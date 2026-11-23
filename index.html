@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="index">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+
+<header class="hero">
+  <span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span>
+  <h1>El modelo propone, el arnés dispone</h1>
+  <p class="lede">Un modelo solo predice texto. Lo que lo convierte en un agente al que una empresa le puede confiar trabajo es el arnés: el bucle que lo hace actuar, las herramientas que puede usar, las reglas que lo limitan y los registros que permiten auditarlo. Este curso construye uno pieza por pieza.</p>
+</header>
+
+<section>
+  <h2>Cómo usar este curso</h2>
+  <div class="prose">
+    <p><b>Estado.</b> El curso está en preparación. La <a href="temario.html">tabla de contenido</a> ya tiene los 16 capítulos con sus secciones y sus laboratorios, y está en revisión.</p>
+    <p><b>Para quién es.</b> Ingenieros que van a construir o integrar agentes. Conviene programar en TypeScript o Python y conocer la llamada a un modelo, las herramientas y MCP, que están en Aplicaciones con IA. Usar y configurar agentes ya hechos está en Agentes personales.</p>
+    <p><b>Cómo está hecho.</b> Un arnés mínimo crece capítulo a capítulo: empieza como un bucle de pocas líneas y termina con políticas, validadores, aprobación humana, auditoría y subagentes. Cada capítulo agrega una pieza con su contrato, y los laboratorios muestran el arnés corriendo en la página: cambias una regla, un presupuesto o una herramienta y ves qué acción se permite, cuál pide aprobación y cuál se bloquea. Los arneses del mercado aparecen como ejemplos para comparar.</p>
+  </div>
+</section>
+
+<details class="stage" id="temario" open><summary><h2><span class="pn">Empieza aquí</span> Tabla de contenido</h2></summary>
+  <div class="mods">
+    <a class="mod" href="temario.html"><span class="n">≡</span><b>Tabla de contenido</b><p>Cada capítulo con sus secciones y sus laboratorios.</p></a>
+  </div>
+</details>
+
+<details class="stage" id="parte-1" open><summary><h2><span class="pn">Parte 1</span> El arnés y su bucle</h2><span class="cuenta" data-etapa-cuenta="1"></span></summary>
+  <div class="mods">
+    <div class="mod soon" data-id="modelo-y-arnes"><span class="n">01</span><b>Modelo más arnés: qué es un arnés</b><p>Por qué el modelo solo no basta y qué piezas lo rodean en un agente gobernable.</p></div>
+    <div class="mod soon" data-id="el-bucle"><span class="n">02</span><b>El bucle del agente</b><p>Turnos, motivo de parada, llamadas a herramientas y condiciones para terminar.</p></div>
+  </div>
+</details>
+
+<details class="stage" id="parte-2" open><summary><h2><span class="pn">Parte 2</span> El núcleo</h2><span class="cuenta" data-etapa-cuenta="2"></span></summary>
+  <div class="mods">
+    <div class="mod soon" data-id="herramientas"><span class="n">03</span><b>El runtime de herramientas y el registro de capacidades</b><p>Contratos de herramienta, validación de entradas, ejecución en paralelo y descubrimiento.</p></div>
+    <div class="mod soon" data-id="puerta-a-los-modelos"><span class="n">04</span><b>La puerta a los modelos (*model gateway*)</b><p>Una interfaz para varios proveedores, con costo, caché, reintentos y respaldo.</p></div>
+    <div class="mod soon" data-id="contexto"><span class="n">05</span><b>El motor de contexto y la compactación</b><p>Ensamblar lo que ve el modelo en cada turno y resumir cuando la ventana se llena.</p></div>
+    <div class="mod soon" data-id="estado-y-eventos"><span class="n">06</span><b>Sesiones, eventos y ejecución durable</b><p>Guardar el estado, publicar eventos y reanudar una tarea después de una caída o de una espera larga.</p></div>
+  </div>
+</details>
+
+<details class="stage" id="parte-3" open><summary><h2><span class="pn">Parte 3</span> Gobernar al agente</h2><span class="cuenta" data-etapa-cuenta="3"></span></summary>
+  <div class="mods">
+    <div class="mod soon" data-id="reglas-y-politicas"><span class="n">07</span><b>Reglas y el motor de políticas</b><p>Quién autoriza cada acción: reglas declarativas, clasificación de riesgo y control de admisión.</p></div>
+    <div class="mod soon" data-id="validadores"><span class="n">08</span><b>Validadores y ganchos</b><p>Revisar antes y después de cada acción: entradas, efectos, respuestas y reglas del dominio.</p></div>
+    <div class="mod soon" data-id="humano-en-el-bucle"><span class="n">09</span><b>El servicio de interacción humana</b><p>Aprobaciones, preguntas, correcciones en marcha y traspasos a una persona.</p></div>
+    <div class="mod soon" data-id="credenciales-y-aislamiento"><span class="n">10</span><b>Credenciales, aislamiento e idempotencia</b><p>Que el agente use secretos sin verlos, trabaje en un entorno aislado y no repita efectos.</p></div>
+    <div class="mod soon" data-id="registros-y-auditoria"><span class="n">11</span><b>Registros, auditoría y gobierno de datos</b><p>El libro de auditoría, la retención, los datos que el agente puede tocar y la observabilidad para cada audiencia.</p></div>
+  </div>
+</details>
+
+<details class="stage" id="parte-4" open><summary><h2><span class="pn">Parte 4</span> Patrones de agentes</h2><span class="cuenta" data-etapa-cuenta="4"></span></summary>
+  <div class="mods">
+    <div class="mod soon" data-id="planificador-y-ejecutor"><span class="n">12</span><b>Planificador y ejecutor</b><p>Separar el plan de la ejecución, revisar y replanificar.</p></div>
+    <div class="mod soon" data-id="orquestador-y-subagentes"><span class="n">13</span><b>Orquestador y subagentes</b><p>Delegar a especialistas con su propio contexto, coordinar traspasos y comunicar agentes.</p></div>
+    <div class="mod soon" data-id="memoria-y-habilidades"><span class="n">14</span><b>Memoria a corto y largo plazo y la biblioteca de habilidades</b><p>Lo que el agente recuerda entre tareas y los procedimientos que carga solo cuando hacen falta.</p></div>
+  </div>
+</details>
+
+<details class="stage" id="parte-5" open><summary><h2><span class="pn">Parte 5</span> Calidad y puesta en marcha</h2><span class="cuenta" data-etapa-cuenta="5"></span></summary>
+  <div class="mods">
+    <div class="mod soon" data-id="evaluar-un-arnes"><span class="n">15</span><b>Evaluar un arnés</b><p>Medir trayectorias y no solo respuestas: banco de tareas, éxito, pasos, costo y mejora frente a la línea base.</p></div>
+    <div class="mod soon" data-id="integracion"><span class="n">16</span><b>Un arnés completo, de punta a punta</b><p>El camino feliz y los caminos de control, con todas las piezas juntas y el orden para construirlas.</p></div>
+  </div>
+</details>
+
+
+
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+</body>
+</html>

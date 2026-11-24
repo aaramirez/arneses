@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Herramientas y capacidades · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="herramientas">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 03 DE 16</span><h1>El runtime de herramientas y el registro de capacidades</h1><p class="lede">Una herramienta es la única forma que tiene un agente de tocar el mundo. Este capítulo le pone contrato a cada una, valida lo que pide el modelo antes de ejecutarlo, decide qué corre en paralelo y lleva un registro de qué puede usar cada agente.</p></header>
+<section><h2>El contrato de una herramienta: nombre, esquema, efectos y riesgo</h2><div class="prose"><p>En el bucle del capítulo 2, las herramientas eran un mapa de nombres a funciones: si el modelo pedía <code>consultar_ventas</code>, el arnés buscaba la función y la llamaba. Funciona en una demostración. En producción falta casi todo: no se sabe qué argumentos acepta, qué cambia en el mundo, cuánto puede tardar ni quién puede usarla. Este capítulo convierte esa función suelta en una herramienta con <b>contrato</b> (<i>contract</i>), y le da al arnés su <b>runtime de herramientas</b> (<i>tool runtime</i>), la pieza que las ejecuta con reglas.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en el almacén de una empresa. Nadie entra a sacar cosas: se llena un formulario con campos fijos (qué, cuánto, para qué centro de costo) y el almacenero lo revisa antes de entregar. El formulario es lo que ve quien pide; la ficha interna del artículo (si es peligroso, si hay que firmar, cuántos se pueden sacar por día) la ve solo el almacén. Una herramienta tiene las dos partes.</p></div><div class="prose"><p>El contrato tiene dos caras. La primera es la que <b>ve el modelo</b>, porque la necesita para decidir cuándo usar la herramienta y cómo llenarla:</p><ul><li><b>Nombre</b> (<i>name</i>): corto, en minúsculas y sin espacios, como <code>crear_reembolso</code>. Es el identificador que el modelo escribe en su llamada.</li><li><b>Descripción</b> (<i>description</i>): qué hace, cuándo usarla y cuándo no. Es, en la práctica, un pedazo del prompt: una descripción vaga produce llamadas equivocadas.</li><li><b>Esquema de entrada</b> (<i>input schema</i>): la forma exacta de los argumentos, escrita en <b>JSON Schema</b>, el estándar para describir y validar datos JSON: qué campos hay, de qué tipo, cuáles son obligatorios y con qué límites.</li></ul><p>La segunda cara la <b>ve solo el arnés</b>, y el modelo no tiene por qué conocerla:</p><ul><li><b>Efectos</b> (<i>effects</i>): si solo lee, si escribe dentro del sistema o si actúa afuera (manda un correo, mueve dinero).</li><li><b>Riesgo</b> (<i>risk</i>): bajo, medio o alto. Es lo que usarán las políticas del capítulo 7 para decidir si se permite, si pide aprobación o si se deniega.</li><li><b>Idempotencia</b> (<i>idempotency</i>): si repetir la llamada con los mismos argumentos produce el mismo efecto una sola vez. Importa para los reintentos.</li><li><b>Límites</b>: tiempo máximo de ejecución y tamaño máximo del resultado.</li></ul></div><figure class="fig fig-esquema" id="03-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 420" style="min-width:680px" role="img" aria-label="El contrato de la herramienta crear_reembolso en dos paneles: a la izquierda lo que ve el modelo, nombre, descripción y esquema de entrada con cuatro campos; a la derecha lo que ve solo el arnés, efectos, riesgo, idempotencia, límites, función y dueño; una línea punteada los separa como frontera del contexto">
+  
+  <rect x="20" y="20" width="390" height="330" rx="12" class="c-tra"/>
+  <text x="40" y="48" class="t t-xs t-b k-tra">LO QUE VE EL MODELO</text>
+
+  <text x="40" y="80" class="t t-s t-m">nombre</text>
+  <rect x="130" y="64" width="260" height="26" rx="6" class="caja"/>
+  <text x="142" y="82" class="t t-s t-mono t-b">crear_reembolso</text>
+
+  <text x="40" y="118" class="t t-s t-m">descripción</text>
+  <rect x="130" y="102" width="260" height="62" rx="6" class="caja"/>
+  <text x="142" y="121" class="t t-s">Reembolsa un cobro a un cliente.</text>
+  <text x="142" y="137" class="t t-s">Úsala solo si el cobro está</text>
+  <text x="142" y="153" class="t t-s">confirmado como duplicado.</text>
+
+  <text x="40" y="192" class="t t-s t-m">esquema</text>
+  <rect x="130" y="176" width="260" height="156" rx="6" class="caja"/>
+  <g class="t t-s">
+    <text x="142" y="197"><tspan class="t-mono t-b">cliente_id</tspan>  entero ≥ 1</text>
+    <text x="142" y="213" class="t-m">obligatorio</text>
+    <text x="142" y="236"><tspan class="t-mono t-b">monto</tspan>  número, &gt; 0 y ≤ 500</text>
+    <text x="142" y="252" class="t-m">obligatorio</text>
+    <text x="142" y="275"><tspan class="t-mono t-b">moneda</tspan>  USD, PEN o COP</text>
+    <text x="142" y="291" class="t-m">obligatorio</text>
+    <text x="142" y="309"><tspan class="t-mono t-b">motivo</tspan>  texto de hasta 200</text>
+    <text x="142" y="324" class="t-m t-xs">NADA MÁS: SIN CAMPOS EXTRA</text>
+  </g>
+
+  
+  <line x1="430" y1="14" x2="430" y2="360" class="ln ln-d" style="stroke-width:2"/>
+  <text x="430" y="380" class="t t-xs t-b t-m" text-anchor="middle">FRONTERA DEL CONTEXTO</text>
+
+  
+  <rect x="450" y="20" width="390" height="330" rx="12" class="d-sis"/>
+  <text x="470" y="48" class="t t-xs t-b k-sis">LO QUE VE SOLO EL ARNÉS</text>
+  <g class="t t-s">
+    <text x="470" y="82" class="t-m">efectos</text><text x="590" y="82" class="t-b">externo: mueve dinero</text>
+    <text x="470" y="114" class="t-m">riesgo</text><text x="590" y="114" class="t-b k-sis">alto</text>
+    <text x="470" y="146" class="t-m">idempotente</text><text x="590" y="146" class="t-b">no</text><text x="612" y="146" class="t-m">(capítulo 10)</text>
+    <text x="470" y="178" class="t-m">tiempo límite</text><text x="590" y="178" class="t-b">10 s</text>
+    <text x="470" y="210" class="t-m">resultado máx.</text><text x="590" y="210" class="t-b">2.000 caracteres</text>
+    <text x="470" y="242" class="t-m">ejecutar()</text><text x="590" y="242" class="t-b t-mono">pagos.reembolsar()</text>
+    <text x="470" y="274" class="t-m">dueño</text><text x="590" y="274" class="t-b">equipo de finanzas</text>
+    <text x="470" y="306" class="t-m">versión</text><text x="590" y="306" class="t-b">3</text>
+  </g>
+
+  
+  <g class="t t-s">
+    <text x="215" y="378" text-anchor="middle" class="k-tra t-b">va al contexto en cada turno</text>
+    <text x="215" y="396" text-anchor="middle" class="t-m">el modelo decide cuándo usarla y cómo llenarla</text>
+    <text x="645" y="378" text-anchor="middle" class="k-sis t-b">la usan el runtime y las políticas</text>
+    <text x="645" y="396" text-anchor="middle" class="t-m">validar, autorizar, limitar y ejecutar</text>
+  </g>
+</svg></div><figcaption><b>Las dos caras del contrato de una herramienta.</b> A la izquierda, en violeta, lo que se le manda al modelo en cada turno: nombre, descripción y esquema de entrada, con el ejemplo de <code>crear_reembolso</code>. A la derecha, en rojo ladrillo, la ficha que solo lee el arnés: efectos, riesgo, idempotencia, límites y la función que ejecuta. La línea punteada del medio es la frontera: nada de la derecha entra al contexto del modelo.</figcaption></figure><div class="prose"><p>En el arnés del curso, el contrato es un tipo:</p><div class="code-copia"><pre><code>interface Herramienta {
+  // Lo que ve el modelo
+  nombre: string;
+  descripcion: string;
+  esquema: JSONSchema;                        // forma de los argumentos
+
+  // Lo que ve solo el arnés
+  efectos: "lectura" | "escritura" | "externo";
+  riesgo: "bajo" | "medio" | "alto";
+  idempotente: boolean;
+  limiteSegundos: number;
+  limiteCaracteres: number;
+  ejecutar(args: unknown, senal: AbortSignal): Promise&lt;string&gt;;
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>¿Por qué no dejar que el modelo vea el riesgo? Porque no le sirve para nada bueno. El modelo no decide si una acción se permite, y saber que una herramienta es «de riesgo alto» no lo vuelve más prudente: a veces solo lo lleva a evitarla cuando sí hacía falta. El riesgo es un dato para las reglas del arnés, no una sugerencia para el modelo.</p></div></section>
+<section><h2>Validar la entrada antes de ejecutar</h2><div class="prose"><p>El modelo escribe los argumentos como texto. Casi siempre los escribe bien, pero «casi siempre» no alcanza cuando la herramienta mueve dinero. Puede inventar un campo, poner un número como texto (<code>"4512"</code> en vez de <code>4512</code>), olvidar uno obligatorio o pasarse de un límite. Por eso el runtime <b>valida cada llamada contra su esquema antes de ejecutarla</b>, sin excepciones.</p><p>Este es el esquema de <code>crear_reembolso</code> en JSON Schema:</p><div class="code-copia"><pre><code>{
+  "type": "object",
+  "properties": {
+    "cliente_id": { "type": "integer", "minimum": 1 },
+    "monto":      { "type": "number", "exclusiveMinimum": 0, "maximum": 500 },
+    "moneda":     { "type": "string", "enum": ["USD", "PEN", "COP"] },
+    "motivo":     { "type": "string", "maxLength": 200 }
+  },
+  "required": ["cliente_id", "monto", "moneda"],
+  "additionalProperties": false
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Cada palabra clave es una regla: <code>type</code> fija el tipo, <code>required</code> los campos obligatorios, <code>enum</code> la lista cerrada de valores, <code>minimum</code> y <code>maximum</code> los rangos, <code>maxLength</code> el largo de un texto y <code>additionalProperties: false</code> prohíbe campos que no estén en la lista. Hay bibliotecas que validan JSON Schema en casi todos los lenguajes, como Ajv en TypeScript o <code>jsonschema</code> en Python, y otras que generan el esquema desde los tipos del programa, como Zod o Pydantic.</p><p>Cuando la validación falla, la llamada <b>no se ejecuta</b> y el error vuelve al modelo como un resultado con <code>esError</code>, igual que en el capítulo 2. El mensaje tiene que decir qué campo falló y qué se esperaba: «<code>monto</code> debe ser como máximo 500; llegó 5000». Con eso el modelo corrige o le explica a la persona por qué no puede.</p></div><div class="ml"><b>En la práctica</b><p>Algunos proveedores ofrecen un <b>modo estricto</b> (<i>strict mode</i>): el modelo queda obligado a generar argumentos que cumplen el esquema, porque el proveedor restringe lo que puede escribir. Es útil y reduce errores, pero no reemplaza la validación del arnés. El modo estricto suele aceptar solo una parte de JSON Schema, no conoce las reglas del negocio («un cliente bloqueado no recibe reembolsos») y depende de un proveedor que puede cambiar. El arnés valida siempre, aunque el proveedor prometa que no hace falta.</p></div><div class="prose"><p>El esquema es una red con agujeros si se escribe flojo. Prueba quitarle reglas y mira qué llamadas defectuosas llegan hasta la herramienta.</p></div><div class="lab" id="03-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Registra una herramienta con su esquema y mira cómo el arnés rechaza una llamada mal formada</h3></div><p class="hint">Activa o desactiva las reglas del esquema de <code>crear_reembolso</code> y mira el JSON Schema que resulta. Abajo, ocho llamadas que propuso un modelo: cada una se acepta o se rechaza con el mensaje que volvería al modelo. Busca qué regla deja pasar el reembolso de 5.000 y cuál detiene el campo inventado.</p><style>
+[id="03-lab-1"] .c3l1-reglas{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:6px 16px;font:600 .84rem var(--f-display)}
+[id="03-lab-1"] .c3l1-reglas label{display:flex;align-items:flex-start;gap:6px}
+[id="03-lab-1"] .c3l1-reglas code{font-size:.78rem}
+[id="03-lab-1"] details.c3l1-esq{background:var(--paper)}
+[id="03-lab-1"] details.c3l1-esq summary{cursor:pointer;font:600 .86rem var(--f-display)}
+[id="03-lab-1"] .c3l1-pre{margin:8px 0 0;font:500 .76rem/1.45 var(--f-mono);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+[id="03-lab-1"] .c3l1-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+[id="03-lab-1"] .c3l1-lista li{border:1px solid var(--line);border-left:5px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--card);display:grid;gap:3px}
+[id="03-lab-1"] .c3l1-lista li.ok{border-left-color:var(--good)}
+[id="03-lab-1"] .c3l1-lista li.no{border-left-color:var(--c-tra)}
+[id="03-lab-1"] .c3l1-lista li.fuga{border-left-color:var(--warm);background:var(--warm-soft)}
+[id="03-lab-1"] .c3l1-json{font:500 .78rem/1.4 var(--f-mono);overflow-wrap:anywhere}
+[id="03-lab-1"] .c3l1-ver{font:600 .8rem/1.4 var(--f-display)}
+[id="03-lab-1"] .c3l1-ver.ok{color:var(--good)}
+[id="03-lab-1"] .c3l1-ver.no{color:var(--c-tra)}
+[id="03-lab-1"] .c3l1-ver.fuga{color:var(--warm)}
+</style>
+<div class="c3l1-reglas" id="c3l1-reglas"></div>
+<details class="c3l1-esq"><summary>Ver el JSON Schema que resulta</summary><pre class="c3l1-pre" id="c3l1-pre"></pre></details>
+<div class="readout texto" id="c3l1-out" aria-live="polite"></div>
+<ol class="c3l1-lista" id="c3l1-lista" aria-label="Llamadas propuestas por el modelo y su resultado"></ol></div></section>
+<section><h2>Ejecución secuencial y en paralelo</h2><div class="prose"><p>Como viste en el capítulo 2, un modelo puede pedir varias herramientas en una sola respuesta. El runtime tiene que decidir si las ejecuta <b>en serie</b> (<i>sequential</i>), una detrás de otra, o <b>en paralelo</b> (<i>parallel</i>), todas a la vez. En paralelo el turno dura lo que tarda la más lenta; en serie, la suma de todas.</p></div><div class="analogia"><b>Imagínalo así</b><p>En una cocina, el arroz, el guiso y la ensalada se pueden preparar a la vez: no dependen uno de otro. Pero no se sirve el plato antes de cocinar el arroz, y dos cocineros no salan la misma olla al mismo tiempo. Paralelo cuando las tareas son independientes; en orden cuando una depende de otra o cuando tocan lo mismo.</p></div><div class="prose"><p>La regla del runtime del curso es simple y conservadora:</p><ol class="steps"><li><span>Las llamadas de <b>solo lectura</b> se ejecutan en paralelo.</span></li><li><span>Las que <b>escriben</b> o actúan afuera se ejecutan de a una, en el orden en que las pidió el modelo, después de las lecturas.</span></li><li><span>Una falla <b>no cancela a las demás</b>. Cada llamada produce su propio resultado, correcto o con error. En TypeScript eso es <code>Promise.allSettled</code>, no <code>Promise.all</code>, que se detiene en el primer rechazo.</span></li><li><span>Los resultados vuelven <b>todos juntos</b> en el mensaje siguiente, cada uno con su <code>id</code>, sin importar en qué orden terminaron.</span></li></ol><p>¿Y si una llamada depende del resultado de otra? Entonces el modelo no debería pedirlas en la misma respuesta: no puede saber el argumento de la segunda sin ver el resultado de la primera. Si lo hace, está adivinando. Cuando hay dependencia, lo correcto son dos turnos.</p></div><figure class="fig fig-flujo" id="03-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 400" style="min-width:680px" role="img" aria-label="El camino de una llamada por el runtime de herramientas: llamada del modelo, buscar en el registro del agente, validar el esquema, políticas, ejecutar con tiempo límite, recortar el resultado y resultado normalizado; cuatro salidas por error que terminan en un resultado con esError; abajo, dos lecturas corren en paralelo y una escritura espera a que terminen, y los tres resultados vuelven juntos">
+  <defs>
+    <marker id="d32-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d32-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+  </defs>
+  <g class="t t-s">
+    <rect x="17" y="40" width="106" height="56" rx="10" class="c-tra"/><text x="70" y="64" text-anchor="middle" class="t-b k-tra">① Llamada</text><text x="70" y="81" text-anchor="middle">del modelo</text>
+    <rect x="137" y="40" width="106" height="56" rx="10" class="d-sis"/><text x="190" y="64" text-anchor="middle" class="t-b">② ¿En el</text><text x="190" y="81" text-anchor="middle">registro?</text>
+    <rect x="257" y="40" width="106" height="56" rx="10" class="d-sis"/><text x="310" y="64" text-anchor="middle" class="t-b">③ Validar</text><text x="310" y="81" text-anchor="middle">el esquema</text>
+    <rect x="377" y="40" width="106" height="56" rx="10" class="d-sis ln-d"/><text x="430" y="64" text-anchor="middle" class="t-b">④ Políticas</text><text x="430" y="81" text-anchor="middle" class="t-m">capítulo 7</text>
+    <rect x="497" y="40" width="106" height="56" rx="10" class="c-enl"/><text x="550" y="64" text-anchor="middle" class="t-b k-enl">⑤ Ejecutar</text><text x="550" y="81" text-anchor="middle">con límite</text>
+    <rect x="617" y="40" width="106" height="56" rx="10" class="d-sis"/><text x="670" y="64" text-anchor="middle" class="t-b">⑥ Recortar</text><text x="670" y="81" text-anchor="middle">el resultado</text>
+    <rect x="737" y="40" width="106" height="56" rx="10" class="c-enl"/><text x="790" y="64" text-anchor="middle" class="t-b k-enl">⑦ Resultado</text><text x="790" y="81" text-anchor="middle" class="t-mono">id · esError</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <line x1="123" y1="68" x2="135" y2="68" marker-end="url(#d32-m)"/>
+    <line x1="243" y1="68" x2="255" y2="68" marker-end="url(#d32-m)"/>
+    <line x1="363" y1="68" x2="375" y2="68" marker-end="url(#d32-m)"/>
+    <line x1="483" y1="68" x2="495" y2="68" marker-end="url(#d32-m)"/>
+    <line x1="603" y1="68" x2="615" y2="68" marker-end="url(#d32-m)"/>
+    <line x1="723" y1="68" x2="735" y2="68" marker-end="url(#d32-m)"/>
+  </g>
+  
+  <g style="stroke:var(--d-sis);stroke-width:1.8;fill:none">
+    <line x1="190" y1="96" x2="190" y2="170"/>
+    <line x1="310" y1="96" x2="310" y2="170"/>
+    <line x1="430" y1="96" x2="430" y2="170"/>
+    <line x1="550" y1="96" x2="550" y2="170"/>
+    <path d="M190 170 H 790 V 99" marker-end="url(#d32-s)"/>
+  </g>
+  <g class="t t-s k-sis">
+    <text x="196" y="125">no existe</text><text x="196" y="139">para este</text><text x="196" y="153">agente</text>
+    <text x="316" y="125">argumentos</text><text x="316" y="139">inválidos</text>
+    <text x="436" y="125">denegada o</text><text x="436" y="139">rechazada</text>
+    <text x="556" y="125">tiempo</text><text x="556" y="139">agotado o</text><text x="556" y="153">falla</text>
+    <text x="640" y="188" class="t-b">todo termina en un resultado</text>
+  </g>
+
+  
+  <text x="17" y="228" class="t t-xs t-b t-m">UN TURNO CON TRES LLAMADAS: DOS LECTURAS Y UNA ESCRITURA</text>
+  <g class="t t-s">
+    <text x="17" y="262" class="t-b">t1 lectura</text>
+    <text x="17" y="298" class="t-b">t2 lectura</text>
+    <text x="17" y="334" class="t-b">t3 escritura</text>
+  </g>
+  <rect x="120" y="246" width="300" height="24" rx="5" class="c-enl"/><text x="130" y="263" class="t t-s">consultar_ventas</text>
+  <rect x="120" y="282" width="200" height="24" rx="5" class="c-enl"/><text x="130" y="299" class="t t-s">consultar_clima</text>
+  <rect x="120" y="318" width="300" height="24" rx="5" class="caja ln-d"/><text x="130" y="335" class="t t-s t-m">espera a las lecturas</text>
+  <rect x="430" y="318" width="190" height="24" rx="5" class="d-sis"/><text x="440" y="335" class="t t-s">guardar_informe</text>
+  <rect x="660" y="246" width="183" height="96" rx="10" class="c-red"/>
+  <text x="751" y="282" class="t t-s t-b k-red" text-anchor="middle">Tres resultados juntos</text>
+  <text x="751" y="299" class="t t-s" text-anchor="middle">en un mensaje,</text>
+  <text x="751" y="316" class="t t-s" text-anchor="middle">cada uno con su id</text>
+  <g class="ln" style="stroke-width:1.6">
+    <line x1="420" y1="258" x2="657" y2="258" class="ln-d" marker-end="url(#d32-m)"/>
+    <line x1="320" y1="294" x2="657" y2="294" class="ln-d" marker-end="url(#d32-m)"/>
+    <line x1="620" y1="330" x2="657" y2="330" marker-end="url(#d32-m)"/>
+  </g>
+  <line x1="120" y1="364" x2="640" y2="364" class="ln"/>
+  <text x="120" y="382" class="t t-s t-m">tiempo →</text>
+  <text x="420" y="382" class="t t-s t-m" text-anchor="middle">fin de las lecturas</text>
+</svg></div><figcaption><b>El camino de cada llamada por el runtime de herramientas.</b> De izquierda a derecha, los pasos que recorre cada llamada antes de convertirse en resultado: buscarla en el registro del agente, validar el esquema, pasar por las políticas (que llegan en el capítulo 7), ejecutar con tiempo límite y recortar el resultado. Las flechas rojas hacia abajo son las salidas por error: ninguna detiene al agente, todas terminan en un resultado con <code>esError</code>. Abajo, dos llamadas de lectura recorren el camino a la vez y una escritura espera su turno.</figcaption></figure><div class="prose"><p>Compara las dos formas con tres herramientas. Cambia lo que tarda cada una y mira qué pasa cuando una depende de otra o cuando una escribe.</p></div><div class="lab" id="03-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Tres herramientas en serie y en paralelo: el tiempo total de cada forma</h3></div><p class="hint">Mueve lo que tarda cada herramienta y el tiempo límite. Mira las dos líneas de tiempo, en serie y en paralelo, y el total de cada una. Después marca que la búsqueda del cliente escribe un registro y mira cómo el runtime la saca del grupo paralelo.</p><style>
+[id="03-lab-2"] .c3l2-lienzo{overflow-x:auto;border-radius:8px}
+[id="03-lab-2"] .c3l2-svg{min-width:540px}
+[id="03-lab-2"] .c3l2-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="03-lab-2"] .c3l2-svg text{font:500 11px var(--f-display);fill:var(--muted)}
+[id="03-lab-2"] .c3l2-svg text.b{font-weight:700;fill:var(--ink)}
+[id="03-lab-2"] .c3l2-chk{display:flex;flex-wrap:wrap;gap:8px 20px;font:600 .86rem var(--f-display)}
+[id="03-lab-2"] .c3l2-chk label{display:flex;align-items:center;gap:6px}
+</style>
+<div class="ctls">
+  <label class="ctl">consultar_ventas <output id="c3l2-va"></output><input type="range" id="c3l2-a" min="0.5" max="5" step="0.1" value="2"></label>
+  <label class="ctl">buscar_cliente <output id="c3l2-vb"></output><input type="range" id="c3l2-b" min="0.5" max="5" step="0.1" value="1.2"></label>
+  <label class="ctl">consultar_inventario <output id="c3l2-vc"></output><input type="range" id="c3l2-c" min="0.5" max="5" step="0.1" value="3"></label>
+  <label class="ctl">Tiempo límite por herramienta <output id="c3l2-vl"></output><input type="range" id="c3l2-l" min="1" max="6" step="0.5" value="6"></label>
+</div>
+<div class="c3l2-chk">
+  <label><input type="checkbox" id="c3l2-esc"> buscar_cliente además escribe un registro</label>
+  <label><input type="checkbox" id="c3l2-dep"> consultar_inventario necesita el resultado de consultar_ventas</label>
+</div>
+<div class="c3l2-lienzo"><svg class="c3l2-svg" id="c3l2-svg" viewBox="0 0 620 270" role="img" aria-label="Dos líneas de tiempo, en serie y en paralelo, con las tres herramientas como barras; las barras cortadas por el tiempo límite se marcan en rojo"></svg></div>
+<div class="readout texto" id="c3l2-out" aria-live="polite"></div></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Valida argumentos y compara serie y paralelo en Python</h3></div><p>Vas a correr un runtime mínimo con tres herramientas simuladas. No usa la red ni claves. Necesitas Python 3.8 o más nuevo. Crea un archivo <code>herramientas.py</code> con este contenido:</p><div class="code-copia"><pre><code># herramientas.py: validar argumentos y comparar ejecución en serie y en paralelo
+import asyncio, time
+
+# Tres herramientas de solo lectura que tardan distinto (simulan una red lenta)
+async def consultar_ventas(args):
+    await asyncio.sleep(1.2); return {"mes": args["mes"], "total": 48230}
+async def consultar_clima(args):
+    await asyncio.sleep(0.8); return {"ciudad": args["ciudad"], "grados": 24}
+async def buscar_cliente(args):
+    await asyncio.sleep(2.0); return {"id": args["id"], "nombre": "Cliente de prueba"}
+
+# El registro: cada herramienta con su función, su esquema mínimo y su tiempo límite
+REGISTRO = {
+    "consultar_ventas": (consultar_ventas, {"mes": str}, 3.0),
+    "consultar_clima":  (consultar_clima,  {"ciudad": str}, 3.0),
+    "buscar_cliente":   (buscar_cliente,   {"id": int}, 1.5),
+}
+
+def validar(nombre, args):
+    if nombre not in REGISTRO:
+        return f"no existe la herramienta «{nombre}»"
+    esquema = REGISTRO[nombre][1]
+    for campo, tipo in esquema.items():
+        if campo not in args:
+            return f"falta el argumento obligatorio «{campo}»"
+        if not isinstance(args[campo], tipo):
+            return f"«{campo}» debe ser {tipo.__name__}, llegó {type(args[campo]).__name__}"
+    sobran = set(args) - set(esquema)
+    return f"argumentos no permitidos: {sorted(sobran)}" if sobran else None
+
+async def ejecutar(id_, nombre, args):
+    error = validar(nombre, args)
+    if error:
+        return id_, {"esError": True, "contenido": "argumentos inválidos: " + error}
+    funcion, _, limite = REGISTRO[nombre]
+    try:
+        return id_, {"esError": False, "contenido": await asyncio.wait_for(funcion(args), limite)}
+    except asyncio.TimeoutError:
+        return id_, {"esError": True, "contenido": f"tiempo agotado: más de {limite} s"}
+
+LLAMADAS = [
+    ("t1", "consultar_ventas", {"mes": "2026-10"}),
+    ("t2", "consultar_clima", {"ciudad": "Lima"}),
+    ("t3", "buscar_cliente", {"id": "4512"}),
+    ("t4", "borrar_todo", {}),
+]
+
+async def principal():
+    inicio = time.perf_counter()
+    for ll in LLAMADAS:
+        print("serie   ", *await ejecutar(*ll))
+    print(f"en serie: {time.perf_counter() - inicio:.1f} s\n")
+    inicio = time.perf_counter()
+    for r in await asyncio.gather(*(ejecutar(*ll) for ll in LLAMADAS)):
+        print("paralelo", *r)
+    print(f"en paralelo: {time.perf_counter() - inicio:.1f} s")
+
+asyncio.run(principal())</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Córrelo desde la carpeta donde lo guardaste:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python herramientas.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 herramientas.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Mira <code>t3</code> y <code>t4</code>: se rechazaron antes de ejecutarse. Lee los mensajes de error: ¿le dirían al modelo qué corregir?</span></li><li><span>Anota los dos tiempos totales. Las llamadas rechazadas no cuentan, porque nunca corrieron.</span></li><li><span>Cambia <code>{"id": "4512"}</code> por <code>{"id": 4512}</code> y vuelve a correrlo. Ahora <code>t3</code> pasa la validación, pero tarda 2 segundos y su límite es 1,5: mira qué resultado devuelve y cómo cambian los totales.</span></li><li><span>Agrega a <code>t1</code> un argumento que no existe, por ejemplo <code>"moneda": "USD"</code>, y mira el error.</span></li></ol><p><b>Qué observar:</b> en paralelo, el total se acerca al tiempo de la herramienta más lenta; en serie, es la suma. Las llamadas que fallan la validación o que se pasan del tiempo no detienen a las demás: cada una devuelve su propio resultado. Los tiempos exactos pueden variar unas centésimas según la computadora.</p></div></section>
+<section><h2>El registro de capacidades: qué puede usar cada agente</h2><div class="prose"><p>Un arnés de empresa termina con decenas o cientos de herramientas. No todas son para todos: el agente de atención al cliente no debería ver <code>ejecutar_sql</code>, y el asistente de código no tiene por qué ver <code>crear_reembolso</code>. El <b>registro de capacidades</b> (<i>capability registry</i>) es el catálogo central de herramientas, con sus contratos, y la regla de qué subconjunto le toca a cada agente.</p><p>Tres ideas lo ordenan:</p><ul><li><b>Mínimo privilegio</b> (<i>least privilege</i>): cada agente recibe solo las herramientas que necesita su trabajo. Lo que no está en su lista no existe para él: no aparece en su contexto y, si el modelo la pide igual, el runtime la rechaza con «no existe la herramienta». Esa negativa no depende del texto del prompt; vive en el registro.</li><li><b>Una sola fuente de verdad</b>: el contrato de cada herramienta se define una vez, con un dueño y una versión. Los agentes la referencian por nombre; no copian su definición.</li><li><b>Descubrimiento</b> (<i>discovery</i>): cada definición ocupa espacio en el contexto, y en todos los turnos. Con muchas herramientas, el arnés puede darle al modelo una herramienta para <b>buscar herramientas</b> y cargar solo las definiciones que necesita, en vez de mandarlas todas cada vez.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>En un hospital, la farmacia tiene todos los medicamentos, pero cada servicio ve un carro con los suyos. Una enfermera de pediatría no encuentra en su carro las dosis de un adulto, y si las pide, la farmacia no las despacha. El carro es la vista del agente; la farmacia, el registro.</p></div><figure class="fig fig-arquitectura" id="03-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 440" style="min-width:680px" role="img" aria-label="Arquitectura del registro de capacidades: abajo, tres fuentes de herramientas, funciones propias del arnés, un servidor MCP local y uno remoto; en el medio, el registro con nueve herramientas y su riesgo; arriba, tres agentes, cada uno con solo las herramientas que le asignaron">
+  <defs>
+    <marker id="d33-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  <rect x="40" y="16" width="230" height="96" rx="10" class="c-red"/><text x="54" y="38" class="t t-b k-red">Agente de atención</text>
+  <text x="54" y="60" class="t t-s t-mono">buscar_cliente</text>
+  <text x="54" y="77" class="t t-s t-mono">consultar_pedido</text>
+  <text x="54" y="94" class="t t-s t-mono">crm__crear_caso</text>
+  <line x1="155" y1="150" x2="155" y2="115" class="ln ln-d" style="stroke-width:1.8" marker-end="url(#d33-m)"/>
+  <rect x="315" y="16" width="230" height="96" rx="10" class="c-red"/><text x="329" y="38" class="t t-b k-red">Agente de finanzas</text>
+  <text x="329" y="60" class="t t-s t-mono">consultar_ventas</text>
+  <text x="329" y="77" class="t t-s t-mono">crear_reembolso</text>
+  <text x="329" y="94" class="t t-s t-mono">docs__buscar</text>
+  <line x1="430" y1="150" x2="430" y2="115" class="ln ln-d" style="stroke-width:1.8" marker-end="url(#d33-m)"/>
+  <rect x="590" y="16" width="230" height="96" rx="10" class="c-red"/><text x="604" y="38" class="t t-b k-red">Asistente de código</text>
+  <text x="604" y="60" class="t t-s t-mono">leer_archivo</text>
+  <text x="604" y="77" class="t t-s t-mono">ejecutar_pruebas</text>
+  <text x="604" y="94" class="t t-s t-mono">docs__buscar</text>
+  <line x1="705" y1="150" x2="705" y2="115" class="ln ln-d" style="stroke-width:1.8" marker-end="url(#d33-m)"/>
+  <text x="445" y="137" class="t t-s t-m">cada agente ve solo su lista</text>
+  <rect x="40" y="150" width="780" height="130" rx="12" class="d-sis"/>
+  <text x="56" y="174" class="t t-b k-sis">Registro de capacidades</text><text x="250" y="174" class="t t-s t-m">contrato · riesgo · dueño · versión · qué agentes la ven</text>
+  <rect x="56" y="190" width="142" height="26" rx="13" class="caja"/><circle cx="70" cy="203" r="6" class="c-enl"/><text x="82" y="207" class="t t-s t-mono">buscar_cliente</text>
+  <rect x="208" y="190" width="156" height="26" rx="13" class="caja"/><circle cx="222" cy="203" r="6" class="c-enl"/><text x="234" y="207" class="t t-s t-mono">consultar_pedido</text>
+  <rect x="374" y="190" width="156" height="26" rx="13" class="caja"/><circle cx="388" cy="203" r="6" class="c-enl"/><text x="400" y="207" class="t t-s t-mono">consultar_ventas</text>
+  <rect x="540" y="190" width="149" height="26" rx="13" class="caja"/><circle cx="554" cy="203" r="6" class="d-sis"/><text x="566" y="207" class="t t-s t-mono">crear_reembolso</text>
+  <rect x="56" y="226" width="128" height="26" rx="13" class="caja"/><circle cx="70" cy="239" r="6" class="c-enl"/><text x="82" y="243" class="t t-s t-mono">leer_archivo</text>
+  <rect x="194" y="226" width="156" height="26" rx="13" class="caja"/><circle cx="208" cy="239" r="6" class="c-fis"/><text x="220" y="243" class="t t-s t-mono">ejecutar_pruebas</text>
+  <rect x="360" y="226" width="149" height="26" rx="13" class="caja"/><circle cx="374" cy="239" r="6" class="c-fis"/><text x="386" y="243" class="t t-s t-mono">crm__crear_caso</text>
+  <rect x="519" y="226" width="128" height="26" rx="13" class="caja"/><circle cx="533" cy="239" r="6" class="c-enl"/><text x="545" y="243" class="t t-s t-mono">docs__buscar</text>
+  <rect x="657" y="226" width="128" height="26" rx="13" class="caja"/><circle cx="671" cy="239" r="6" class="d-sis"/><text x="683" y="243" class="t t-s t-mono">ejecutar_sql</text>
+  <text x="806" y="276" class="t t-s t-m" text-anchor="end">ejecutar_sql no está asignada a ningún agente</text>
+  <g class="t t-s"><circle cx="62" cy="268" r="6" class="c-enl"/><text x="74" y="272">bajo</text><circle cx="122" cy="268" r="6" class="c-fis"/><text x="134" y="272">medio</text><circle cx="190" cy="268" r="6" class="d-sis"/><text x="202" y="272">alto</text></g>
+  <rect x="40" y="330" width="230" height="70" rx="10" class="d-oper"/><text x="54" y="354" class="t t-b">Propias</text><text x="54" y="373" class="t t-s">funciones del arnés</text><text x="54" y="390" class="t t-s t-m">mismo proceso</text>
+  <line x1="155" y1="330" x2="155" y2="283" class="ln" style="stroke-width:2" marker-end="url(#d33-m)"/>
+  <rect x="315" y="330" width="230" height="70" rx="10" class="d-inet"/><text x="329" y="354" class="t t-b">Servidor MCP «crm»</text><text x="329" y="373" class="t t-s">local, por stdio</text><text x="329" y="390" class="t t-s t-m">otro proceso</text>
+  <line x1="430" y1="330" x2="430" y2="283" class="ln" style="stroke-width:2" marker-end="url(#d33-m)"/>
+  <rect x="590" y="330" width="230" height="70" rx="10" class="d-inet"/><text x="604" y="354" class="t t-b">Servidor MCP «docs»</text><text x="604" y="373" class="t t-s">remoto, por HTTP</text><text x="604" y="390" class="t t-s t-m">otra máquina</text>
+  <line x1="705" y1="330" x2="705" y2="283" class="ln" style="stroke-width:2" marker-end="url(#d33-m)"/>
+  <text x="40" y="425" class="t t-xs t-b t-m">FUENTES DE HERRAMIENTAS</text><text x="230" y="425" class="t t-s t-m">el registro las importa (por MCP, con tools/list) y les asigna riesgo</text>
+</svg></div><figcaption><b>El registro de capacidades y sus tres fuentes.</b> Abajo, de dónde vienen las herramientas: funciones propias del arnés, un servidor MCP local y un servidor MCP remoto. En el medio, el registro, que guarda cada contrato con su riesgo y su dueño. Arriba, tres agentes, cada uno con su vista: solo las herramientas que le asignaron. Las flechas punteadas muestran que un agente nunca llega a una herramienta sin pasar por el registro.</figcaption></figure><div class="prose"><p>El ahorro de contexto es fácil de subestimar. Una definición con descripción y esquema ocupa, típicamente, desde unas decenas hasta unos pocos cientos de tokens, según lo larga que sea su descripción. Cincuenta herramientas pueden sumar diez mil tokens que se reenvían en cada turno, aunque el agente use dos.</p></div><div class="lab" id="03-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Elige un agente y mira qué herramientas ve y cuánto contexto ocupan</h3></div><p class="hint">Elige un agente y mira su vista del registro: qué herramientas recibe y cuántos tokens suman sus definiciones en cada turno. Activa la búsqueda de herramientas y compara. Después haz que el modelo pida una herramienta que no le toca y mira qué responde el runtime.</p><style>
+[id="03-lab-3"] .opciones{grid-template-columns:minmax(0,1fr)}
+[id="03-lab-3"] .c3l3-chips{display:flex;flex-wrap:wrap;gap:6px}
+[id="03-lab-3"] .c3l3-chips button{font:500 .78rem var(--f-mono);border-radius:999px;padding:5px 10px;display:inline-flex;gap:6px;align-items:center}
+[id="03-lab-3"] .c3l3-chips button i{width:9px;height:9px;border-radius:50%;display:inline-block}
+[id="03-lab-3"] .c3l3-chips button.fuera{opacity:.38;text-decoration:line-through}
+[id="03-lab-3"] .c3l3-chips button.vista{border-color:var(--c-red);background:var(--c-red-s);color:var(--ink)}
+[id="03-lab-3"] .c3l3-chk{display:flex;flex-wrap:wrap;gap:8px 20px;font:600 .86rem var(--f-display)}
+[id="03-lab-3"] .c3l3-chk label{display:flex;align-items:center;gap:6px}
+[id="03-lab-3"] .c3l3-barras{display:grid;gap:8px}
+[id="03-lab-3"] .c3l3-fila{display:grid;grid-template-columns:minmax(120px,auto) 1fr minmax(90px,auto);gap:10px;align-items:center;font:600 .82rem var(--f-display)}
+[id="03-lab-3"] .c3l3-pista{height:14px;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+[id="03-lab-3"] .c3l3-pista i{display:block;height:100%;transition:width .3s}
+[id="03-lab-3"] .c3l3-fila output{font-family:var(--f-mono);font-size:.8rem;text-align:right}
+[id="03-lab-3"] .c3l3-hint{font-size:.86rem;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){[id="03-lab-3"] .c3l3-pista i{transition:none}}
+</style>
+<div class="opciones">
+  <label>Agente
+    <select id="c3l3-ag">
+      <option value="atencion">Agente de atención al cliente</option>
+      <option value="finanzas">Agente de finanzas</option>
+      <option value="codigo">Asistente de código</option>
+      <option value="todas">Sin registro: todas las herramientas a todos</option>
+    </select></label>
+</div>
+<div class="ctls">
+  <label class="ctl">Turnos de la ejecución <output id="c3l3-vt"></output><input type="range" id="c3l3-t" min="1" max="30" step="1" value="10"></label>
+</div>
+<div class="c3l3-chk"><label><input type="checkbox" id="c3l3-busq"> Búsqueda de herramientas (cargar definiciones a demanda)</label></div>
+<p class="c3l3-hint">El registro completo. Toca una herramienta para que el modelo de este agente la pida.</p>
+<div class="c3l3-chips" id="c3l3-chips" role="group" aria-label="Herramientas del registro"></div>
+<div class="c3l3-barras" id="c3l3-barras"></div>
+<div class="readout texto" id="c3l3-out" aria-live="polite"></div></div></section>
+<section><h2>Herramientas propias y herramientas por MCP</h2><div class="prose"><p>Hay dos maneras de que una herramienta llegue al registro. Las <b>propias</b> son funciones del programa del arnés: el runtime las llama directamente, en el mismo proceso. Las <b>remotas</b> viven en otro programa, y la forma estándar de conectarlas hoy es <b>MCP</b> (<i>Model Context Protocol</i>, protocolo de contexto de modelos).</p><p>Un <b>servidor MCP</b> (<i>MCP server</i>) es un programa que publica herramientas, y el arnés actúa como <b>cliente MCP</b> (<i>MCP client</i>). Se hablan con mensajes <b>JSON-RPC 2.0</b> (un formato estándar de llamada a procedimientos remotos sobre JSON), por la entrada y salida estándar si el servidor corre en la misma máquina (<i>stdio</i>) o por HTTP si está en otra. Dos mensajes importan aquí: <code>tools/list</code>, que devuelve las herramientas con su nombre, su descripción y su esquema de entrada (<code>inputSchema</code>), y <code>tools/call</code>, que ejecuta una y devuelve el contenido y una marca <code>isError</code>. Es el mismo contrato de este capítulo, con otros nombres.</p><p>Para el registro, una herramienta MCP es una más, con tres cuidados:</p><ul><li><b>Nombres sin choques.</b> Dos servidores pueden publicar una herramienta <code>buscar</code>. El registro les antepone el nombre del servidor, por ejemplo <code>crm__buscar</code> y <code>docs__buscar</code>.</li><li><b>El riesgo lo asigna el arnés.</b> MCP permite que el servidor anote sus herramientas con pistas como <code>readOnlyHint</code> o <code>destructiveHint</code>. La especificación misma dice que son <b>pistas</b> y que no hay que confiar en ellas si el servidor no es de confianza. El arnés las usa como sugerencia, y la ficha de riesgo la decide quien administra el registro.</li><li><b>El esquema se valida igual.</b> Que el servidor valide sus argumentos no exime al arnés de validarlos antes de mandarlos.</li></ul><p>MCP a fondo, con sus transportes, recursos y prompts, está en el curso Aplicaciones con IA: https://aaramirez.github.io/aplicaciones-con-ia/temario.html.</p></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Lee el contrato de una herramienta en la especificación de MCP</h3></div><p>Vas a leer la especificación pública de MCP, sin instalar nada. Abre la <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">página de herramientas de la especificación</a>.</p><ol class="steps"><li><span>Busca el ejemplo de respuesta a <code>tools/list</code>. Ubica en él las tres partes que ve el modelo: nombre, descripción y <code>inputSchema</code>.</span></li><li><span>Busca la sección de anotaciones (<i>annotations</i>). Anota las cuatro pistas que define y qué dice la especificación sobre confiar en ellas.</span></li><li><span>Busca cómo se informa un error de ejecución en <code>tools/call</code>. ¿Se parece al <code>esError</code> del curso?</span></li><li><span>Busca <code>outputSchema</code>. ¿Para qué sirve declarar también la forma del resultado?</span></li></ol><p><b>Qué observar:</b> el contrato de MCP coincide casi campo por campo con el de este capítulo, y separa los errores de protocolo (la llamada estaba mal hecha) de los errores de la herramienta (corrió y falló), que vuelven al modelo como resultado. La especificación tiene versiones con fecha; si hay una más nueva, compárala con esta.</p></div></section>
+<section><h2>Límites de tiempo, tamaño del resultado y truncado</h2><div class="prose"><p>Una herramienta puede colgarse esperando a un servicio que no responde, o devolver un archivo de diez megabytes. Las dos cosas rompen al agente: la primera lo deja esperando para siempre y la segunda llena la ventana de contexto en un solo turno. Por eso el contrato trae dos límites y el runtime los hace cumplir.</p><p><b>El tiempo límite</b> (<i>timeout</i>). El runtime corre cada herramienta con un reloj. Si se pasa, cancela la ejecución con la señal de cancelación del capítulo 2 y devuelve un resultado con <code>esError</code>: «tiempo agotado: más de 10 segundos». Para una lectura es suficiente. Para una escritura hay que pensar más, porque cancelar no garantiza que el efecto no haya ocurrido: la base de datos pudo haber guardado el cambio un instante antes. Ese caso lo resuelve la guardia de idempotencia del capítulo 10.</p><p><b>El tamaño del resultado.</b> El runtime mide el resultado antes de devolverlo. Si pasa del límite, lo <b>recorta</b> (<i>truncation</i>) y lo dice. Hay varias formas de recortar, y la elección importa:</p><ul><li><b>Quedarse con el principio.</b> Sirve para listados ordenados, pero pierde el final, que en un registro de errores suele ser lo importante.</li><li><b>Principio y final.</b> Guarda las primeras y las últimas líneas, y en el medio una marca con lo que se omitió. Es la opción por defecto más segura para salidas de comandos.</li><li><b>Guardar todo y devolver una referencia.</b> El resultado completo va a un archivo y el modelo recibe un resumen con la ruta, para leer por partes con otra herramienta.</li></ul><p>En todos los casos, el resultado recortado lleva una <b>nota para el modelo</b>: «[recortado: se omitieron 48.200 caracteres; usa <code>leer_archivo</code> con <code>desde</code> y <code>hasta</code> para ver el resto]». Sin esa nota, el modelo cree que vio todo y saca conclusiones de un texto incompleto.</p></div><div class="caso"><b>Un caso real</b><p>Un caso que se repite en agentes de código: el agente corre las pruebas de un proyecto grande, la salida tiene miles de líneas y el runtime se queda con el principio. Las primeras líneas dicen que todo va bien; el error estaba al final. El agente responde «todas las pruebas pasan». El arreglo fue cambiar la estrategia a principio y final, y agregar la nota de recorte: desde entonces, el modelo pide ver el resto cuando lo necesita.</p></div><div class="prose"><p>Con contrato, validación, paralelismo, registro y límites, el runtime ya merece su nombre. Lo que falta, decidir si una llamada válida <b>se permite</b>, es la pieza de las políticas, en el capítulo 7.</p><p><b>Herramientas con contrato y un registro de capacidades.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Qué partes del contrato de una herramienta ve el modelo y cuáles solo el arnés?</summary><p>El modelo ve el nombre, la descripción y el esquema de entrada. El arnés guarda además los efectos, el riesgo, si es idempotente, los límites de tiempo y tamaño y la función que ejecuta.</p></details><details><summary>El modelo pide <code>crear_reembolso</code> con <code>"monto": 5000</code> y el esquema dice <code>"maximum": 500</code>. ¿Qué hace el runtime?</summary><p>No la ejecuta. Devuelve al modelo un resultado con <code>esError</code> y un mensaje que dice qué campo falló y qué se esperaba, para que corrija o le explique a la persona.</p></details><details><summary>¿Por qué el modo estricto de un proveedor no reemplaza la validación del arnés?</summary><p>Porque suele aceptar solo una parte de JSON Schema, no conoce las reglas del negocio y depende de un proveedor que puede cambiar. El arnés valida siempre.</p></details><details><summary>¿Qué llamadas ejecuta en paralelo el runtime del curso y cuáles en orden?</summary><p>Las de solo lectura, en paralelo. Las que escriben o actúan afuera, de a una y en el orden que las pidió el modelo, después de las lecturas.</p></details><details><summary>¿Qué pasa si el modelo pide una herramienta que existe en el registro pero no está en la lista de su agente?</summary><p>El runtime la rechaza como si no existiera y devuelve el error al modelo. La restricción vive en el registro, no en el prompt.</p></details><details><summary>¿Por qué un resultado recortado debe llevar una nota para el modelo?</summary><p>Porque sin ella el modelo cree que vio todo y puede concluir algo falso con un texto incompleto. La nota le dice cuánto se omitió y cómo ver el resto.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué diferencias hay entre las versiones de JSON Schema (draft-07, 2019-09 y 2020-12) y cuál aceptan los proveedores de modelos?<small>Pista: busca «JSON Schema 2020-12 vs draft-07».</small></li><li>¿Cómo funciona JSON-RPC 2.0 y en qué se diferencia de una API REST?</li><li>¿Qué es la decodificación restringida (<i>constrained decoding</i>) y cómo obliga a un modelo a escribir un JSON válido?<small>Pista: busca «constrained decoding grammar LLM».</small></li><li>¿Qué hace el bucle de eventos (<i>event loop</i>) de JavaScript o de <code>asyncio</code> para que varias llamadas de red avancen «a la vez» en un solo hilo?</li><li>¿Qué métodos de HTTP son idempotentes según su especificación y por qué POST no lo es?<small>Pista: busca «<a href="https://www.rfc-editor.org/rfc/rfc9110" target="_blank" rel="noopener">RFC 9110</a> idempotent methods».</small></li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://www.anthropic.com/engineering/writing-tools-for-agents" target="_blank" rel="noopener">Writing effective tools for agents <small>lectura, en inglés</small></a><a class="vid" href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">Tools, especificación de MCP <small>especificación, en inglés</small></a><a class="vid" href="https://json-schema.org/learn/getting-started-step-by-step" target="_blank" rel="noopener">JSON Schema: getting started <small>tutorial, en inglés</small></a><a class="vid" href="https://platform.openai.com/docs/guides/function-calling" target="_blank" rel="noopener">Function calling (OpenAI) <small>documentación, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const R=[['tipos','Tipos de cada campo (<code>type</code>)'],['req','Campos obligatorios (<code>required</code>)'],['rango','Monto mayor que 0 y hasta 500'],['min','<code>cliente_id</code> desde 1 (<code>minimum</code>)'],['enum','Monedas permitidas (<code>enum</code>)'],['largo','Motivo de hasta 200 caracteres'],['extra','Sin campos extra (<code>additionalProperties</code>)']];
+  $('#c3l1-reglas').innerHTML=R.map(([k,n])=>`<label><input type="checkbox" data-k="${k}" checked> <span>${n}</span></label>`).join('');
+  const largo='El cliente llamó tres veces porque vio dos cobros iguales en su estado de cuenta del mes de octubre y pide que se le devuelva uno de ellos; además comenta que ya había reclamado por el mismo motivo en septiembre, que el asesor de esa vez le prometió una solución y que nunca recibió respuesta por correo ni por teléfono.';
+  const C=[
+    [{cliente_id:4512,monto:19.9,moneda:'USD',motivo:'cobro duplicado'},null],
+    [{cliente_id:'4512',monto:19.9,moneda:'USD'},'tipos'],
+    [{cliente_id:4512,monto:5000,moneda:'USD'},'rango'],
+    [{cliente_id:98,monto:500,moneda:'PEN'},null],
+    [{cliente_id:4512,monto:19.9,moneda:'EUR'},'enum'],
+    [{cliente_id:4512,monto:19.9},'req'],
+    [{cliente_id:4512,monto:19.9,moneda:'PEN',aprobado_por:'gerencia'},'extra'],
+    [{cliente_id:0,monto:-19.9,moneda:'COP'},'min'],
+    [{cliente_id:4512,monto:45,moneda:'COP',motivo:largo},'largo']];
+  function esquema(on){
+    const p={cliente_id:{},monto:{},moneda:{},motivo:{}};
+    if(on.tipos){p.cliente_id.type='integer';p.monto.type='number';p.moneda.type='string';p.motivo.type='string';}
+    if(on.min)p.cliente_id.minimum=1;
+    if(on.rango){p.monto.exclusiveMinimum=0;p.monto.maximum=500;}
+    if(on.enum)p.moneda.enum=['USD','PEN','COP'];
+    if(on.largo)p.motivo.maxLength=200;
+    const e={type:'object',properties:p};
+    if(on.req)e.required=['cliente_id','monto','moneda'];
+    if(on.extra)e.additionalProperties=false;
+    return e;
+  }
+  const tipoDe=v=>Number.isInteger(v)?'integer':typeof v;
+  function validar(e,a){
+    const err=[];
+    for(const k of e.required||[])if(!(k in a))err.push(`falta el campo obligatorio «${k}»`);
+    for(const [k,v] of Object.entries(a)){
+      const s=e.properties[k];
+      if(!s){if(e.additionalProperties===false)err.push(`«${k}» no está permitido`);continue;}
+      if(s.type){const t=tipoDe(v);const okT=s.type==='number'?typeof v==='number':(s.type==='integer'?t==='integer':t===s.type);if(!okT){err.push(`«${k}» debe ser ${({integer:'un entero',number:'un número',string:'un texto'})[s.type]}; llegó ${typeof v==='string'?'un texto':'otro tipo'}`);continue;}}
+      if(typeof v==='number'){
+        if(s.minimum!==undefined&&v<s.minimum)err.push(`«${k}» debe ser al menos ${s.minimum}; llegó ${v}`);
+        if(s.exclusiveMinimum!==undefined&&v<=s.exclusiveMinimum)err.push(`«${k}» debe ser mayor que ${s.exclusiveMinimum}; llegó ${v}`);
+        if(s.maximum!==undefined&&v>s.maximum)err.push(`«${k}» debe ser como máximo ${s.maximum}; llegó ${v}`);}
+      if(s.enum&&!s.enum.includes(v))err.push(`«${k}» debe ser uno de ${s.enum.join(', ')}; llegó «${v}»`);
+      if(typeof v==='string'&&s.maxLength!==undefined&&v.length>s.maxLength)err.push(`«${k}» admite ${s.maxLength} caracteres; llegaron ${v.length}`);
+    }
+    return err;
+  }
+  const mostrar=a=>JSON.stringify(a).replace(JSON.stringify(largo),`"El cliente llamó tres veces…" (${largo.length} caracteres)`);
+  function pintar(){
+    const on={};document.querySelectorAll('#c3l1-reglas input').forEach(i=>on[i.dataset.k]=i.checked);
+    const e=esquema(on);
+    $('#c3l1-pre').textContent=JSON.stringify(e,null,2);
+    let fugas=0,rech=0,malas=0;
+    $('#c3l1-lista').innerHTML=C.map(([a,defecto],i)=>{
+      const err=validar(e,a);if(defecto)malas++;
+      let cls,txt;
+      if(err.length){cls='no';rech++;txt='✖ Rechazada. Vuelve al modelo: «argumentos inválidos: '+err.join('; ')+'»';}
+      else if(defecto){cls='fuga';fugas++;txt='⚠ Pasa la validación y se ejecuta, aunque está mal: '+({tipos:'el id llegó como texto',rango:'un reembolso fuera de rango',enum:'una moneda que el sistema de pagos no maneja',req:'sin moneda, el sistema de pagos elegirá una por defecto',extra:'un campo inventado que la herramienta puede ignorar o, peor, usar',min:'un cliente y un monto imposibles',largo:'un texto que no cabe en el sistema de destino'})[defecto];}
+      else{cls='ok';txt='✔ Válida: se ejecuta.';}
+      return `<li class="${cls}"><span class="c3l1-json">t${i+1} crear_reembolso(${mostrar(a)})</span><span class="c3l1-ver ${cls}">${txt}</span></li>`;}).join('');
+    const tot=Object.values(on).filter(Boolean).length;
+    $('#c3l1-out').innerHTML=fugas?`<span class="warn">${fugas} de ${malas} llamadas defectuosas llegarían a ejecutarse.</span><span>Con ${tot} de 7 reglas activas. Cada regla apagada abre un agujero por donde pasa un tipo de error del modelo.</span>`
+      :`<span class="ok">Las ${malas} llamadas defectuosas se detienen antes de ejecutar.</span><span>Las 2 válidas pasan, incluida la del monto justo en el límite (500). Cada rechazo vuelve al modelo con un mensaje que dice qué corregir.</span>`;
+  }
+  document.querySelectorAll('#c3l1-reglas input').forEach(i=>i.addEventListener('change',pintar));
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const N=['consultar_ventas','buscar_cliente','consultar_inventario'],MOD=2;
+  const f=v=>v.toFixed(1).replace('.',',');
+  function plan(d,lim,esc,dep,paralelo){
+    // devuelve [{i,a,b,corte}] y bloques de modelo
+    const ef=d.map(x=>Math.min(x,lim)),corte=d.map(x=>x>lim);
+    const res=[],mods=[];
+    if(!paralelo){let t=0;
+      [0,1,2].forEach(i=>{if(i===2&&dep){mods.push([t,t+MOD]);t+=MOD;}res.push({i,a:t,b:t+ef[i],c:corte[i]});t+=ef[i];});
+      return {res,mods,total:t};}
+    // paralelo: lecturas juntas; escrituras después, de a una; dependencia: otro turno
+    const turno1=[0,1].concat(dep?[]:[2]);
+    const lect=turno1.filter(i=>!(i===1&&esc)),escr=turno1.filter(i=>i===1&&esc);
+    let fin=0;lect.forEach(i=>{res.push({i,a:0,b:ef[i],c:corte[i]});fin=Math.max(fin,ef[i]);});
+    let t=fin;escr.forEach(i=>{res.push({i,a:t,b:t+ef[i],c:corte[i]});t+=ef[i];});
+    if(dep){mods.push([t,t+MOD]);t+=MOD;res.push({i:2,a:t,b:t+ef[2],c:corte[2]});t+=ef[2];}
+    return {res,mods,total:t};
+  }
+  function pintar(){
+    const d=['a','b','c'].map(k=>+$('#c3l2-'+k).value),lim=+$('#c3l2-l').value,esc=$('#c3l2-esc').checked,dep=$('#c3l2-dep').checked;
+    ['a','b','c'].forEach((k,i)=>$('#c3l2-v'+k).textContent=f(d[i])+' s');$('#c3l2-vl').textContent=f(lim)+' s';
+    const S=plan(d,lim,esc,dep,false),P=plan(d,lim,esc,dep,true);
+    const X0=128,ESC=470/17,X=t=>X0+t*ESC;
+    let s='';
+    const grupo=(p,y0,tit)=>{
+      s+=`<text x="10" y="${y0}" class="b">${tit}</text><text x="612" y="${y0}" text-anchor="end" class="b">${f(p.total)} s</text>`;
+      [0,1,2].forEach(i=>{const y=y0+10+i*30;
+        s+=`<text x="10" y="${y+17}">${N[i].replace('consultar_','consultar_').slice(0,20)}</text>`;
+        p.res.filter(r=>r.i===i).forEach(r=>{const w=(r.b-r.a)*ESC;const col=r.c?'--warm':((i===1&&esc)?'--d-sis':'--c-enl');
+          s+=`<rect x="${X(r.a)}" y="${y+2}" width="${Math.max(w,2)}" height="22" rx="4" style="fill:var(${col}-s,var(--warm-soft));stroke:var(${col});stroke-width:1.5"/>`;
+          if(r.c)s+=`<text x="${X(r.b)-4}" y="${y+17}" text-anchor="end" style="fill:var(--warm);font-weight:700">tiempo agotado</text>`;
+          else if(w>30)s+=`<text x="${X(r.a)+5}" y="${y+17}" class="b">${f(r.b-r.a)}</text>`;});});
+      p.mods.forEach(([a,b])=>{s+=`<rect x="${X(a)}" y="${y0+6}" width="${(b-a)*ESC}" height="${3*30}" rx="4" style="fill:var(--c-tra-s);stroke:var(--c-tra);stroke-dasharray:4 3;opacity:.85"/><text x="${X((a+b)/2)}" y="${y0+56}" text-anchor="middle" style="fill:var(--c-tra);font-weight:700">modelo</text><text x="${X((a+b)/2)}" y="${y0+70}" text-anchor="middle" style="fill:var(--c-tra)">turno 2</text>`;});
+    };
+    grupo(S,16,'En serie');grupo(P,136,'Con las reglas del runtime');
+    s+=`<line x1="${X0}" y1="250" x2="${X(17)}" y2="250" style="stroke:var(--line)"/>`;
+    for(let k=0;k<=16;k+=2)s+=`<text x="${X(k)}" y="265" text-anchor="middle">${k}</text>`;
+    $('#c3l2-svg').innerHTML=s;
+    const ah=S.total-P.total;
+    const notas=[];
+    if(esc)notas.push('<span><b>buscar_cliente</b> escribe: el runtime la saca del grupo paralelo y la corre después de las lecturas, de a una.</span>');
+    if(dep)notas.push('<span>Si <b>consultar_inventario</b> necesita el resultado de <b>consultar_ventas</b>, el modelo no puede pedirla en la misma respuesta: hace falta otro turno del modelo (en violeta), en serie y en paralelo.</span>');
+    const cortes=d.filter(x=>x>lim).length;
+    if(cortes)notas.push(`<span class="warn">${cortes===1?'Una herramienta se pasó':'Se pasaron '+cortes+' herramientas'} del límite de ${f(lim)} s: el runtime la${cortes>1?'s':''} cancela y devuelve un resultado con esError. Las demás siguen.</span>`);
+    $('#c3l2-out').innerHTML=`<span class="big">En serie ${f(S.total)} s · con las reglas del runtime ${f(P.total)} s</span><span>${ah>0.05?'El paralelo ahorra '+f(ah)+' s: el grupo de lecturas dura lo que la más lenta.':'Aquí no hay ahorro: casi todo tiene que ir en orden.'}</span>${notas.join('')}`;
+  }
+  ['a','b','c','l'].forEach(k=>$('#c3l2-'+k).addEventListener('input',pintar));
+  ['esc','dep'].forEach(k=>$('#c3l2-'+k).addEventListener('change',pintar));
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const H={
+    buscar_cliente:['bajo','Busca un cliente por número de documento, teléfono o correo. Devuelve id, nombre y estado.',{q:'string',campo:'string'}],
+    consultar_pedido:['bajo','Consulta el estado de un pedido o de una orden de servicio por su número.',{pedido_id:'string'}],
+    crm__crear_caso:['medio','Crea un caso de atención en el CRM con categoría, prioridad y descripción. Úsala solo después de confirmar los datos con el cliente.',{cliente_id:'integer',categoria:'string',prioridad:'string',descripcion:'string'}],
+    docs__buscar:['bajo','Busca en la documentación interna y devuelve los cinco fragmentos más relevantes con su fuente.',{consulta:'string',limite:'integer'}],
+    consultar_ventas:['bajo','Devuelve el total de ventas de un mes, con desglose opcional por producto o región.',{mes:'string',desglose:'string'}],
+    crear_reembolso:['alto','Reembolsa un cobro a un cliente. Úsala solo si el cobro está confirmado como duplicado o erróneo.',{cliente_id:'integer',monto:'number',moneda:'string',motivo:'string'}],
+    exportar_reporte:['medio','Genera un reporte en hoja de cálculo con los datos indicados y devuelve la ruta del archivo.',{tipo:'string',desde:'string',hasta:'string',formato:'string'}],
+    leer_archivo:['bajo','Lee un archivo de texto del proyecto. Para archivos grandes, usa desde y hasta para leer por partes.',{ruta:'string',desde:'integer',hasta:'integer'}],
+    escribir_archivo:['medio','Escribe o reemplaza un archivo del proyecto con el contenido indicado.',{ruta:'string',contenido:'string'}],
+    ejecutar_pruebas:['medio','Corre las pruebas del proyecto, o solo las que coinciden con un patrón, y devuelve el resumen.',{patron:'string'}],
+    ejecutar_sql:['alto','Ejecuta una consulta SQL contra la base de datos de producción y devuelve las filas.',{consulta:'string'}],
+    enviar_correo:['alto','Envía un correo a uno o varios destinatarios con asunto, cuerpo y adjuntos opcionales.',{para:'string',asunto:'string',cuerpo:'string',adjuntos:'array'}]
+  };
+  const BUSQ=['bajo','Busca herramientas por palabra clave y carga sus definiciones para los turnos siguientes.',{consulta:'string'}];
+  const AG={atencion:['buscar_cliente','consultar_pedido','crm__crear_caso','docs__buscar'],
+    finanzas:['consultar_ventas','crear_reembolso','exportar_reporte','docs__buscar'],
+    codigo:['leer_archivo','escribir_archivo','ejecutar_pruebas','docs__buscar'],
+    todas:Object.keys(H)};
+  const def=(n,[r,d,p])=>JSON.stringify({name:n,description:d,input_schema:{type:'object',properties:Object.fromEntries(Object.entries(p).map(([k,t])=>[k,{type:t,description:'Valor de '+k.replace('_',' ')}])),required:[Object.keys(p)[0]]}});
+  const tok=s=>Math.ceil(s.length/4);
+  const TK=Object.fromEntries(Object.entries(H).map(([n,v])=>[n,tok(def(n,v))]));
+  const TKB=tok(def('buscar_herramientas',BUSQ));
+  const COL={bajo:'--c-enl',medio:'--c-fis',alto:'--d-sis'};
+  let pedida=null;
+  $('#c3l3-chips').innerHTML=Object.entries(H).map(([n,[r]])=>`<button type="button" data-n="${n}"><i style="background:var(${COL[r]})"></i>${n}</button>`).join('');
+  const miles=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  function pintar(){
+    const ag=$('#c3l3-ag').value,turnos=+$('#c3l3-t').value,busq=$('#c3l3-busq').checked;
+    $('#c3l3-vt').textContent=turnos;
+    const vista=AG[ag];
+    document.querySelectorAll('#c3l3-chips button').forEach(b=>{const v=vista.includes(b.dataset.n);b.classList.toggle('vista',v);b.classList.toggle('fuera',!v);b.setAttribute('aria-pressed',String(b.dataset.n===pedida));});
+    const todas=Object.values(TK).reduce((a,b)=>a+b,0);
+    const suyas=vista.reduce((a,n)=>a+TK[n],0);
+    // con búsqueda: la meta-herramienta siempre, y en promedio 2 de sus herramientas cargadas
+    const cargadas=vista.slice(0,2).reduce((a,n)=>a+TK[n],0);
+    const porTurno=busq?TKB+cargadas:suyas;
+    const fil=[['Todo el registro',todas,'--muted'],[busq?'Con búsqueda':'Vista del agente',porTurno,'--accent']];
+    const mx=todas;
+    $('#c3l3-barras').innerHTML=fil.map(([n,v,c])=>`<div class="c3l3-fila"><span>${n}</span><span class="c3l3-pista"><i style="width:${v/mx*100}%;background:var(${c})"></i></span><output>${miles(v)} tk/turno</output></div>`).join('');
+    let msg=`<span class="big">${miles(porTurno*turnos)} tokens de definiciones en ${turnos} turno${turnos>1?'s':''}</span>`;
+    msg+=`<span>${busq?`El modelo ve solo <code>buscar_herramientas</code> (${TKB} tokens) y las definiciones que cargó, aquí dos.`:`El agente ve ${vista.length} de ${Object.keys(H).length} herramientas: ${miles(suyas)} tokens por turno.`} Con todo el registro serían ${miles(todas*turnos)}. Estimación: un token por cada 4 caracteres de la definición en JSON.</span>`;
+    if(ag==='todas')msg+='<span class="warn">Sin registro, el agente de atención también ve ejecutar_sql, crear_reembolso y enviar_correo. Ninguna regla del prompt lo compensa.</span>';
+    if(pedida){const ok=vista.includes(pedida);const r=H[pedida][0];
+      msg+=ok?`<span class="ok">El modelo pide ${pedida}: está en la vista del agente, pasa a validar el esquema y a las políticas (riesgo ${r}).</span>`
+        :`<span class="warn">El modelo pide ${pedida}: no está en la vista de este agente. El runtime responde «no existe la herramienta ${pedida}» como resultado con esError, aunque exista en el registro.</span>`;}
+    $('#c3l3-out').innerHTML=msg;
+  }
+  $('#c3l3-chips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;pedida=b.dataset.n;pintar();});
+  $('#c3l3-ag').addEventListener('change',pintar);$('#c3l3-t').addEventListener('input',pintar);$('#c3l3-busq').addEventListener('change',pintar);
+  pintar();
+})();
+</script>
+</body>
+</html>

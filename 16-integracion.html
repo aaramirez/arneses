@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Integración · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="integracion">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 16 DE 16</span><h1>Un arnés completo, de punta a punta</h1><p class="lede">Quince capítulos construyeron una pieza cada uno. Este las junta: sigue un pedido real desde que entra por el chat hasta que deja su rastro en el libro de auditoría, lo desvía por cada camino de control, y cierra con el orden para construir las piezas, el salto de un arnés personal a uno de empresa y la forma de cambiarlo sin romper a los agentes que ya están trabajando.</p></header>
+<section><h2>El camino feliz: un pedido de la entrada al resultado</h2><div class="prose"><p>El capítulo 1 dibujó un arnés con seis piezas. Quince capítulos después, el arnés tiene más de veinte, cada una con su contrato. Ninguna, por sí sola, demuestra que el conjunto funciona: eso solo se ve siguiendo un pedido real de punta a punta y mirando qué pieza decide en cada momento. Este capítulo no agrega ninguna pieza nueva. Las conecta.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en el recorrido de un paquete en una empresa de envíos. Cada área hace bien su parte: recepción, clasificación, aduana, bodega, reparto. Pero la empresa solo sabe que funciona cuando sigue un paquete concreto de la ventanilla a la puerta del cliente, con el número de seguimiento en cada escaneo, y cuando prueba qué pasa si la dirección está mal, si el camión se descompone o si el destinatario no está. Este capítulo es ese seguimiento.</p></div><div class="prose"><p>Este es el mapa completo, con el capítulo que construyó cada pieza:</p></div><figure class="fig fig-arquitectura" id="16-diagrama-1"><div class="lienzo"><svg viewBox="0 0 900 560" style="min-width:740px" role="img" aria-label="El arnés completo con el capítulo de cada pieza. Arriba, la entrada: chat seguro y API, identidad del llamante y control de admisión. A la izquierda, el núcleo: bucle, sesión durable y eventos, motor de contexto, memoria y habilidades, plan y ejecutor, orquestador y subagentes. A la derecha, la puerta a los modelos hacia el modelo, fuera del arnés, y el camino de cada acción: registro de capacidades y validadores, políticas, humano en el bucle, credenciales, idempotencia y entorno aislado antes de las herramientas que tocan el mundo. Abajo, lo que atraviesa todo: eventos y trazas, libro de auditoría, gobierno de datos, control operativo y banco de evaluación.">
+  <defs>
+    <marker id="d161-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+    <marker id="d161-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d161-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+  </defs>
+  <rect x="20" y="14" width="680" height="532" rx="14" class="caja" style="stroke-dasharray:6 5;stroke-width:1.6"/>
+  <text x="686" y="34" class="t t-xs t-b t-m" text-anchor="end">EL ARNÉS</text>
+
+  
+  <text x="36" y="34" class="t t-xs t-b t-m">ENTRADA</text>
+  <rect x="36" y="42" width="152" height="46" rx="8" class="caja"/><text x="48" y="62" class="t t-s t-b">Chat seguro y BFF</text><text x="48" y="78" class="t t-s t-m">capítulo 16</text>
+  <rect x="196" y="42" width="140" height="46" rx="8" class="caja"/><text x="208" y="62" class="t t-s t-b">API del arnés</text><text x="208" y="78" class="t t-s t-m">capítulo 16</text>
+  <rect x="344" y="42" width="164" height="46" rx="8" class="d-sis"/><text x="356" y="62" class="t t-s t-b k-sis">Identidad del llamante</text><text x="356" y="78" class="t t-s">capítulo 7</text>
+  <rect x="516" y="42" width="168" height="46" rx="8" class="d-sis"/><text x="528" y="62" class="t t-s t-b k-sis">Control de admisión</text><text x="528" y="78" class="t t-s">capítulo 7</text>
+
+  
+  <text x="36" y="114" class="t t-xs t-b t-m">NÚCLEO</text>
+  <rect x="36" y="122" width="290" height="46" rx="8" class="c-red" style="stroke-width:2.2"/><text x="48" y="142" class="t t-s t-b k-red">Bucle con límites explícitos</text><text x="48" y="158" class="t t-s">capítulo 2</text>
+  <rect x="36" y="176" width="290" height="46" rx="8" class="c-red"/><text x="48" y="196" class="t t-s t-b k-red">Sesión durable y bus de eventos</text><text x="48" y="212" class="t t-s">capítulo 6</text>
+  <rect x="36" y="230" width="290" height="46" rx="8" class="c-fis"/><text x="48" y="250" class="t t-s t-b k-fis">Motor de contexto y compactación</text><text x="48" y="266" class="t t-s">capítulo 5</text>
+  <rect x="36" y="284" width="290" height="46" rx="8" class="c-fis"/><text x="48" y="304" class="t t-s t-b k-fis">Memoria y habilidades</text><text x="48" y="320" class="t t-s">capítulo 14</text>
+  <rect x="36" y="338" width="141" height="46" rx="8" class="d-casa"/><text x="46" y="358" class="t t-s t-b k-casa">Plan y ejecutor</text><text x="46" y="374" class="t t-s">capítulo 12</text>
+  <rect x="185" y="338" width="141" height="46" rx="8" class="d-casa"/><text x="195" y="358" class="t t-s t-b k-casa">Subagentes</text><text x="195" y="374" class="t t-s">capítulo 13</text>
+
+  
+  <text x="350" y="114" class="t t-xs t-b t-m">CADA LLAMADA AL MODELO Y CADA ACCIÓN</text>
+  <rect x="350" y="122" width="334" height="46" rx="8" class="c-tra"/><text x="362" y="142" class="t t-s t-b k-tra">Puerta a los modelos</text><text x="362" y="158" class="t t-s">capítulo 4 · costo, caché, respaldo</text>
+  <rect x="350" y="176" width="334" height="46" rx="8" class="d-sis"/><text x="362" y="196" class="t t-s t-b k-sis">Registro de capacidades y validadores</text><text x="362" y="212" class="t t-s">capítulos 3 y 8 · contrato, esquema, efecto</text>
+  <rect x="350" y="230" width="164" height="46" rx="8" class="d-sis"/><text x="362" y="250" class="t t-s t-b k-sis">Políticas</text><text x="362" y="266" class="t t-s">capítulo 7</text>
+  <rect x="520" y="230" width="164" height="46" rx="8" class="d-casa"/><text x="532" y="250" class="t t-s t-b k-casa">Humano en el bucle</text><text x="532" y="266" class="t t-s">capítulo 9</text>
+  <rect x="350" y="284" width="164" height="46" rx="8" class="d-sis"/><text x="362" y="304" class="t t-s t-b k-sis">Credenciales</text><text x="362" y="320" class="t t-s">capítulo 10</text>
+  <rect x="520" y="284" width="164" height="46" rx="8" class="d-sis"/><text x="532" y="304" class="t t-s t-b k-sis">Idempotencia</text><text x="532" y="320" class="t t-s">capítulo 10</text>
+  <rect x="350" y="338" width="334" height="46" rx="8" class="c-enl"/><text x="362" y="358" class="t t-s t-b k-enl">Herramientas en un entorno aislado</text><text x="362" y="374" class="t t-s">capítulos 3 y 10</text>
+
+  
+  <text x="36" y="420" class="t t-xs t-b t-m">ATRAVIESA TODO</text>
+  <rect x="36" y="428" width="124" height="56" rx="8" class="d-inet"/><text x="46" y="450" class="t t-s t-b k-inet">Eventos y</text><text x="46" y="465" class="t t-s t-b k-inet">trazas</text><text x="46" y="479" class="t t-s">cap. 6 y 11</text>
+  <rect x="168" y="428" width="124" height="56" rx="8" class="d-inet"/><text x="178" y="450" class="t t-s t-b k-inet">Libro de</text><text x="178" y="465" class="t t-s t-b k-inet">auditoría</text><text x="178" y="479" class="t t-s">capítulo 11</text>
+  <rect x="300" y="428" width="124" height="56" rx="8" class="d-inet"/><text x="310" y="450" class="t t-s t-b k-inet">Gobierno</text><text x="310" y="465" class="t t-s t-b k-inet">de datos</text><text x="310" y="479" class="t t-s">capítulo 11</text>
+  <rect x="432" y="428" width="124" height="56" rx="8" class="d-inet"/><text x="442" y="450" class="t t-s t-b k-inet">Control</text><text x="442" y="465" class="t t-s t-b k-inet">operativo</text><text x="442" y="479" class="t t-s">capítulo 10</text>
+  <rect x="564" y="428" width="120" height="56" rx="8" class="c-fis"/><text x="574" y="450" class="t t-s t-b k-fis">Banco de</text><text x="574" y="465" class="t t-s t-b k-fis">evaluación</text><text x="574" y="479" class="t t-s">capítulo 15</text>
+  <text x="36" y="510" class="t t-s t-m">cada pieza publica eventos y escribe en el libro; el banco mide cada cambio de cualquier pieza</text>
+
+  
+  <rect x="730" y="118" width="150" height="56" rx="10" class="c-tra"/>
+  <text x="805" y="142" class="t t-b k-tra" text-anchor="middle">Modelo</text><text x="805" y="160" class="t t-s" text-anchor="middle">propone</text>
+  <line x1="684" y1="145" x2="726" y2="145" class="ln s-tra" style="stroke-width:2" marker-end="url(#d161-t)"/>
+  <text x="805" y="306" class="t t-xs t-b t-m" text-anchor="middle">EL MUNDO</text>
+  <rect x="730" y="316" width="150" height="30" rx="8" class="caja"/><text x="805" y="336" class="t t-s" text-anchor="middle">cobros y CRM</text>
+  <rect x="730" y="352" width="150" height="30" rx="8" class="caja"/><text x="805" y="372" class="t t-s" text-anchor="middle">correo y archivos</text>
+  <line x1="684" y1="361" x2="726" y2="361" class="ln s-enl" style="stroke-width:2" marker-end="url(#d161-e)"/>
+  <rect x="730" y="42" width="150" height="46" rx="10" class="caja"/><text x="805" y="62" class="t t-s t-b" text-anchor="middle">Quien pide</text><text x="805" y="78" class="t t-s t-m" text-anchor="middle">persona, API o evento</text>
+  <line x1="730" y1="65" x2="690" y2="65" class="ln" style="stroke-width:1.6" marker-end="url(#d161-m)"/>
+  
+  <line x1="326" y1="145" x2="346" y2="145" class="ln" style="stroke-width:1.6" marker-end="url(#d161-m)"/>
+  <line x1="181" y1="88" x2="181" y2="118" class="ln" style="stroke-width:1.6" marker-end="url(#d161-m)"/>
+</svg></div><figcaption><b>El arnés completo, pieza por pieza.</b> Arriba, la entrada: el chat seguro y la API, con la identidad verificada y el control de admisión. En el centro, el núcleo: el bucle con su sesión durable, el motor de contexto con la memoria y las habilidades, y la puerta a los modelos que lleva al modelo, fuera del arnés. A la derecha, el camino de cada acción: validadores, políticas, humano en el bucle, credenciales, idempotencia y entorno aislado antes de tocar el mundo. Abajo, lo que atraviesa todo: eventos, libro de auditoría, gobierno de datos, control operativo y el banco de evaluación. Cada recuadro lleva el número de su capítulo.</figcaption></figure><div class="prose"><p>El pedido es el que acompañó al curso: Ana, de atención al cliente, escribe en el chat interno «la cliente 4512 tiene un cobro duplicado de US$ 25 en octubre; reembólsaselo». Síguelo en orden:</p><ol class="steps"><li><span><b>Entrada.</b> El chat envía el pedido a la API del arnés con la sesión de Ana. El arnés verifica su identidad con el proveedor de identidad de la empresa y crea una ejecución con una clave de idempotencia, para que un doble clic no cree dos tareas.</span></li><li><span><b>Admisión</b> (capítulo 7). El control de admisión acepta la tarea: Ana tiene rol de atención, el agente es el de atención, el presupuesto es de US$ 0,50 y 12 turnos.</span></li><li><span><b>Sesión</b> (capítulo 6). Se abre la ejecución con un punto de control inicial; desde aquí, cada paso queda guardado.</span></li><li><span><b>Contexto</b> (capítulos 5 y 14). El motor arma el turno: instrucciones, las herramientas que el registro de capacidades permite a este agente (capítulo 3), la preferencia de Ana por las tablas que guardó la memoria, y los metadatos de las habilidades instaladas.</span></li><li><span><b>Modelo</b> (capítulo 4). La puerta a los modelos llama al modelo configurado, cuenta tokens y costo, y tiene un respaldo listo. El modelo ve la descripción de la habilidad de reembolsos, la carga y propone <code>consultar_cobros({cliente: "4512"})</code>.</span></li><li><span><b>Validadores y políticas</b> (capítulos 8 y 7). El esquema es válido; la política dice que leer cobros con el rol de atención se permite.</span></li><li><span><b>Credencial</b> (capítulo 10). El intermediario emite una credencial de solo lectura, de minutos, a nombre de Ana. El modelo nunca la ve.</span></li><li><span><b>Herramienta.</b> El sistema de cobros devuelve dos cargos de US$ 25 del 3 de octubre. El resultado llega con su etiqueta de gobierno, «confidencial» (capítulo 11).</span></li><li><span><b>Segunda propuesta.</b> El modelo propone <code>reembolsar({cliente: "4512", monto: 25.00})</code>. La política: un reembolso de hasta US$ 100 con el rol de atención se permite.</span></li><li><span><b>Idempotencia</b> (capítulo 10). La guardia calcula la clave de la acción, la anota «en curso», la herramienta reembolsa y la guardia la marca «completada».</span></li><li><span><b>Validación posterior</b> (capítulo 8). Un validador consulta el sistema: el reembolso existe, es uno y es por US$ 25.</span></li><li><span><b>Respuesta.</b> El modelo responde a Ana con una tabla y el número de reembolso; el validador de respuesta comprueba que no trae datos de otras cuentas, y la respuesta sale por el canal en eventos.</span></li><li><span><b>Registro</b> (capítulo 11). El libro de auditoría tiene la admisión, dos decisiones de política, una credencial y un efecto, encadenados con hashes y con las versiones de cada pieza.</span></li></ol></div><figure class="fig fig-flujo" id="16-diagrama-2"><div class="lienzo"><svg viewBox="0 0 912 630" style="min-width:760px" role="img" aria-label="Diagrama de secuencia del camino feliz: el pedido de Ana entra por la API, se admite, el contexto se arma, el modelo propone consultar cobros, validadores y políticas lo permiten, el intermediario emite una credencial y el sistema de cobros responde; el modelo propone reembolsar 25 dólares, se permite, la guardia de idempotencia anota la clave, se hace el reembolso, se verifica y la respuesta validada vuelve a Ana. A la derecha, las fases y las entradas del libro de auditoría.">
+  <defs>
+    <marker id="d162-casa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--d-casa)"/></marker>
+    <marker id="d162-sis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--d-sis)"/></marker>
+    <marker id="d162-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--c-red)"/></marker>
+    <marker id="d162-fis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--c-fis)"/></marker>
+    <marker id="d162-tra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--c-tra)"/></marker>
+    <marker id="d162-enl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--c-enl)"/></marker>
+  </defs>
+  <rect x="4" y="12" width="100" height="48" rx="10" class="caja"/><text x="56" y="32" text-anchor="middle" class="t t-s t-b ">API y BFF</text><text x="56" y="49" text-anchor="middle" class="t t-xs">Ana, atención</text>
+  <line x1="56" y1="60" x2="56" y2="616" class="vida"/>
+  <rect x="108" y="12" width="100" height="48" rx="10" class="d-sis"/><text x="160" y="32" text-anchor="middle" class="t t-s t-b k-sis">Admisión</text><text x="160" y="49" text-anchor="middle" class="t t-xs">control</text>
+  <line x1="160" y1="60" x2="160" y2="616" class="vida"/>
+  <rect x="212" y="12" width="100" height="48" rx="10" class="c-red"/><text x="264" y="32" text-anchor="middle" class="t t-s t-b k-red">Bucle</text><text x="264" y="49" text-anchor="middle" class="t t-xs">y sesión</text>
+  <line x1="264" y1="60" x2="264" y2="616" class="vida"/>
+  <rect x="316" y="12" width="100" height="48" rx="10" class="c-fis"/><text x="368" y="32" text-anchor="middle" class="t t-s t-b k-fis">Contexto</text><text x="368" y="49" text-anchor="middle" class="t t-xs">y memoria</text>
+  <line x1="368" y1="60" x2="368" y2="616" class="vida"/>
+  <rect x="420" y="12" width="100" height="48" rx="10" class="c-tra"/><text x="472" y="32" text-anchor="middle" class="t t-s t-b k-tra">Modelo</text><text x="472" y="49" text-anchor="middle" class="t t-xs">por la puerta</text>
+  <line x1="472" y1="60" x2="472" y2="616" class="vida"/>
+  <rect x="524" y="12" width="100" height="48" rx="10" class="d-sis"/><text x="576" y="32" text-anchor="middle" class="t t-s t-b k-sis">Validadores</text><text x="576" y="49" text-anchor="middle" class="t t-xs">y políticas</text>
+  <line x1="576" y1="60" x2="576" y2="616" class="vida"/>
+  <rect x="628" y="12" width="100" height="48" rx="10" class="d-sis"/><text x="680" y="32" text-anchor="middle" class="t t-s t-b k-sis">Credenciales</text><text x="680" y="49" text-anchor="middle" class="t t-xs">e idempotencia</text>
+  <line x1="680" y1="60" x2="680" y2="616" class="vida"/>
+  <rect x="732" y="12" width="100" height="48" rx="10" class="c-enl"/><text x="784" y="32" text-anchor="middle" class="t t-s t-b k-enl">Cobros</text><text x="784" y="49" text-anchor="middle" class="t t-xs">sistema real</text>
+  <line x1="784" y1="60" x2="784" y2="616" class="vida"/>
+  <line x1="56" y1="90" x2="157" y2="90" class="ln" style="stroke:var(--d-casa);stroke-width:2" marker-end="url(#d162-casa)"/>
+  <text x="62" y="84" class="t t-s">① pedido + identidad</text>
+  <line x1="160" y1="120" x2="261" y2="120" class="ln" style="stroke:var(--d-sis);stroke-width:2" marker-end="url(#d162-sis)"/>
+  <text x="166" y="114" class="t t-s">② admitida: US$ 0,50 · 12 turnos</text>
+  <line x1="264" y1="150" x2="365" y2="150" class="ln" style="stroke:var(--c-red);stroke-width:2" marker-end="url(#d162-red)"/>
+  <text x="270" y="144" class="t t-s">③ armar el turno 1</text>
+  <line x1="368" y1="180" x2="267" y2="180" class="ln" style="stroke:var(--c-fis);stroke-width:2" marker-end="url(#d162-fis)"/>
+  <text x="362" y="174" class="t t-s" text-anchor="end">④ instrucciones, herramientas, memoria</text>
+  <line x1="264" y1="210" x2="469" y2="210" class="ln" style="stroke:var(--c-red);stroke-width:2" marker-end="url(#d162-red)"/>
+  <text x="270" y="204" class="t t-s">⑤ contexto</text>
+  <line x1="472" y1="240" x2="267" y2="240" class="ln" style="stroke:var(--c-tra);stroke-width:2" marker-end="url(#d162-tra)"/>
+  <text x="466" y="234" class="t t-s" text-anchor="end">⑥ consultar_cobros(4512)</text>
+  <line x1="264" y1="270" x2="573" y2="270" class="ln" style="stroke:var(--c-red);stroke-width:2" marker-end="url(#d162-red)"/>
+  <text x="270" y="264" class="t t-s">⑦ esquema ok · permitir</text>
+  <line x1="576" y1="300" x2="677" y2="300" class="ln" style="stroke:var(--d-sis);stroke-width:2" marker-end="url(#d162-sis)"/>
+  <text x="582" y="294" class="t t-s">⑧ credencial de lectura</text>
+  <line x1="680" y1="330" x2="781" y2="330" class="ln" style="stroke:var(--d-sis);stroke-width:2" marker-end="url(#d162-sis)"/>
+  <text x="686" y="324" class="t t-s">⑨ consulta</text>
+  <line x1="784" y1="360" x2="267" y2="360" class="ln" style="stroke:var(--c-enl);stroke-width:2" marker-end="url(#d162-enl)"/>
+  <text x="778" y="354" class="t t-s" text-anchor="end">⑩ 2 cargos de US$ 25 · confidencial</text>
+  <line x1="264" y1="390" x2="469" y2="390" class="ln" style="stroke:var(--c-red);stroke-width:2" marker-end="url(#d162-red)"/>
+  <text x="270" y="384" class="t t-s">⑪ resultado</text>
+  <line x1="472" y1="420" x2="267" y2="420" class="ln" style="stroke:var(--c-tra);stroke-width:2" marker-end="url(#d162-tra)"/>
+  <text x="466" y="414" class="t t-s" text-anchor="end">⑫ reembolsar(4512, 25,00)</text>
+  <line x1="264" y1="450" x2="573" y2="450" class="ln" style="stroke:var(--c-red);stroke-width:2" marker-end="url(#d162-red)"/>
+  <text x="270" y="444" class="t t-s">⑬ ≤ US$ 100 · permitir</text>
+  <line x1="576" y1="480" x2="677" y2="480" class="ln" style="stroke:var(--d-sis);stroke-width:2" marker-end="url(#d162-sis)"/>
+  <text x="582" y="474" class="t t-s">⑭ clave nueva: «en curso»</text>
+  <line x1="680" y1="510" x2="781" y2="510" class="ln" style="stroke:var(--d-sis);stroke-width:2" marker-end="url(#d162-sis)"/>
+  <text x="686" y="504" class="t t-s">⑮ reembolso + clave</text>
+  <line x1="784" y1="540" x2="267" y2="540" class="ln" style="stroke:var(--c-enl);stroke-width:2" marker-end="url(#d162-enl)"/>
+  <text x="778" y="534" class="t t-s" text-anchor="end">⑯ reembolso #1 · verificado</text>
+  <line x1="264" y1="570" x2="59" y2="570" class="ln" style="stroke:var(--c-red);stroke-width:2" marker-end="url(#d162-red)"/>
+  <text x="258" y="564" class="t t-s" text-anchor="end">⑰ respuesta validada, en tabla</text>
+  <rect x="806" y="72" width="100" height="56" rx="8" class="d-inet"/>
+  <text x="814" y="87" class="t t-xs t-b k-inet">ADMISIÓN</text>
+  <text x="814" y="103" class="t t-xs">admisión</text>
+  <rect x="806" y="132" width="100" height="266" rx="8" class="d-inet"/>
+  <text x="814" y="147" class="t t-xs t-b k-inet">TURNO 1</text>
+  <text x="814" y="163" class="t t-xs">política: sí</text>
+  <text x="814" y="177" class="t t-xs">credencial</text>
+  <text x="814" y="191" class="t t-xs">efecto: consulta</text>
+  <rect x="806" y="402" width="100" height="146" rx="8" class="d-inet"/>
+  <text x="814" y="417" class="t t-xs t-b k-inet">TURNO 2</text>
+  <text x="814" y="433" class="t t-xs">política: sí</text>
+  <text x="814" y="447" class="t t-xs">idempotencia</text>
+  <text x="814" y="461" class="t t-xs">efecto: reembolso</text>
+  <rect x="806" y="552" width="100" height="26" rx="8" class="d-inet"/>
+  <text x="814" y="567" class="t t-xs t-b k-inet">RESPUESTA</text>
+</svg></div><figcaption><b>El flujo del camino feliz.</b> Ocho participantes arriba y el tiempo hacia abajo. Las flechas numeradas siguen el pedido de Ana: entra por la API, se admite, el contexto se arma, el modelo propone dos acciones y cada una pasa por validadores y políticas antes de usar una credencial y tocar el sistema de cobros; el reembolso pasa además por la guardia de idempotencia. A la derecha, en cada fase, las entradas que deja en el libro de auditoría.</figcaption></figure><div class="prose"><p>Fíjate en cuántas veces decidió el modelo: dos, al proponer cada acción, y una tercera al redactar. Todo lo demás lo decidió el arnés con reglas fijas. Es la frase del capítulo 1 hecha recorrido.</p></div></section>
+<section><h2>Los caminos de control: denegado, aprobación, falla y reanudación</h2><div class="prose"><p>El camino feliz es el que menos enseña. Las piezas de gobierno existen para los otros caminos, los que se desvían del feliz en algún punto y tienen que terminar de forma segura y explicable. Hay cinco que todo arnés debe recorrer bien:</p><ul><li><b>Denegado.</b> Ana pide «manda el historial de pagos de la 4512 a contabilidad@externo-ejemplo.com». El modelo propone <code>enviar_correo</code>. La política y el gobierno de datos lo deniegan: datos confidenciales a un dominio externo. La denegación vuelve al modelo como un resultado con error (capítulo 2), el modelo le explica a Ana por qué no y le ofrece la alternativa interna. Nadie tuvo que confiar en que el modelo «se portara bien».</li><li><b>Aprobación.</b> El cobro duplicado es de US$ 300. La política pide aprobación; el servicio de interacción humana crea una solicitud con su tarjeta y su plazo para la supervisora (capítulo 9), y la ejecución queda en una <b>espera durable</b>: el proceso se libera y nada queda en memoria (capítulo 6). Si aprueba, la tarea sigue desde el punto de control; si rechaza, el motivo vuelve al modelo; si vence, se aplica lo que diga la solicitud, por ejemplo denegar y avisar.</li><li><b>Falla.</b> El proveedor del modelo responde con errores de límite de tasa: la puerta pasa al respaldo (capítulo 4). Después, la llamada de reembolso vence por tiempo justo cuando la pasarela ya había reembolsado: el reintento lleva la misma clave de idempotencia y la pasarela devuelve el reembolso original. Un solo efecto.</li><li><b>Reanudación.</b> El proceso se cae entre la consulta y el reembolso. Otro proceso toma la ejecución desde el último punto de control: la consulta ya estaba en el diario de pasos y no se repite, y el reembolso pasa por la guardia como siempre.</li><li><b>Apagado.</b> Operación detecta un problema en el sistema de cobros y apaga la herramienta <code>reembolsar</code> en todos los agentes (capítulo 10). Antes de ejecutar, el bucle consulta las directivas, encuentra el interruptor y pausa la ejecución con su estado guardado. Ana recibe un aviso; cuando se enciende de nuevo, la tarea sigue.</li></ul></div><figure class="fig fig-esquema" id="16-diagrama-3"><div class="lienzo"><svg viewBox="0 0 980 470" style="min-width:740px" role="img" aria-label="El camino feliz como una línea con ocho estaciones, de la entrada al registro, y cinco desvíos debajo: denegado, aprobación, falla, reanudación y apagado. Cada desvío dice desde qué pieza sale, sus pasos y el estado explícito en que termina: respondida con motivo, completada o denegada, un solo efecto, completada sin repetir y pausada. Todos escriben en el libro de auditoría.">
+  <defs><marker id="d163-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker></defs>
+  <text x="20" y="24" class="t t-xs t-b t-m">EL CAMINO FELIZ</text>
+  <line x1="60" y1="62" x2="928" y2="62" class="ln s-enl" style="stroke-width:5"/>
+  <circle cx="60" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="60" y="90" class="t t-s t-b" text-anchor="middle">Entrada</text>
+  <circle cx="184" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="184" y="90" class="t t-s t-b" text-anchor="middle">Admisión</text>
+  <circle cx="308" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="308" y="90" class="t t-s t-b" text-anchor="middle">Contexto</text>
+  <circle cx="432" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="432" y="90" class="t t-s t-b" text-anchor="middle">Modelo</text>
+  <circle cx="556" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="556" y="90" class="t t-s t-b" text-anchor="middle">Políticas</text>
+  <circle cx="680" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="680" y="90" class="t t-s t-b" text-anchor="middle">Credencial</text>
+  <circle cx="804" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="804" y="90" class="t t-s t-b" text-anchor="middle">Herramienta</text>
+  <circle cx="928" cy="62" r="9" class="c-enl" style="stroke-width:2"/><text x="928" y="90" class="t t-s t-b" text-anchor="middle">Respuesta</text>
+  <text x="20" y="136" class="t t-s t-b k-sis">DENEGADO</text><text x="20" y="152" class="t t-xs t-m">desde: políticas</text>
+  <rect x="190" y="116" width="180" height="48" rx="8" class="d-sis"/><text x="200" y="136" class="t t-s">la política y el gobierno</text><text x="200" y="152" class="t t-s">de datos deniegan</text>
+  <line x1="370" y1="140" x2="386" y2="140" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="390" y="116" width="180" height="48" rx="8" class="d-sis"/><text x="400" y="136" class="t t-s">el error vuelve al</text><text x="400" y="152" class="t t-s">modelo como dato</text>
+  <line x1="570" y1="140" x2="586" y2="140" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="590" y="116" width="180" height="48" rx="8" class="d-sis"/><text x="600" y="136" class="t t-s">el modelo explica y</text><text x="600" y="152" class="t t-s">ofrece una alternativa</text>
+  <line x1="770" y1="140" x2="786" y2="140" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="790" y="122" width="176" height="36" rx="18" class="caja" style="stroke-width:2"/><text x="878" y="145" class="t t-s t-b" text-anchor="middle">respondida con motivo</text>
+  <text x="20" y="198" class="t t-s t-b k-casa">APROBACIÓN</text><text x="20" y="214" class="t t-xs t-m">desde: políticas</text>
+  <rect x="190" y="178" width="180" height="48" rx="8" class="d-casa"/><text x="200" y="198" class="t t-s">solicitud a la supervisora</text><text x="200" y="214" class="t t-s">con tarjeta y plazo</text>
+  <line x1="370" y1="202" x2="386" y2="202" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="390" y="178" width="180" height="48" rx="8" class="d-casa"/><text x="400" y="198" class="t t-s">espera durable:</text><text x="400" y="214" class="t t-s">el proceso se libera</text>
+  <line x1="570" y1="202" x2="586" y2="202" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="590" y="178" width="180" height="48" rx="8" class="d-casa"/><text x="600" y="198" class="t t-s">aprueba: sigue · rechaza:</text><text x="600" y="214" class="t t-s">motivo · vence: deniega</text>
+  <line x1="770" y1="202" x2="786" y2="202" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="790" y="184" width="176" height="36" rx="18" class="caja" style="stroke-width:2"/><text x="878" y="207" class="t t-s t-b" text-anchor="middle">completada o denegada</text>
+  <text x="20" y="260" class="t t-s t-b k-tra">FALLA</text><text x="20" y="276" class="t t-xs t-m">desde: la puerta</text><text x="20" y="289" class="t t-xs t-m">y la herramienta</text>
+  <rect x="190" y="240" width="180" height="48" rx="8" class="c-tra"/><text x="200" y="260" class="t t-s">proveedor con errores:</text><text x="200" y="276" class="t t-s">la puerta usa el respaldo</text>
+  <line x1="370" y1="264" x2="386" y2="264" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="390" y="240" width="180" height="48" rx="8" class="c-tra"/><text x="400" y="260" class="t t-s">el reembolso vence por</text><text x="400" y="276" class="t t-s">tiempo tras el efecto</text>
+  <line x1="570" y1="264" x2="586" y2="264" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="590" y="240" width="180" height="48" rx="8" class="c-tra"/><text x="600" y="260" class="t t-s">reintento con la misma</text><text x="600" y="276" class="t t-s">clave de idempotencia</text>
+  <line x1="770" y1="264" x2="786" y2="264" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="790" y="246" width="176" height="36" rx="18" class="caja" style="stroke-width:2"/><text x="878" y="269" class="t t-s t-b" text-anchor="middle">un solo efecto</text>
+  <text x="20" y="322" class="t t-s t-b k-red">REANUDACIÓN</text><text x="20" y="338" class="t t-xs t-m">desde: cualquier paso</text>
+  <rect x="190" y="302" width="180" height="48" rx="8" class="c-red"/><text x="200" y="322" class="t t-s">el proceso se cae</text><text x="200" y="338" class="t t-s">entre dos pasos</text>
+  <line x1="370" y1="326" x2="386" y2="326" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="390" y="302" width="180" height="48" rx="8" class="c-red"/><text x="400" y="322" class="t t-s">otro proceso toma el</text><text x="400" y="338" class="t t-s">último punto de control</text>
+  <line x1="570" y1="326" x2="586" y2="326" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="590" y="302" width="180" height="48" rx="8" class="c-red"/><text x="600" y="322" class="t t-s">lo hecho no se repite;</text><text x="600" y="338" class="t t-s">el resto sigue</text>
+  <line x1="770" y1="326" x2="786" y2="326" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="790" y="308" width="176" height="36" rx="18" class="caja" style="stroke-width:2"/><text x="878" y="331" class="t t-s t-b" text-anchor="middle">completada sin repetir</text>
+  <text x="20" y="384" class="t t-s t-b k-inet">APAGADO</text><text x="20" y="400" class="t t-xs t-m">desde: control</text>
+  <rect x="190" y="364" width="180" height="48" rx="8" class="d-inet"/><text x="200" y="384" class="t t-s">operación apaga</text><text x="200" y="400" class="t t-s">«reembolsar»</text>
+  <line x1="370" y1="388" x2="386" y2="388" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="390" y="364" width="180" height="48" rx="8" class="d-inet"/><text x="400" y="384" class="t t-s">el bucle consulta las</text><text x="400" y="400" class="t t-s">directivas antes de actuar</text>
+  <line x1="570" y1="388" x2="586" y2="388" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="590" y="364" width="180" height="48" rx="8" class="d-inet"/><text x="600" y="384" class="t t-s">pausa con el estado</text><text x="600" y="400" class="t t-s">guardado y avisa a Ana</text>
+  <line x1="770" y1="388" x2="786" y2="388" class="ln" style="stroke-width:1.6" marker-end="url(#d163-m)"/>
+  <rect x="790" y="370" width="176" height="36" rx="18" class="caja" style="stroke-width:2"/><text x="878" y="393" class="t t-s t-b" text-anchor="middle">pausada y reanudada</text>
+  <line x1="20" y1="430" x2="966" y2="430" class="ln ln-d"/>
+  <text x="20" y="450" class="t t-s t-m">todos los caminos escriben en el libro de auditoría: qué pasó, quién decidió y con qué regla</text>
+</svg></div><figcaption><b>El camino feliz y sus cinco desvíos.</b> La línea gruesa del centro es el camino feliz, de la entrada al registro. De cada punto donde una pieza puede decir que no, sale un desvío: denegado en las políticas, aprobación en el humano, falla en la puerta y en la herramienta, reanudación en la sesión y apagado en el control operativo. Cada desvío termina en un estado explícito (respondida con motivo, en espera, completada sin doble efecto, pausada) y todos escriben en el libro de auditoría.</figcaption></figure><div class="prose"><p>Los cinco tienen algo en común: <b>ninguno termina en un estado ambiguo</b>. La tarea queda completada, denegada con motivo, esperando a alguien con plazo, o pausada con su estado guardado. Y en todos, el libro de auditoría puede contar qué pasó y por qué. Esa es la diferencia entre un agente que funciona y uno gobernable.</p><p>Recorre los caminos tú mismo, pieza por pieza.</p></div><div class="lab" id="16-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El recorrido completo: sigue un pedido por cada pieza y desvíalo por cada camino de control</h3></div><p class="hint">Elige un camino y avanza con «Siguiente». En el mapa se enciende la pieza que decide en cada paso, y abajo se acumula lo que queda en el libro de auditoría. En el camino de aprobación, elige qué responde la supervisora. Compara cuántas piezas recorre cada camino y en cuál decide el modelo.</p><style>
+[id="16-lab-1"] .c16l1-mapa{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:620px){[id="16-lab-1"] .c16l1-mapa{grid-template-columns:repeat(3,minmax(0,1fr))}}
+[id="16-lab-1"] .c16l1-n{border:1.5px solid var(--line);border-radius:8px;padding:6px 7px;background:var(--card);font:700 .76rem/1.2 var(--f-display);color:var(--muted);transition:background .2s,border-color .2s;min-height:44px}
+[id="16-lab-1"] .c16l1-n small{display:block;font:500 .68rem var(--f-mono);margin-top:2px}
+[id="16-lab-1"] .c16l1-n.ya{color:var(--ink);border-style:dashed}
+[id="16-lab-1"] .c16l1-n.on{color:var(--ink);border-width:2.5px;box-shadow:0 0 0 2px var(--accent-soft)}
+@media (prefers-reduced-motion:reduce){[id="16-lab-1"] .c16l1-n{transition:none}}
+[id="16-lab-1"] .c16l1-paso{border-left:4px solid var(--accent);background:var(--paper);border-radius:0 10px 10px 0;padding:10px 12px;font:500 .9rem/1.45 var(--f-display);display:grid;gap:4px}
+[id="16-lab-1"] .c16l1-paso b.m{color:var(--c-tra)}
+[id="16-lab-1"] .c16l1-paso .num{font:700 .72rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+[id="16-lab-1"] .c16l1-libro{list-style:none;margin:0;padding:0;display:grid;gap:3px;font:500 .78rem var(--f-mono)}
+[id="16-lab-1"] .c16l1-libro li{padding:3px 8px;border-radius:5px;background:var(--paper);overflow-wrap:anywhere}
+[id="16-lab-1"] .c16l1-libro li span{color:var(--muted)}
+[id="16-lab-1"] .c16l1-sec{font:700 .7rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+</style>
+<div class="opciones" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">
+  <label>Camino
+    <select id="c16l1-c">
+      <option value="feliz">Camino feliz: reembolso de US$ 25</option>
+      <option value="neg">Denegado: enviar el historial afuera</option>
+      <option value="apr">Aprobación: reembolso de US$ 300</option>
+      <option value="falla">Falla: proveedor caído y respuesta perdida</option>
+      <option value="rean">Reanudación: el proceso se cae</option>
+      <option value="apag">Apagado: operación apaga «reembolsar»</option>
+    </select></label>
+  <label id="c16l1-rl">Respuesta de la supervisora
+    <select id="c16l1-r">
+      <option value="si">Aprueba</option>
+      <option value="no">Rechaza</option>
+      <option value="vence">No responde: vence</option>
+    </select></label>
+</div>
+<div class="c16l1-mapa" id="c16l1-mapa" aria-label="Las piezas del arnés"></div>
+<div class="c16l1-paso" id="c16l1-paso" aria-live="polite"></div>
+<div class="btns" role="group" aria-label="Avanzar el recorrido">
+  <button type="button" id="c16l1-ant">◀ Anterior</button>
+  <button type="button" id="c16l1-sig" class="primary">Siguiente ▶</button>
+  <button type="button" id="c16l1-fin">Ir al final</button>
+  <button type="button" id="c16l1-rei">Reiniciar</button>
+</div>
+<div>
+  <div class="c16l1-sec">Libro de auditoría de esta ejecución</div>
+  <ol class="c16l1-libro" id="c16l1-libro"></ol>
+</div>
+<div class="readout texto" id="c16l1-out" aria-live="polite"></div></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Corre un arnés de juguete de punta a punta</h3></div><p>Vas a correr, en Python y sin red, un arnés mínimo con cuatro piezas juntas: políticas, aprobación, guardia de idempotencia y libro de auditoría con hashes encadenados. El «modelo» es un guion fijo de propuestas. Necesitas Python 3. Crea un archivo <code>arnes.py</code> con este contenido:</p><div class="code-copia"><pre><code># arnes.py: un arnés de juguete de punta a punta (simulado, sin red ni modelos reales)
+import hashlib
+import json
+
+LIBRO = []                                  # libro de auditoría: solo agregar
+GUARDIA = {}                                # guardia de idempotencia: clave -&gt; resultado
+COBROS = {"4512": [25.00, 25.00]}           # el «mundo»: cobros de la cliente
+REEMBOLSOS = []
+
+def auditar(tipo, **datos):
+    anterior = LIBRO[-1]["hash"] if LIBRO else "0" * 8
+    entrada = {"n": len(LIBRO) + 1, "tipo": tipo, **datos, "anterior": anterior}
+    entrada["hash"] = hashlib.sha256(json.dumps(entrada, sort_keys=True).encode()).hexdigest()[:8]
+    LIBRO.append(entrada)
+
+def politica(quien, herramienta, args):
+    if herramienta == "consultar_cobros":
+        return "permitir"
+    if herramienta == "reembolsar":
+        return "permitir" if args["monto"] &lt;= 100 else "pedir_aprobacion"
+    return "denegar"                        # lo que no está permitido, se deniega
+
+def ejecutar(ejecucion, paso, herramienta, args):
+    clave = hashlib.sha256(json.dumps([ejecucion, paso, herramienta, args], sort_keys=True).encode()).hexdigest()[:8]
+    if clave in GUARDIA:
+        return GUARDIA[clave]                # ya ocurrió: no se repite el efecto
+    if herramienta == "consultar_cobros":
+        r = f"cobros: {COBROS[args['cliente']]}"
+    elif herramienta == "reembolsar":
+        REEMBOLSOS.append((args["cliente"], args["monto"]))
+        r = f"reembolso #{len(REEMBOLSOS)}"
+    GUARDIA[clave] = r
+    return r
+
+def correr(ejecucion, quien, propuestas, aprueba=None, reanuda=False):
+    """propuestas: lo que «propone el modelo», en orden (aquí, un guion fijo)."""
+    if not reanuda:                         # al reanudar, la tarea ya estaba admitida
+        auditar("admision", ejecucion=ejecucion, quien=quien, presupuesto_usd=0.50)
+    for paso, (herramienta, args) in enumerate(propuestas, start=1):
+        decision = politica(quien, herramienta, args)
+        if decision == "pedir_aprobacion":
+            auditar("aprobacion", ejecucion=ejecucion, paso=paso, por="supervisora",
+                    resultado="aprobada" if aprueba else "rechazada")
+            decision = "permitir" if aprueba else "denegar"
+        auditar("politica", ejecucion=ejecucion, paso=paso, herramienta=herramienta, decision=decision)
+        if decision != "permitir":
+            print(f"  paso {paso}: {herramienta} {args} -&gt; {decision} (el error vuelve al modelo como dato)")
+            continue
+        r = ejecutar(ejecucion, paso, herramienta, args)
+        auditar("efecto", ejecucion=ejecucion, paso=paso, resultado=r)
+        print(f"  paso {paso}: {herramienta} {args} -&gt; {r}")
+
+print("Camino feliz: reembolso de US$ 25")
+correr("ej-1", "ana", [("consultar_cobros", {"cliente": "4512"}), ("reembolsar", {"cliente": "4512", "monto": 25.00})])
+print("La misma ejecución se cae y se reanuda desde el principio:")
+correr("ej-1", "ana", [("consultar_cobros", {"cliente": "4512"}), ("reembolsar", {"cliente": "4512", "monto": 25.00})], reanuda=True)
+print("Camino de control: US$ 300, la supervisora rechaza")
+correr("ej-2", "ana", [("reembolsar", {"cliente": "4512", "monto": 300.00})], aprueba=False)
+print("Camino de control: una herramienta que no está en las reglas")
+correr("ej-3", "ana", [("enviar_correo", {"para": "x@externo-ejemplo.com"})])
+
+print(f"\nReembolsos reales: {REEMBOLSOS}")
+print("Libro de auditoría:")
+for e in LIBRO:
+    resto = {k: v for k, v in e.items() if k not in ("n", "tipo", "anterior", "hash")}
+    print(f"  {e['n']:&gt;2} {e['tipo']:&lt;10} {resto}  anterior={e['anterior']} hash={e['hash']}")</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python arnes.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 arnes.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Mira la línea «Reembolsos reales»: la ejecución <code>ej-1</code> corrió dos veces el reembolso y hubo uno solo. Busca en <code>ejecutar</code> qué lo impidió.</span></li><li><span>En el libro, sigue la columna <code>anterior</code>: cada entrada guarda el hash de la anterior.</span></li><li><span>Cambia <code>aprueba=False</code> por <code>aprueba=True</code> y vuelve a correrlo: ¿cuántos reembolsos hay ahora y qué entradas nuevas aparecen?</span></li><li><span>Agrega <code>("enviar_correo", {"para": "x@externo-ejemplo.com"})</code> a la lista de propuestas de la primera llamada a <code>correr</code> y mira que la política lo deniega sin que el resto de la tarea se detenga.</span></li></ol><p><b>Qué observar:</b> el «modelo» solo propone; la política, la aprobación, la guardia y el libro deciden y registran. Cada camino de control termina en un estado explícito y deja su rastro. El resultado no depende de tu sistema: la simulación no usa la red, y los hashes salen iguales en cualquier computadora.</p></div></section>
+<section><h2>El chat seguro y la API del arnés</h2><div class="prose"><p>Hasta aquí el arnés se miró por dentro. Pero las personas llegan a él por una interfaz: un chat en el navegador, una aplicación interna, otro sistema que llama a su API. Esa puerta de entrada tiene sus propios riesgos, y un arnés impecable por dentro puede quedar abierto por fuera.</p></div><div class="analogia"><b>Imagínalo así</b><p>Una bóveda de banco puede ser perfecta y el banco igual perder dinero si la ventanilla entrega efectivo a quien muestra una foto del documento de otro. La ventanilla verifica la identidad, no acepta órdenes escritas en un papel suelto y nunca deja ver la pantalla interna. El chat es la ventanilla del arnés.</p></div><div class="prose"><p>El patrón más usado es el <b>BFF</b> (<i>backend for frontend</i>, servidor intermedio para la interfaz): el navegador no habla con la API del arnés directamente, sino con un servidor propio de la interfaz que guarda la sesión del usuario. Sus reglas básicas:</p><ul><li><b>La identidad la da el proveedor de identidad</b>, con un inicio de sesión estándar como <b>OpenID Connect</b>. El BFF guarda los tokens del lado del servidor; al navegador solo le da una <b>cookie de sesión</b> marcada <code>HttpOnly</code> (el código de la página no la puede leer), <code>Secure</code> (solo viaja cifrada) y <code>SameSite</code>. Nunca un token en el almacenamiento local del navegador.</li><li><b>Toda acción que cambia algo</b> lleva protección contra <b>CSRF</b> (<i>cross-site request forgery</i>, falsificación de petición entre sitios) y valida el origen.</li><li><b>La respuesta del modelo es contenido no confiable.</b> Puede traer HTML o Markdown armado por una inyección de prompts, así que se sanea antes de mostrarse, con una política de seguridad de contenido estricta, para evitar <b>XSS</b> (<i>cross-site scripting</i>, código inyectado en la página).</li><li><b>Lo que nunca sale</b>: claves del modelo, argumentos confidenciales de herramientas, el razonamiento interno del modelo, datos de otros usuarios.</li><li><b>Las conversaciones se aíslan</b> por empresa, usuario, agente y conversación. Una conversación de chat no se mezcla con las ejecuciones que disparan los eventos de otros sistemas.</li></ul><p>La API del arnés se diseña alrededor de las ejecuciones, no de los mensajes:</p><div class="tbl"><table><thead><tr><th>Operación</th><th>Qué hace</th><th>Detalle que importa</th></tr></thead><tbody><tr><td><code>POST /ejecuciones</code></td><td>Crea una ejecución con un pedido</td><td>Lleva <code>Idempotency-Key</code>: dos envíos iguales crean una sola ejecución</td></tr><tr><td><code>GET /ejecuciones/{id}</code></td><td>Estado: en curso, esperando, completada, denegada, pausada</td><td>Solo para quien tiene derecho sobre esa ejecución</td></tr><tr><td><code>GET /ejecuciones/{id}/eventos</code></td><td>Eventos en vivo por <b>SSE</b> (<i>server-sent events</i>)</td><td>Al reconectar con <code>Last-Event-ID</code> se vuelven a verificar los permisos</td></tr><tr><td><code>POST /solicitudes/{id}/resolucion</code></td><td>Aprueba, rechaza o corrige una solicitud humana</td><td>La identidad sale de la sesión, nunca del cuerpo del pedido</td></tr><tr><td><code>POST /ejecuciones/{id}/cancelacion</code></td><td>Cancela una ejecución</td><td>Cerrar la pestaña <b>no</b> cancela: son estados independientes</td></tr></tbody></table></div><p>La última fila evita un error frecuente: si cerrar el navegador cancelara la tarea, una aprobación de dos días sería imposible. La ejecución vive en el arnés; la conexión del navegador solo la mira.</p></div><figure class="fig fig-arquitectura" id="16-diagrama-4"><div class="lienzo"><svg viewBox="0 0 920 440" style="min-width:760px" role="img" aria-label="Arquitectura del chat seguro. El navegador solo tiene una cookie de sesión HttpOnly y Secure y recibe eventos. El BFF inicia sesión con el proveedor de identidad mediante OpenID Connect, guarda los tokens, valida CSRF y origen y sanea la salida del modelo. La API del arnés expone ejecuciones, eventos por SSE, solicitudes humanas y cancelación, y detrás está el runtime del arnés. Una franja marca lo que nunca cruza hacia el navegador: tokens, claves, razonamiento interno y datos de otros usuarios.">
+  <defs>
+    <marker id="d164-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+    <marker id="d164-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+  </defs>
+  
+  <rect x="12" y="110" width="206" height="316" rx="12" class="d-casa"/>
+  <text x="24" y="132" class="t t-xs t-b k-casa">NAVEGADOR</text>
+  <rect x="246" y="110" width="236" height="316" rx="12" class="d-oper"/>
+  <text x="258" y="132" class="t t-xs t-b k-oper">BFF · SERVIDOR DE LA INTERFAZ</text>
+  <rect x="510" y="110" width="398" height="316" rx="12" class="d-sis"/>
+  <text x="522" y="132" class="t t-xs t-b k-sis">EL ARNÉS</text>
+
+  
+  <rect x="26" y="148" width="178" height="58" rx="8" class="caja"/>
+  <text x="38" y="170" class="t t-s t-b">Página del chat</text>
+  <text x="38" y="188" class="t t-s">muestra texto ya saneado</text>
+  <rect x="26" y="218" width="178" height="74" rx="8" class="caja"/>
+  <text x="38" y="240" class="t t-s t-b">Cookie de sesión</text>
+  <text x="38" y="258" class="t t-s t-mono">HttpOnly · Secure</text>
+  <text x="38" y="276" class="t t-s t-mono">SameSite</text>
+  <text x="26" y="320" class="t t-s t-b k-casa">no guarda:</text>
+  <text x="26" y="338" class="t t-s">tokens en almacenamiento</text>
+  <text x="26" y="354" class="t t-s">local, claves, razonamiento</text>
+  <text x="26" y="370" class="t t-s">del modelo, datos ajenos</text>
+
+  
+  <rect x="260" y="148" width="208" height="40" rx="8" class="caja"/><text x="272" y="173" class="t t-s">guarda los tokens del usuario</text>
+  <rect x="260" y="196" width="208" height="40" rx="8" class="caja"/><text x="272" y="221" class="t t-s">valida CSRF y origen</text>
+  <rect x="260" y="244" width="208" height="40" rx="8" class="caja"/><text x="272" y="269" class="t t-s">sanea la salida (contra XSS)</text>
+  <rect x="260" y="292" width="208" height="40" rx="8" class="caja"/><text x="272" y="317" class="t t-s">límites de tasa y de tamaño</text>
+  <rect x="260" y="340" width="208" height="40" rx="8" class="caja"/><text x="272" y="365" class="t t-s">aísla por usuario y conversación</text>
+
+  
+  <rect x="524" y="148" width="228" height="264" rx="8" class="caja"/>
+  <text x="536" y="170" class="t t-s t-b">API del arnés</text>
+  <g class="t t-s t-mono">
+    <text x="536" y="196">POST /ejecuciones</text>
+    <text x="536" y="236">GET /ejecuciones/{id}</text>
+    <text x="536" y="276">GET …/{id}/eventos</text>
+    <text x="536" y="316">POST /solicitudes/{id}/…</text>
+    <text x="536" y="356">POST …/{id}/cancelacion</text>
+  </g>
+  <g class="t t-xs t-m">
+    <text x="536" y="211">con Idempotency-Key</text>
+    <text x="536" y="251">estado, solo para su dueño</text>
+    <text x="536" y="291">SSE, permisos en cada reconexión</text>
+    <text x="536" y="331">aprobar o corregir, con identidad</text>
+    <text x="536" y="371">cerrar la pestaña no cancela</text>
+  </g>
+  <rect x="768" y="148" width="126" height="264" rx="8" class="c-red"/>
+  <text x="831" y="176" class="t t-s t-b k-red" text-anchor="middle">Runtime</text>
+  <text x="831" y="200" class="t t-s" text-anchor="middle">bucle, sesión,</text>
+  <text x="831" y="216" class="t t-s" text-anchor="middle">políticas,</text>
+  <text x="831" y="232" class="t t-s" text-anchor="middle">herramientas,</text>
+  <text x="831" y="248" class="t t-s" text-anchor="middle">auditoría…</text>
+  <text x="831" y="290" class="t t-s t-m" text-anchor="middle">la ejecución</text>
+  <text x="831" y="306" class="t t-s t-m" text-anchor="middle">vive aquí, no</text>
+  <text x="831" y="322" class="t t-s t-m" text-anchor="middle">en el navegador</text>
+
+  
+  <rect x="246" y="20" width="236" height="56" rx="10" class="caja" style="stroke-width:1.6"/>
+  <text x="364" y="44" class="t t-b" text-anchor="middle">Proveedor de identidad</text>
+  <text x="364" y="62" class="t t-s t-m" text-anchor="middle">inicio de sesión con OpenID Connect</text>
+  <line x1="364" y1="78" x2="364" y2="144" class="ln" style="stroke-width:1.6" marker-start="url(#d164-m)" marker-end="url(#d164-m)"/>
+
+  
+  <line x1="206" y1="177" x2="256" y2="177" class="ln s-casa" style="stroke:var(--d-casa);stroke-width:2" marker-start="url(#d164-c)" marker-end="url(#d164-c)"/>
+  <line x1="470" y1="177" x2="520" y2="177" class="ln" style="stroke-width:2" marker-start="url(#d164-m)" marker-end="url(#d164-m)"/>
+  <line x1="752" y1="280" x2="764" y2="280" class="ln" style="stroke-width:2" marker-end="url(#d164-m)"/>
+
+  
+  <line x1="232" y1="400" x2="232" y2="140" class="ln ln-d" style="stroke:var(--warm);stroke-width:2"/>
+  <line x1="496" y1="400" x2="496" y2="140" class="ln ln-d" style="stroke:var(--warm);stroke-width:2"/>
+  <text x="246" y="404" class="t t-xs t-b" style="fill:var(--warm)">← NO CRUZAN: TOKENS NI CLAVES</text>
+</svg></div><figcaption><b>El chat seguro y la API del arnés.</b> A la izquierda, el navegador: solo tiene una cookie de sesión y recibe eventos. En el medio, el BFF: inicia sesión con el proveedor de identidad, guarda los tokens, valida CSRF y origen, y sanea la salida. A la derecha, la API del arnés con sus recursos (ejecuciones, eventos, solicitudes) y, detrás, el runtime. Las franjas punteadas marcan lo que no cruza hacia la izquierda: tokens, claves, razonamiento interno y datos de otros usuarios.</figcaption></figure><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Mira los encabezados de seguridad de una aplicación web real</h3></div><p>Vas a pedir solo los encabezados de dos sitios públicos, sin iniciar sesión ni enviar nada, y buscar las defensas de esta sección. En Windows se usa <code>curl.exe</code> para no llamar al comando de PowerShell que tiene el mismo nombre.</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>curl.exe -sI https://github.com</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>curl.exe -sI https://developer.mozilla.org/es/</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>curl -sI https://github.com</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>curl -sI https://developer.mozilla.org/es/</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la respuesta de GitHub, busca <code>Set-Cookie</code> y anota qué atributos lleva cada cookie: <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite</code>.</span></li><li><span>Busca <code>Strict-Transport-Security</code>: obliga al navegador a usar siempre HTTPS con ese sitio. Anota cuánto dura (<code>max-age</code>, en segundos).</span></li><li><span>Busca <code>Content-Security-Policy</code> y mira la primera directiva, <code>default-src</code>: ¿desde dónde permite cargar contenido por defecto?</span></li><li><span>Busca <code>X-Frame-Options</code> y compara los dos sitios.</span></li></ol><p><b>Qué observar:</b> las defensas de un chat seguro no son secretas ni exóticas: son encabezados que cualquier sitio serio envía y que puedes leer desde la terminal. Una cookie de sesión con <code>HttpOnly</code> y <code>Secure</code>, HTTPS obligatorio y una política de contenido restrictiva son la base del BFF. Los valores exactos cambian con el tiempo y entre sitios.</p></div></section>
+<section><h2>El orden para construir las piezas</h2><div class="prose"><p>Con todas las piezas a la vista, la pregunta práctica es por dónde empezar. No todo a la vez, y no en cualquier orden: muchas piezas dependen de otras. Las aprobaciones necesitan esperas durables; la idempotencia necesita pasos durables; las políticas necesitan saber en nombre de quién actúa el agente; la auditoría necesita eventos con identidad. Construir en desorden obliga a rehacer.</p><p>Un orden que funciona, en cuatro hitos, cada uno con un agente que ya sirve para algo:</p><ol class="steps"><li><span><b>Un agente de solo lectura.</b> El bucle con límites (capítulo 2), herramientas con contrato que solo leen (3), la puerta a los modelos (4), el motor de contexto (5) y la sesión con eventos (6). Y desde el primer día, <b>un banco de evaluación pequeño</b> (15): veinte tareas escritas a mano. Sin efectos en el mundo, el riesgo es bajo y ya hay valor: consultar, resumir, explicar.</span></li><li><span><b>Acciones con control.</b> Identidad y políticas (7), validadores a los dos lados (8), credenciales con alcance mínimo (10) y el libro de auditoría (11). Recién aquí entran las herramientas que escriben, y todas empiezan pidiendo aprobación.</span></li><li><span><b>Producción.</b> Aprobaciones con plazo (9), esperas y pasos durables (6), idempotencia y entorno aislado (10), gobierno de datos y observabilidad por audiencia (11), control operativo (10) y el banco completo en integración continua, con negativas y caos (15). Las aprobaciones se van relajando a medida que el banco demuestra que una acción es segura.</span></li><li><span><b>Patrones</b>, solo si hacen falta. Plan y ejecutor (12) cuando las tareas son largas; orquestador y subagentes (13) cuando un solo contexto no alcanza; memoria a largo plazo y habilidades (14) cuando el agente repite errores o los procedimientos no caben en las instrucciones.</span></li></ol></div><figure class="fig fig-esquema" id="16-diagrama-5"><div class="lienzo"><svg viewBox="0 0 940 470" style="min-width:740px" role="img" aria-label="Orden de construcción en cuatro hitos. Hito 1, agente de solo lectura: bucle con límites, herramientas que leen, puerta a los modelos, motor de contexto, sesión y eventos. Hito 2, acciones con control: identidad y políticas, validadores, credenciales, libro de auditoría y herramientas que escriben. Hito 3, producción: esperas y pasos durables, aprobaciones con plazo, idempotencia y aislamiento, gobierno de datos y control operativo. Hito 4, patrones si hacen falta: plan y ejecutor, subagentes, memoria y habilidades. Flechas de dependencia y, debajo de todo, el banco de evaluación desde el primer hito.">
+  <defs><marker id="d165-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker><marker id="d165-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0L10 5L0 10z" class="k-fis"/></marker></defs>
+  <rect x="16" y="14" width="212" height="54" rx="10" class="c-red" style="stroke-width:2"/><text x="28" y="34" class="t t-xs t-b k-red">HITO 1</text><text x="28" y="54" class="t t-b">Un agente de solo lectura</text>
+  <rect x="16" y="82" width="212" height="36" rx="8" class="caja"/><text x="28" y="105" class="t t-s">Bucle con límites</text><text x="216" y="105" class="t t-s t-b t-mono k-red" text-anchor="end">2</text>
+  <rect x="16" y="128" width="212" height="36" rx="8" class="caja"/><text x="28" y="151" class="t t-s">Herramientas que leen</text><text x="216" y="151" class="t t-s t-b t-mono k-red" text-anchor="end">3</text>
+  <rect x="16" y="174" width="212" height="36" rx="8" class="caja"/><text x="28" y="197" class="t t-s">Puerta a los modelos</text><text x="216" y="197" class="t t-s t-b t-mono k-red" text-anchor="end">4</text>
+  <rect x="16" y="220" width="212" height="36" rx="8" class="caja"/><text x="28" y="243" class="t t-s">Motor de contexto</text><text x="216" y="243" class="t t-s t-b t-mono k-red" text-anchor="end">5</text>
+  <rect x="16" y="266" width="212" height="36" rx="8" class="caja"/><text x="28" y="289" class="t t-s">Sesión y eventos</text><text x="216" y="289" class="t t-s t-b t-mono k-red" text-anchor="end">6</text>
+  <text x="16" y="332" class="t t-xs t-b t-m">YA PUEDE</text><text x="16" y="350" class="t t-s">consultar, resumir, explicar</text>
+  <line x1="230" y1="41" x2="244" y2="41" class="ln" style="stroke-width:2" marker-end="url(#d165-m)"/>
+  <rect x="248" y="14" width="212" height="54" rx="10" class="d-sis" style="stroke-width:2"/><text x="260" y="34" class="t t-xs t-b k-sis">HITO 2</text><text x="260" y="54" class="t t-b">Acciones con control</text>
+  <rect x="248" y="82" width="212" height="36" rx="8" class="caja"/><text x="260" y="105" class="t t-s">Identidad y políticas</text><text x="448" y="105" class="t t-s t-b t-mono k-sis" text-anchor="end">7</text>
+  <rect x="248" y="128" width="212" height="36" rx="8" class="caja"/><text x="260" y="151" class="t t-s">Validadores</text><text x="448" y="151" class="t t-s t-b t-mono k-sis" text-anchor="end">8</text>
+  <rect x="248" y="174" width="212" height="36" rx="8" class="caja"/><text x="260" y="197" class="t t-s">Credenciales</text><text x="448" y="197" class="t t-s t-b t-mono k-sis" text-anchor="end">10</text>
+  <rect x="248" y="220" width="212" height="36" rx="8" class="caja"/><text x="260" y="243" class="t t-s">Libro de auditoría</text><text x="448" y="243" class="t t-s t-b t-mono k-sis" text-anchor="end">11</text>
+  <rect x="248" y="266" width="212" height="36" rx="8" class="caja"/><text x="260" y="289" class="t t-s">Herramientas que escriben</text><text x="448" y="289" class="t t-s t-b t-mono k-sis" text-anchor="end">3</text>
+  <text x="248" y="332" class="t t-xs t-b t-m">YA PUEDE</text><text x="248" y="350" class="t t-s">actuar con permiso y rastro</text>
+  <line x1="462" y1="41" x2="476" y2="41" class="ln" style="stroke-width:2" marker-end="url(#d165-m)"/>
+  <rect x="480" y="14" width="212" height="54" rx="10" class="c-enl" style="stroke-width:2"/><text x="492" y="34" class="t t-xs t-b k-enl">HITO 3</text><text x="492" y="54" class="t t-b">Producción</text>
+  <rect x="480" y="82" width="212" height="36" rx="8" class="caja"/><text x="492" y="105" class="t t-s">Esperas y pasos durables</text><text x="680" y="105" class="t t-s t-b t-mono k-enl" text-anchor="end">6</text>
+  <rect x="480" y="128" width="212" height="36" rx="8" class="caja"/><text x="492" y="151" class="t t-s">Aprobaciones con plazo</text><text x="680" y="151" class="t t-s t-b t-mono k-enl" text-anchor="end">9</text>
+  <rect x="480" y="174" width="212" height="36" rx="8" class="caja"/><text x="492" y="197" class="t t-s">Idempotencia y aislamiento</text><text x="680" y="197" class="t t-s t-b t-mono k-enl" text-anchor="end">10</text>
+  <rect x="480" y="220" width="212" height="36" rx="8" class="caja"/><text x="492" y="243" class="t t-s">Gobierno de datos</text><text x="680" y="243" class="t t-s t-b t-mono k-enl" text-anchor="end">11</text>
+  <rect x="480" y="266" width="212" height="36" rx="8" class="caja"/><text x="492" y="289" class="t t-s">Control operativo</text><text x="680" y="289" class="t t-s t-b t-mono k-enl" text-anchor="end">10</text>
+  <text x="480" y="332" class="t t-xs t-b t-m">YA PUEDE</text><text x="480" y="350" class="t t-s">trabajar sin nadie mirando</text>
+  <line x1="694" y1="41" x2="708" y2="41" class="ln" style="stroke-width:2" marker-end="url(#d165-m)"/>
+  <rect x="712" y="14" width="212" height="54" rx="10" class="d-casa" style="stroke-width:2"/><text x="724" y="34" class="t t-xs t-b k-casa">HITO 4</text><text x="724" y="54" class="t t-b">Patrones, si hacen falta</text>
+  <rect x="712" y="82" width="212" height="36" rx="8" class="caja"/><text x="724" y="105" class="t t-s">Plan y ejecutor</text><text x="912" y="105" class="t t-s t-b t-mono k-casa" text-anchor="end">12</text>
+  <rect x="712" y="128" width="212" height="36" rx="8" class="caja"/><text x="724" y="151" class="t t-s">Subagentes</text><text x="912" y="151" class="t t-s t-b t-mono k-casa" text-anchor="end">13</text>
+  <rect x="712" y="174" width="212" height="36" rx="8" class="caja"/><text x="724" y="197" class="t t-s">Memoria y habilidades</text><text x="912" y="197" class="t t-s t-b t-mono k-casa" text-anchor="end">14</text>
+  <text x="712" y="332" class="t t-xs t-b t-m">YA PUEDE</text><text x="712" y="350" class="t t-s">tareas largas o grandes</text>
+  <line x1="228" y1="284" x2="245" y2="238" class="ln ln-d" marker-end="url(#d165-m)"/>
+  <line x1="460" y1="100" x2="477" y2="146" class="ln ln-d" marker-end="url(#d165-m)"/>
+  <path d="M480 100h-8V146h4" class="ln ln-d" marker-end="url(#d165-m)"/>
+  <path d="M480 100h-8V192h4" class="ln ln-d" marker-end="url(#d165-m)"/>
+  <rect x="16" y="378" width="908" height="52" rx="10" class="c-fis"/>
+  <text x="30" y="400" class="t t-b k-fis">Banco de evaluación · capítulo 15</text>
+  <text x="30" y="419" class="t t-s">20 tareas a mano en el hito 1; negativas y caos en el hito 3; cada pieza nueva se mide contra la anterior</text>
+  <line x1="30" y1="446" x2="910" y2="446" class="ln s-fis" style="stroke-width:2" marker-end="url(#d165-b)"/>
+  <text x="30" y="462" class="t t-xs t-m">DESDE EL PRIMER DÍA, BAJO TODOS LOS HITOS</text>
+</svg></div><figcaption><b>El orden de construcción en cuatro hitos.</b> De izquierda a derecha, cada columna es un hito con las piezas que agrega y el número de su capítulo; abajo, lo que el agente ya puede hacer al terminarlo. Las flechas punteadas marcan dependencias que obligan al orden: las aprobaciones necesitan políticas y esperas durables, la idempotencia necesita pasos durables y la auditoría necesita eventos. El banco de evaluación corre bajo los cuatro hitos, desde el primero.</figcaption></figure><div class="prose"><p>Dos ideas de este orden van contra la intuición. La primera: la evaluación no va al final, va al principio, porque cada pieza nueva se tiene que medir contra la anterior. La segunda: los patrones multiagente van al final, y a veces nunca. Un buen agente simple, con buenas herramientas, buen contexto y buenas reglas, resuelve más que tres agentes mal gobernados. Es el último principio de la constitución del capítulo 1.</p><p>Prueba qué riesgos cubre cada combinación de piezas.</p></div><div class="lab" id="16-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Arma tu arnés: elige las piezas y mira qué riesgos quedan cubiertos y cuáles no</h3></div><p class="hint">Enciende y apaga piezas, o empieza por uno de los tres perfiles. Cada riesgo queda cubierto, parcial o expuesto según las piezas que lo controlan. Mira también los avisos de dependencias: una pieza sin la que necesita no protege de verdad. Busca el conjunto más chico que cubre los riesgos de un agente que reembolsa dinero.</p><style>
+[id="16-lab-2"] .c16l2-piezas{display:flex;flex-wrap:wrap;gap:6px}
+[id="16-lab-2"] .c16l2-piezas button small{font:500 .7rem var(--f-mono);opacity:.8;margin-left:4px}
+[id="16-lab-2"] .c16l2-r{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+[id="16-lab-2"] .c16l2-r li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;font:500 .84rem/1.35 var(--f-display);padding:6px 8px;border-radius:8px;background:var(--card);border:1px solid var(--line)}
+[id="16-lab-2"] .c16l2-r li small{display:block;color:var(--muted);font-size:.76rem}
+[id="16-lab-2"] .c16l2-chip{font:700 .68rem var(--f-display);padding:2px 7px;border-radius:999px;color:var(--card);white-space:nowrap;margin-top:1px}
+[id="16-lab-2"] .k-ok{background:var(--good)} [id="16-lab-2"] .k-par{background:var(--c-fis)} [id="16-lab-2"] .k-mal{background:var(--warm)}
+[id="16-lab-2"] .c16l2-sec{font:700 .7rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+</style>
+<div class="btns" role="group" aria-label="Perfiles">
+  <button type="button" data-p="demo">Perfil: demostración</button>
+  <button type="button" data-p="lectura">Perfil: solo lectura</button>
+  <button type="button" data-p="prod">Perfil: producción</button>
+  <button type="button" data-p="nada">Vaciar</button>
+</div>
+<div>
+  <div class="c16l2-sec">Piezas del arnés (toca para encender o apagar)</div>
+  <div class="c16l2-piezas" id="c16l2-p" role="group" aria-label="Piezas"></div>
+</div>
+<div class="readout texto" id="c16l2-out" aria-live="polite"></div>
+<div>
+  <div class="c16l2-sec">Riesgos de un agente que reembolsa dinero</div>
+  <ul class="c16l2-r" id="c16l2-r"></ul>
+</div>
+<p class="hint">Un riesgo está cubierto si están todas las piezas que lo controlan, parcial si están algunas y expuesto si no hay ninguna. Es un modelo simplificado: en un arnés real cada pieza también tiene que estar bien configurada y medida.</p></div></section>
+<section><h2>Del arnés personal al arnés de empresa</h2><div class="prose"><p>Muchos de los ejemplos del curso vinieron de agentes de código que corren en la computadora de una persona. Son arneses completos, pero hechos para otro mundo. Pasar de un arnés personal a uno de empresa cambia casi todas las respuestas, aunque las piezas sean las mismas:</p><div class="tbl"><table><thead><tr><th>Pregunta</th><th>Arnés personal</th><th>Arnés de empresa</th></tr></thead><tbody><tr><td>¿Quién pide?</td><td>Una persona, la dueña de la máquina</td><td>Muchas personas, roles, otros sistemas y eventos</td></tr><tr><td>¿Quién autoriza?</td><td>La misma persona, en una ventana de permiso</td><td>Políticas centrales, con aprobaciones por rol</td></tr><tr><td>¿Con qué identidad actúa?</td><td>La de la persona, con sus propias claves</td><td>La de quien pide, con credenciales emitidas por tarea</td></tr><tr><td>¿Dónde corre?</td><td>En su computadora, con un entorno aislado local</td><td>En servidores, con aislamiento por tarea y por empresa</td></tr><tr><td>¿Cuánto dura una tarea?</td><td>Minutos, con la persona mirando</td><td>De segundos a días, sin nadie mirando</td></tr><tr><td>¿Qué se registra?</td><td>La sesión, para retomarla</td><td>Auditoría inalterable, retención y observabilidad por audiencia</td></tr><tr><td>¿Quién lo frena?</td><td>La persona, con una tecla</td><td>Operación, con interruptores por agente y herramienta</td></tr><tr><td>¿Cómo se cambia?</td><td>Actualizando la herramienta</td><td>Con banco de evaluación, salida gradual y vuelta atrás</td></tr></tbody></table></div><p>La diferencia de fondo es <b>quién está mirando</b>. En el arnés personal, la persona ve cada paso y su atención es el último control. En el de empresa nadie mira cada ejecución, y cada control que la persona hacía con los ojos tiene que existir como pieza.</p></div><div class="caso"><b>Un caso real</b><p>Un equipo de una empresa de servicios empezó con un agente de código configurado por cada desarrollador en su computadora, con permisos amplios porque «cada uno mira lo que hace». Cuando quisieron usar el mismo agente para atender pedidos del área de operaciones, sin un desarrollador al lado, descubrieron que les faltaba casi todo: identidad por pedido, políticas centrales, auditoría y una forma de apagarlo. Tardaron más en agregar esas piezas que en construir el agente. Lo que más les sirvió fue haber guardado desde el principio las sesiones de los desarrolladores: con ellas armaron las primeras tareas del banco.</p></div><div class="prose"><p>Construir y mejorar un arnés de empresa es trabajo de ingeniería; usar agentes ya hechos como persona, con buen criterio, está en el curso <a href="https://aaramirez.github.io/agentes-personales/temario.html" target="_blank" rel="noopener">Agentes personales</a>. Y la operación de los servicios que lo sostienen, con despliegues, monitoreo y alertas, está en <a href="https://aaramirez.github.io/devops/temario.html" target="_blank" rel="noopener">DevOps</a>.</p></div></section>
+<section><h2>Cómo evoluciona el runtime sin romper a los agentes</h2><div class="prose"><p>Un arnés en producción nunca está quieto: cambian el modelo, las reglas, los esquemas de las herramientas, el formato en que se guardan las sesiones. Y mientras cambia, hay ejecuciones en curso. Una aprobación que se pidió el martes con la política vieja se responde el jueves, después de un despliegue. ¿Con qué regla se retoma?</p></div><div class="analogia"><b>Imagínalo así</b><p>En un torneo de ajedrez, si la federación cambia una regla, las partidas que ya empezaron terminan con la regla vieja. La nueva vale desde la próxima partida. Nadie cambia las reglas de una partida a mitad del juego, porque ninguno de los dos jugadores aceptó jugar así.</p></div><div class="prose"><p>La regla que ordena esto se llama <b>migrar solo en una frontera inactiva</b> (<i>idle boundary</i>): una sesión pasa a la versión nueva del arnés únicamente cuando no tiene <b>trabajo vivo</b>, es decir, ninguna espera pendiente, ningún paso empezado sin terminar y ninguna invocación a otro agente en curso. Mientras tenga trabajo vivo, sigue con las versiones con que empezó. Para que eso sea posible, se cumplen cuatro condiciones:</p><ul><li><b>La sesión guarda su versión.</b> Además de la ejecución, cada sesión registra con qué versión de las instrucciones, la política, el modelo, cada herramienta y el formato de sesión está corriendo. Es la misma fijación de versiones que usa el libro de auditoría.</li><li><b>Las herramientas y conexiones tienen versión fija por sesión.</b> Si un servidor MCP publica un esquema nuevo, las sesiones abiertas siguen viendo el anterior hasta su próxima frontera inactiva. Nadie ve cambiar un esquema en mitad de una llamada.</li><li><b>El formato de sesión se migra con un migrador explícito.</b> Una sesión guardada en un formato viejo no se «adivina»: se transforma con una función conocida, y una sesión sin versión no se supone de la primera.</li><li><b>El cambio de modelo entre turnos se registra.</b> No es una migración, pero queda en la sesión y en la auditoría.</li></ul><p>Sobre eso se apoya la forma de desplegar que ya mostró el capítulo 15: el cambio pasa el banco, sale primero a una <b>fracción del tráfico</b> (un <b>despliegue canario</b>, <i>canary release</i>), se compara con la versión anterior en producción y, si algo empeora, se vuelve atrás. Las versiones viejas de herramientas se marcan como obsoletas con fecha de retiro, y se retiran recién cuando ninguna sesión las usa.</p></div><div class="ml"><b>En la práctica</b><p>Cuando se versionan los contratos de un arnés, conviene distinguir dos clases de cambio. Un cambio <b>compatible</b> agrega algo opcional, como un campo nuevo en el resultado de una herramienta, y no rompe a nadie. Uno <b>incompatible</b> quita o renombra algo, y obliga a una versión nueva que convive con la anterior hasta que la última sesión que la usa termina. Muchos equipos lo expresan en el número de versión, y lo comprueban con pruebas de contrato en el banco de evaluación.</p></div></section>
+<section><h2>Lo que se lleva el curso</h2><div class="prose"><p>El curso empezó con una frase: el modelo propone, el arnés dispone. Dieciséis capítulos después, esa frase tiene piezas con nombre y contrato:</p><ul><li>El <b>bucle</b> con límites explícitos, las <b>herramientas</b> con contrato, la <b>puerta</b> a los modelos y el <b>motor de contexto</b> hacen trabajar al agente.</li><li>La <b>sesión durable</b> y los <b>eventos</b> hacen que el trabajo sobreviva a caídas y esperas largas.</li><li>Las <b>políticas</b>, los <b>validadores</b>, el <b>humano en el bucle</b>, las <b>credenciales</b>, la <b>idempotencia</b> y el <b>aislamiento</b> deciden qué se ejecuta, con qué permiso y una sola vez.</li><li>La <b>auditoría</b>, el <b>gobierno de datos</b> y la <b>observabilidad</b> hacen que todo se pueda explicar después.</li><li>El <b>plan</b>, los <b>subagentes</b>, la <b>memoria</b> y las <b>habilidades</b> organizan el trabajo cuando una tarea no cabe en un bucle.</li><li>La <b>evaluación</b> permite cambiarlo todo sin miedo, y el <b>orden de construcción</b> permite llegar ahí sin rehacer.</li></ul><p>Ninguna pieza vale sola. Un arnés gobernable es el resultado de juntarlas en el orden correcto, medirlas siempre contra la versión anterior y no dejar nunca una decisión que importa en manos del texto que lee el modelo.</p><p><b>Un arnés gobernable, pieza por pieza.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>En el camino feliz del reembolso de US$ 25, ¿cuántas veces decide el modelo y qué decide?</summary><p>Tres: propone la consulta de cobros, propone el reembolso y redacta la respuesta. Todo lo demás (identidad, admisión, permisos, credencial, idempotencia, validaciones, registro) lo decide el arnés con reglas fijas.</p></details><details><summary>¿Qué tienen en común los cinco caminos de control?</summary><p>Ninguno termina en un estado ambiguo: la tarea queda completada, denegada con motivo, esperando con plazo o pausada con su estado guardado, y todos dejan su rastro en el libro de auditoría.</p></details><details><summary>¿Por qué cerrar la pestaña del chat no debe cancelar la ejecución?</summary><p>Porque la ejecución vive en el arnés y la conexión solo la mira. Si cerrar cancelara, ninguna tarea con una aprobación de horas o días podría terminar. Cancelar es una operación aparte.</p></details><details><summary>¿Por qué el banco de evaluación se construye en el primer hito y no al final?</summary><p>Porque cada pieza que se agrega después se tiene que medir contra la versión anterior; sin banco desde el principio, no hay línea base contra la cual comparar.</p></details><details><summary>¿Qué es una frontera inactiva y por qué importa al desplegar una versión nueva?</summary><p>Es el momento en que una sesión no tiene trabajo vivo: ninguna espera pendiente, ningún paso empezado, ninguna invocación en curso. Solo ahí migra a la versión nueva; antes sigue con las versiones con que empezó, para no retomar una espera vieja con reglas nuevas.</p></details><details><summary>¿Qué cambia de fondo entre un arnés personal y uno de empresa?</summary><p>Quién está mirando. En el personal, la persona ve cada paso y su atención es el último control; en el de empresa nadie mira cada ejecución, así que cada control tiene que existir como pieza: identidad, políticas, auditoría, apagado y evaluación.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué validan los parámetros <code>state</code> y <code>nonce</code> en un inicio de sesión con OpenID Connect y qué ataque evita cada uno?<small>Pista: busca «OIDC state nonce difference».</small></li><li>¿Qué diferencia hay entre los valores <code>Lax</code> y <code>Strict</code> del atributo <code>SameSite</code> de una cookie, y qué tiene que ver con CSRF?</li><li>¿Cómo frena una política de seguridad de contenido (CSP) un ataque de XSS, y qué son los <i>nonces</i> de script?<small>Pista: busca «Content Security Policy strict CSP nonce».</small></li><li>¿En qué se diferencia un despliegue azul-verde (<i>blue-green</i>) de un despliegue canario?</li><li>¿Qué es el versionado semántico y qué significa cada uno de los tres números de una versión como 2.4.1?<small>Pista: mira semver.org.</small></li><li>¿Qué es el patrón de la «higuera estranguladora» (<i>strangler fig</i>) para reemplazar un sistema viejo por partes?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://owasp.org/www-project-top-10-for-large-language-model-applications/" target="_blank" rel="noopener">OWASP Top 10 para aplicaciones con modelos de lenguaje <small>referencia, en inglés</small></a><a class="vid" href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events" target="_blank" rel="noopener">MDN: eventos enviados por el servidor <small>documentación, en inglés</small></a><a class="vid" href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP: prevención de CSRF <small>guía, en inglés</small></a><a class="vid" href="https://martinfowler.com/bliki/CanaryRelease.html" target="_blank" rel="noopener">Canary release <small>lectura, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const N=[['canal','Chat y API','16','--muted','--paper'],['admision','Admisión','7','--d-sis','--d-sis-s'],['sesion','Sesión durable','6','--c-red','--c-red-s'],['bucle','Bucle','2','--c-red','--c-red-s'],['contexto','Contexto y memoria','5 · 14','--c-fis','--c-fis-s'],
+    ['puerta','Puerta a modelos','4','--c-tra','--c-tra-s'],['modelo','Modelo','fuera','--c-tra','--c-tra-s'],['validadores','Validadores','8','--d-sis','--d-sis-s'],['politicas','Políticas','7','--d-sis','--d-sis-s'],['humano','Humano','9','--d-casa','--d-casa-s'],
+    ['credenciales','Credenciales','10','--d-sis','--d-sis-s'],['idempotencia','Idempotencia','10','--d-sis','--d-sis-s'],['control','Control operativo','10','--d-inet','--d-inet-s'],['herramienta','Herramienta','3','--c-enl','--c-enl-s'],['auditoria','Auditoría','11','--d-inet','--d-inet-s']];
+  const NOM=Object.fromEntries(N.map(n=>[n[0],n[1]]));
+  $('#c16l1-mapa').innerHTML=N.map(n=>`<div class="c16l1-n" id="c16l1-n-${n[0]}" data-b="${n[3]}" data-f="${n[4]}">${n[1]}<small>${n[2]==='fuera'?'fuera del arnés':'cap. '+n[2]}</small></div>`).join('');
+  const S=(n,t,a,m)=>({n,t,a,m:!!m});
+  function inicio(ped,monto){return [
+    S(['canal'],`Ana escribe: ${ped} La API verifica su sesión y crea la ejecución con una clave de idempotencia: un doble clic no crea dos tareas.`),
+    S(['admision'],'El control de admisión acepta la tarea: rol de atención, presupuesto de US$ 0,50 y 12 turnos.','admisión · Ana · atención · US$ 0,50'),
+    S(['sesion','bucle'],'Se abre la ejecución con su punto de control inicial y arranca el bucle.'),
+    S(['contexto'],'El motor de contexto arma el turno: instrucciones, las herramientas permitidas a este agente, la preferencia de Ana por las tablas y los metadatos de las habilidades.'),
+  ];}
+  function consulta(monto,respaldo){return [
+    S(['puerta','modelo'],(respaldo?'El proveedor principal responde con errores de límite de tasa; la puerta reintenta y pasa al modelo de respaldo, que ':'La puerta llama al modelo y cuenta el costo. El modelo ')+'carga la habilidad de reembolsos y propone consultar_cobros(4512).',respaldo?'configuración · modelo de respaldo en uso':null,true),
+    S(['validadores','politicas'],'Esquema válido. Política: leer cobros con el rol de atención → permitir.','política · consultar_cobros · permitir'),
+    S(['credenciales','herramienta'],`El intermediario emite una credencial de solo lectura, de minutos, a nombre de Ana; el modelo no la ve. La herramienta devuelve dos cargos de US$ ${monto} del 3 de octubre, etiquetados como confidenciales.`,'credencial · cobros:lectura · para Ana | efecto · consulta de cobros'),
+    S(['modelo'],`Con el resultado a la vista, el modelo propone reembolsar(4512, ${monto}).`,null,true)
+  ];}
+  const cierre=(txt,a)=>[S(['modelo','validadores','canal'],'El modelo redacta la respuesta en una tabla; el validador de respuesta comprueba que no trae datos de otras cuentas, y sale por el canal como eventos.',null,true),S(['auditoria'],txt,a)];
+  function camino(c,r){
+    if(c==='feliz')return [...inicio('«la cliente 4512 tiene un cobro duplicado de US$ 25; reembólsaselo».'),...consulta('25,00'),
+      S(['validadores','politicas'],'Esquema válido. Política: reembolso de hasta US$ 100 con rol de atención → permitir.','política · reembolsar · permitir'),
+      S(['idempotencia','herramienta'],'La guardia calcula la clave y la anota «en curso»; la pasarela reembolsa; la guardia la marca «completada».','efecto · reembolso #1 · US$ 25,00'),
+      S(['validadores'],'El validador posterior consulta el sistema: hay un reembolso, uno solo, de US$ 25.'),
+      ...cierre('El libro cierra la ejecución con sus entradas encadenadas por hashes y las versiones de cada pieza.','ejecución · completada')];
+    if(c==='neg')return [...inicio('«manda el historial de pagos de la 4512 a contabilidad@externo-ejemplo.com».'),
+      S(['puerta','modelo'],'La puerta llama al modelo, que propone enviar_correo(destino externo, historial de pagos).',null,true),
+      S(['validadores','politicas'],'El esquema es válido, pero la política y el gobierno de datos dicen: datos confidenciales hacia un dominio externo → denegar.','política · enviar_correo · denegar · datos confidenciales'),
+      S(['bucle','modelo'],'La denegación vuelve al modelo como un resultado con error, no como una excepción. El modelo le explica a Ana por qué no y le ofrece enviarlo a la casilla interna de contabilidad.',null,true),
+      S(['canal','auditoria'],'Denegada con motivo. Nada salió de la empresa, y el intento queda registrado.','ejecución · completada con denegación')];
+    if(c==='apr'){const base=[...inicio('«la cliente 4512 tiene un cobro duplicado de US$ 300; reembólsaselo».'),...consulta('300,00'),
+      S(['politicas','humano'],'Política: más de US$ 100 → pedir aprobación. Se crea una solicitud para la supervisora con resumen, riesgo y plazo de 24 horas.','política · reembolsar · pedir aprobación'),
+      S(['sesion'],'Espera durable: se guarda el punto de control y el proceso se libera. Nada queda en memoria mientras pasan las horas.')];
+      if(r==='si')return [...base,S(['humano'],'La supervisora aprueba desde su bandeja, con identidad verificada.','aprobación · aprobada · supervisora'),
+        S(['sesion','idempotencia','herramienta'],'La ejecución se reanuda desde el punto de control; la guardia anota la clave y la pasarela reembolsa.','efecto · reembolso #1 · US$ 300,00'),
+        ...cierre('Completada después de la aprobación.','ejecución · completada')];
+      if(r==='no')return [...base,S(['humano'],'La supervisora rechaza: «el segundo cargo es de otro servicio, no es un duplicado».','aprobación · rechazada · supervisora'),
+        S(['bucle','modelo'],'El motivo vuelve al modelo como resultado. El modelo se lo explica a Ana y no reintenta.',null,true),
+        S(['canal','auditoria'],'Denegada con el motivo de la supervisora.','ejecución · completada con rechazo')];
+      return [...base,S(['humano','sesion'],'Nadie responde en 24 horas. La solicitud vence y se aplica lo que dice su campo siVence: denegar.','aprobación · vencida → denegar'),
+        S(['modelo','canal'],'El modelo le avisa a Ana que la aprobación venció y cómo volver a pedirla.',null,true),
+        S(['auditoria'],'Denegada por vencimiento, sin efectos.','ejecución · completada sin efecto')];}
+    if(c==='falla')return [...inicio('«la cliente 4512 tiene un cobro duplicado de US$ 25; reembólsaselo».'),...consulta('25,00',true),
+      S(['validadores','politicas'],'Política: reembolso de hasta US$ 100 → permitir.','política · reembolsar · permitir'),
+      S(['idempotencia','herramienta'],'Clave nueva «en curso». La pasarela reembolsa, pero la respuesta se pierde: tiempo agotado.','efecto · reembolso #1 · respuesta perdida'),
+      S(['idempotencia','herramienta'],'El bucle reintenta. La guardia ve la clave «en curso» y llama con la misma Idempotency-Key: la pasarela devuelve el reembolso #1 sin cobrar de nuevo.','idempotencia · clave repetida · sin nuevo efecto'),
+      ...cierre('Completada con un solo efecto, aunque hubo dos fallas.','ejecución · completada')];
+    if(c==='rean')return [...inicio('«la cliente 4512 tiene un cobro duplicado de US$ 25; reembólsaselo».'),...consulta('25,00').slice(0,3),
+      S(['sesion'],'El proceso se cae justo después de guardar el resultado de la consulta en el diario de pasos.'),
+      S(['sesion','bucle'],'Otro proceso toma la ejecución desde el último punto de control. La consulta ya está en el diario: no se repite.','sesión · reanudada desde el punto de control 3'),
+      S(['modelo','validadores','politicas'],'El modelo propone reembolsar(4512, 25,00); la política permite.','política · reembolsar · permitir',true),
+      S(['idempotencia','herramienta'],'La guardia anota la clave y la pasarela reembolsa una vez.','efecto · reembolso #1 · US$ 25,00'),
+      ...cierre('Completada sin repetir nada de lo que ya estaba hecho.','ejecución · completada')];
+    return [...inicio('«la cliente 4512 tiene un cobro duplicado de US$ 25; reembólsaselo».'),...consulta('25,00'),
+      S(['validadores','politicas'],'Política: reembolso de hasta US$ 100 → permitir.','política · reembolsar · permitir'),
+      S(['control'],'Antes de ejecutar, el bucle consulta las directivas: operación apagó «reembolsar» en todos los agentes hace tres minutos por un problema en la pasarela.'),
+      S(['sesion','canal'],'La ejecución se pausa con su estado guardado y Ana recibe un aviso. El modelo no puede quitarse el freno: la directiva vive fuera de su alcance.','control · reembolsar apagada · ejecución pausada'),
+      S(['control','idempotencia','herramienta'],'Una hora después operación enciende la herramienta; la ejecución se reanuda y la pasarela reembolsa una vez.','efecto · reembolso #1 · US$ 25,00'),
+      ...cierre('Completada después de la pausa.','ejecución · completada')];
+  }
+  let i=0;
+  function pintar(){
+    const c=$('#c16l1-c').value,r=$('#c16l1-r').value;
+    $('#c16l1-rl').style.display=c==='apr'?'':'none';
+    const P=camino(c,r);if(i>=P.length)i=P.length-1;
+    const vistos=new Set();P.slice(0,i).forEach(s=>s.n.forEach(x=>vistos.add(x)));
+    const on=new Set(P[i].n);
+    N.forEach(n=>{const el=$('#c16l1-n-'+n[0]);const a=on.has(n[0]),y=vistos.has(n[0]);
+      el.className='c16l1-n'+(a?' on':y?' ya':'');
+      el.style.borderColor=a||y?`var(${n[3]})`:'';el.style.background=a?`var(${n[4]})`:'';});
+    const s=P[i];
+    $('#c16l1-paso').innerHTML=`<span class="num">Paso ${i+1} de ${P.length} · ${s.n.map(x=>NOM[x]).join(' + ')}</span><span>${s.m?'<b class="m">Decide el modelo.</b> ':''}${s.t}</span>`;
+    const L=[];P.slice(0,i+1).forEach(x=>{if(x.a)x.a.split(' | ').forEach(e=>L.push(e));});
+    $('#c16l1-libro').innerHTML=L.length?L.map((e,k)=>`<li><span>${String(k+1).padStart(2,'0')}</span> ${e}</li>`).join(''):'<li><span>vacío</span></li>';
+    const todas=new Set();P.forEach(x=>x.n.forEach(y=>todas.add(y)));
+    const dm=P.filter(x=>x.m).length;
+    let h=`<span class="big">Este camino recorre ${todas.size} de ${N.length} piezas en ${P.length} pasos</span><span>El modelo decide en ${dm} pasos; el arnés, en los otros ${P.length-dm}.</span>`;
+    if(i===P.length-1)h+=`<span class="ok">Estado final explícito y ${L.length} entradas en el libro. Prueba otro camino y compara.</span>`;
+    $('#c16l1-out').innerHTML=h;
+    $('#c16l1-ant').disabled=i===0;$('#c16l1-sig').disabled=i===P.length-1;
+  }
+  $('#c16l1-sig').addEventListener('click',()=>{i++;pintar();});
+  $('#c16l1-ant').addEventListener('click',()=>{if(i>0)i--;pintar();});
+  $('#c16l1-fin').addEventListener('click',()=>{i=99;pintar();});
+  $('#c16l1-rei').addEventListener('click',()=>{i=0;pintar();});
+  $('#c16l1-c').addEventListener('change',()=>{i=0;pintar();});
+  $('#c16l1-r').addEventListener('change',()=>{pintar();});
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const P=[['bucle','Bucle con límites','2'],['herr','Herramientas con contrato','3'],['puerta','Puerta a los modelos','4'],['ctx','Motor de contexto','5'],['estado','Sesión durable','6'],['pol','Políticas e identidad','7'],['val','Validadores','8'],['hum','Humano en el bucle','9'],['cred','Credenciales','10'],['aisl','Entorno aislado','10'],['idem','Idempotencia','10'],['ctrl','Control operativo','10'],['aud','Auditoría','11'],['gob','Gobierno de datos','11'],['mem','Memoria con reglas','14'],['eval','Banco de evaluación','15']];
+  const NOM=Object.fromEntries(P.map(p=>[p[0],p[1]]));
+  const R=[
+    ['Un correo con una inyección hace enviar datos de clientes afuera',['pol','gob']],
+    ['Un reintento cobra o reembolsa dos veces',['idem','estado']],
+    ['Un bucle sin fin gasta cientos de dólares',['bucle','puerta']],
+    ['Una clave aparece en una respuesta o en un registro',['cred']],
+    ['Un comando borra archivos fuera de la carpeta de trabajo',['aisl','val']],
+    ['Un reembolso de US$ 3.000 sale sin que nadie lo vea',['pol','hum']],
+    ['La tarea se pierde si el proceso se reinicia',['estado']],
+    ['El proveedor del modelo se cae y todo se detiene',['puerta']],
+    ['Nadie puede explicar qué pasó en un incidente',['aud']],
+    ['Un cambio de modelo rompe las aprobaciones sin que nadie lo note',['eval']],
+    ['El contexto se llena y el agente olvida una restricción',['ctx']],
+    ['Argumentos mal formados llegan al sistema de cobros',['herr','val']],
+    ['Un agente falla y no se puede frenar sin apagar todo',['ctrl']],
+    ['Un recuerdo envenenado vuelve en cada tarea',['mem']]
+  ];
+  const DEP=[['hum','estado','el humano en el bucle necesita esperas durables: sin ellas, una aprobación de horas se pierde'],['idem','estado','la idempotencia necesita pasos durables para saber qué ya ocurrió'],['pol','herr','las políticas deciden sobre herramientas con contrato: sin contrato no hay riesgo ni efectos declarados'],['cred','pol','las credenciales se emiten para una identidad verificada, que viene con las políticas'],['aud','estado','la auditoría se alimenta de los eventos de la sesión'],['eval','bucle','el banco de evaluación necesita un bucle con límites que se pueda correr igual cada vez']];
+  const PERF={demo:['bucle','herr'],lectura:['bucle','herr','puerta','ctx','estado','pol','val','cred','aud','eval'],prod:P.map(p=>p[0]),nada:[]};
+  let on=new Set(PERF.lectura);
+  $('#c16l2-p').innerHTML=P.map(p=>`<button type="button" data-k="${p[0]}" aria-pressed="false">${p[1]}<small>${p[2]}</small></button>`).join('');
+  function pintar(){
+    document.querySelectorAll('#c16l2-p [data-k]').forEach(b=>b.setAttribute('aria-pressed',on.has(b.dataset.k)));
+    let ok=0,par=0,mal=0;
+    const filas=R.map(([t,ps])=>{const n=ps.filter(p=>on.has(p)).length;const e=n===ps.length?'ok':n?'par':'mal';if(e==='ok')ok++;else if(e==='par')par++;else mal++;
+      const falta=ps.filter(p=>!on.has(p)).map(p=>NOM[p]);
+      return [e,`<li><span class="c16l2-chip k-${e}">${e==='ok'?'cubierto':e==='par'?'parcial':'expuesto'}</span><span>${t}<small>${e==='ok'?'lo controlan: '+ps.map(p=>NOM[p]).join(' y '):'falta: '+falta.join(' y ')}</small></span></li>`];});
+    const ord={mal:0,par:1,ok:2};filas.sort((a,b)=>ord[a[0]]-ord[b[0]]);
+    $('#c16l2-r').innerHTML=filas.map(f=>f[1]).join('');
+    const avisos=DEP.filter(([a,b])=>on.has(a)&&!on.has(b));
+    let h=`<span class="big">${ok} de ${R.length} riesgos cubiertos · ${par} parciales · ${mal} expuestos</span><span>${on.size} de ${P.length} piezas encendidas.</span>`;
+    avisos.forEach(([a,b,t])=>{h+=`<span class="warn">${NOM[a]} sin ${NOM[b].toLowerCase()}: ${t}.</span>`;});
+    if(ok===R.length&&!avisos.length)h+=`<span class="ok">Todos los riesgos de la lista quedan cubiertos. Ahora falta lo que el laboratorio no mide: configurar bien cada pieza y medirla en el banco.</span>`;
+    else if(on.size<=2&&on.size>0)h+=`<span>Así es una demostración: funciona y nada la protege. Todo lo que hace, lo hace sin red.</span>`;
+    $('#c16l2-out').innerHTML=h;
+  }
+  document.querySelectorAll('#c16l2-p [data-k]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;on.has(k)?on.delete(k):on.add(k);pintar();}));
+  document.querySelectorAll('[id="16-lab-2"] [data-p]').forEach(b=>b.addEventListener('click',()=>{on=new Set(PERF[b.dataset.p]);pintar();}));
+  pintar();
+})();
+</script>
+</body>
+</html>

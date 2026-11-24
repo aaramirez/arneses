@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contexto y compactación · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="contexto">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 05 DE 16</span><h1>El motor de contexto y la compactación</h1><p class="lede">El modelo no recuerda nada entre una llamada y la siguiente: en cada turno ve solo lo que el arnés le pone delante. Elegir eso, dentro de un presupuesto fijo, y resumir sin perder el hilo cuando la ventana se llena, es el trabajo del motor de contexto.</p></header>
+<section><h2>Ensamblar el contexto: instrucciones, herramientas, memoria e historia</h2><div class="prose"><p>Un modelo de lenguaje no tiene memoria entre llamadas. Cada vez que el bucle lo invoca (capítulo 2), le manda un paquete de texto completo, y el modelo responde mirando <b>solo</b> ese paquete. Si algo no está ahí, para el modelo no existe: ni la conversación de hace cinco minutos, ni la regla del proyecto, ni el resultado de la herramienta que corrió hace tres turnos.</p><p>Ese paquete es el <b>contexto</b> (<i>context</i>), y cabe en una <b>ventana de contexto</b> (<i>context window</i>) de tamaño fijo, medida en <b>tokens</b> (<i>tokens</i>, los fragmentos de palabra con que el modelo cuenta y con que se cobra). La pieza del arnés que decide qué entra en cada turno es el <b>motor de contexto</b> (<i>context engine</i>). Responde una sola pregunta: ¿qué debería saber el modelo ahora?</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en un médico de guardia que recibe a un paciente que no conoce. No lee los 400 folios de la historia clínica: alguien le arma una carpeta con el motivo de consulta, las alergias, la medicación actual, los últimos análisis y un resumen de lo anterior. Si la carpeta omite la alergia a la penicilina, el médico más brillante del hospital se equivoca. El motor de contexto es quien arma esa carpeta, cada vez, con un límite de páginas.</p></div><div class="prose"><p>En casi todos los arneses, el contexto de un turno se arma con las mismas capas, en un orden parecido:</p><ol class="steps"><li><span><b>Instrucciones del sistema</b> (<i>system prompt</i>): quién es el agente, su tarea y su tono. Cambian poco.</span></li><li><span><b>Definiciones de herramientas</b> (<i>tool definitions</i>): el nombre, la descripción y el esquema de cada herramienta que el agente puede usar en este turno (capítulo 3). Pesan más de lo que parece: veinte herramientas con buenos esquemas ocupan miles de tokens.</span></li><li><span><b>Contexto del proyecto y memoria</b>: archivos de reglas como <code>AGENTS.md</code> o <code>CLAUDE.md</code>, hechos que el agente guardó de tareas anteriores (capítulo 14) y documentos recuperados para esta tarea.</span></li><li><span><b>Historia de la sesión</b>: los mensajes anteriores, con las llamadas a herramientas y sus resultados. Es la capa que más crece.</span></li><li><span><b>El pedido actual</b>: lo último que dijo la persona o el evento que activó al agente.</span></li></ol><p>Por debajo de todo queda un espacio que no se llena: la <b>reserva para la respuesta</b> (<i>output reserve</i>), los tokens que el modelo necesita para contestar.</p></div><figure class="fig fig-capas" id="05-diagrama-1"><div class="lienzo"><svg viewBox="0 0 780 420" style="min-width:640px" role="img" aria-label="Las capas del contexto de un turno, de arriba abajo: instrucciones del sistema, definiciones de herramientas, proyecto y memoria, historia de la sesión, pedido actual y reserva para la respuesta; a la derecha, la procedencia de cada capa y cuáles son estables, cuáles crecen y cuál nunca se ocupa">
+  <text x="20" y="26" class="t t-xs t-b t-m">LA VENTANA DE CONTEXTO DE UN TURNO</text>
+  <text x="560" y="26" class="t t-xs t-b t-m">PROCEDENCIA</text>
+  <rect x="20" y="38" width="500" height="370" rx="12" class="caja" style="stroke-width:1.6"/>
+
+  <rect x="32" y="50" width="476" height="42" rx="8" class="c-red"/>
+  <text x="46" y="70" class="t t-b k-red">Instrucciones del sistema</text>
+  <text x="46" y="85" class="t t-s">quién es el agente, su tarea, su tono</text>
+  <text x="560" y="70" class="t t-s t-b">configuración del agente</text>
+  <text x="560" y="85" class="t t-s t-m">estable · se guarda en caché</text>
+
+  <rect x="32" y="98" width="476" height="54" rx="8" class="c-enl"/>
+  <text x="46" y="120" class="t t-b k-enl">Definiciones de herramientas</text>
+  <text x="46" y="137" class="t t-s">nombre, descripción y esquema de cada una</text>
+  <text x="560" y="120" class="t t-s t-b">registro de capacidades</text>
+  <text x="560" y="135" class="t t-s t-m">estable · capítulo 3</text>
+
+  <rect x="32" y="158" width="476" height="46" rx="8" class="c-fis"/>
+  <text x="46" y="178" class="t t-b k-fis">Proyecto, memoria y documentos</text>
+  <text x="46" y="194" class="t t-s">AGENTS.md, hechos guardados, lo recuperado</text>
+  <text x="560" y="178" class="t t-s t-b">archivos y memoria</text>
+  <text x="560" y="193" class="t t-s t-m">cambia por tarea · capítulo 14</text>
+
+  <rect x="32" y="210" width="476" height="34" rx="8" class="c-fis" style="stroke-dasharray:5 4"/>
+  <text x="46" y="232" class="t t-s t-b k-fis">Resumen compactado (si hubo compactación)</text>
+  <text x="560" y="232" class="t t-s t-b">motor de contexto</text>
+
+  <rect x="32" y="250" width="476" height="80" rx="8" class="c-tra"/>
+  <text x="46" y="274" class="t t-b k-tra">Historia de la sesión</text>
+  <text x="46" y="291" class="t t-s">mensajes, llamadas a herramientas y sus resultados</text>
+  <text x="46" y="308" class="t t-s t-m">la capa que más crece: aquí se compacta</text>
+  <text x="560" y="274" class="t t-s t-b">gestor de sesiones</text>
+  <text x="560" y="289" class="t t-s t-m">crece turno a turno · capítulo 6</text>
+
+  <rect x="32" y="336" width="476" height="28" rx="8" class="d-casa"/>
+  <text x="46" y="355" class="t t-s t-b k-casa">Pedido actual</text>
+  <text x="560" y="355" class="t t-s t-b">persona, API o evento</text>
+
+  <rect x="32" y="370" width="476" height="30" rx="8" class="caja" style="stroke-dasharray:3 4"/>
+  <text x="46" y="390" class="t t-s t-b t-m">Reserva para la respuesta: nunca se ocupa</text>
+  <text x="560" y="390" class="t t-s t-b">política del arnés</text>
+
+  <path d="M534 50v190" class="ln" style="stroke-width:3"/>
+  <path d="M534 250v114" class="ln s-tra" style="stroke-width:3"/>
+  <text x="760" y="160" class="t t-xs t-b t-m" text-anchor="end">ESTABLE</text>
+  <text x="760" y="318" class="t t-xs t-b k-tra" text-anchor="end">CRECE</text>
+</svg></div><figcaption><b>La anatomía del contexto de un turno.</b> Cada franja es una capa, de arriba abajo en el orden en que el motor la arma, con una altura que sugiere lo que suele ocupar. A la derecha, de dónde viene cada capa: su procedencia. Las capas de arriba son estables y se pueden guardar en caché; la historia crece turno a turno; la reserva para la respuesta, abajo, nunca se ocupa.</figcaption></figure><div class="prose"><p>El motor no copia todo lo que existe. <b>Selecciona</b> (qué entra), <b>ordena</b> (qué va primero), <b>compone</b> (en qué formato) y <b>anota la procedencia</b> (<i>provenance</i>) de cada bloque: de dónde salió. Esa anotación parece un detalle, pero es lo que permite contestar después, cuando el agente se equivoca, la pregunta «¿por qué el modelo creía esto?».</p><p>Una distinción importante: el motor decide qué es <b>relevante</b>, no qué está <b>permitido</b>. Si un documento contiene datos que este usuario no puede ver, no es el motor quien lo filtra por buena voluntad, sino las políticas (capítulo 7) y el gobierno de datos (capítulo 11). Mezclar las dos decisiones en el mismo código es la forma más rápida de que un día se cuele un dato porque «era muy relevante».</p></div></section>
+<section><h2>El presupuesto de contexto</h2><div class="prose"><p>La ventana tiene un tamaño fijo, que depende del modelo: de decenas de miles a más de un millón de tokens. Pero que quepa no quiere decir que convenga. Tres razones hacen del contexto un <b>presupuesto</b> (<i>budget</i>) que se administra:</p><ul><li><b>Costo.</b> Cada token de entrada se paga en cada turno. Un agente que arrastra 150.000 tokens de historia en un bucle de 30 turnos paga esa historia 30 veces. La caché de prompts del capítulo 4 abarata las capas estables, no la historia que cambia.</li><li><b>Latencia.</b> Más tokens de entrada, más tiempo hasta el primer token de respuesta.</li><li><b>Calidad.</b> Los modelos atienden peor lo que está enterrado en medio de un contexto muy largo. Con el contexto lleno de ruido (resultados de herramientas que ya no importan, intentos fallidos), el modelo se distrae, repite pasos o sigue un dato viejo. A ese deterioro se le llama a veces <b>podredumbre del contexto</b> (<i>context rot</i>).</li></ul><p>Por eso el arnés fija un presupuesto por debajo del máximo del modelo, y lo reparte. Un reparto típico reserva una parte fija para instrucciones y herramientas, un tope para memoria y documentos, y deja el resto para la historia, siempre con la reserva para la respuesta intacta.</p></div><div class="ml"><b>En la práctica</b><p>La idea de tratar el contexto como un recurso escaso tiene nombre en la industria: <b>ingeniería de contexto</b> (<i>context engineering</i>). La práctica se resume en buscar el conjunto más pequeño de tokens que hace probable el resultado correcto. Sale más a cuenta sacar del contexto una herramienta que el agente no va a usar en esta tarea que escribir instrucciones más largas pidiéndole que no la use.</p></div><div class="prose"><p>Cuando todo no cabe, el motor decide con una <b>prioridad</b> por capa. Las instrucciones del sistema y el pedido actual no se recortan nunca; los resultados viejos de herramientas son lo primero que se va. Pruébalo: arma el contexto de un agente de soporte con un presupuesto que tú eliges.</p></div><div class="lab" id="05-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Arma el contexto con un presupuesto</h3></div><p class="hint">Mueve el presupuesto y enciende o apaga los bloques candidatos. El motor los mete en orden de prioridad hasta que se acaba el espacio; lo que no cabe queda fuera, con su procedencia anotada. Mira qué pregunta del cliente deja de poder contestarse cuando un bloque se queda afuera.</p><style>
+[id="05-lab-1"] .c5l1-bar{display:flex;height:44px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--paper)}
+[id="05-lab-1"] .c5l1-bar i{display:block;height:100%;min-width:0;transition:width .3s;border-right:1px solid var(--card)}
+@media (prefers-reduced-motion: reduce){[id="05-lab-1"] .c5l1-bar i{transition:none}}
+[id="05-lab-1"] .c5l1-escala{display:flex;justify-content:space-between;font:500 .75rem var(--f-mono);color:var(--muted);margin-top:-8px}
+[id="05-lab-1"] .c5l1-blq{display:grid;gap:6px}
+[id="05-lab-1"] .c5l1-fila{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);font:500 .86rem var(--f-display)}
+[id="05-lab-1"] .c5l1-fila .sw{width:12px;height:12px;border-radius:3px}
+[id="05-lab-1"] .c5l1-fila .tk{font:600 .8rem var(--f-mono);color:var(--muted);white-space:nowrap}
+[id="05-lab-1"] .c5l1-fila .pr{grid-column:2/-1;font:500 .76rem var(--f-display);color:var(--muted)}
+[id="05-lab-1"] .c5l1-fila.fuera{opacity:.55;border-style:dashed}
+[id="05-lab-1"] .c5l1-fila.fuera .tk{color:var(--warm)}
+[id="05-lab-1"] .c5l1-fila button{padding:3px 8px;font-size:.76rem}
+[id="05-lab-1"] .c5l1-preg{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-family:var(--f-body);font-size:.93rem}
+[id="05-lab-1"] .c5l1-preg b{font-family:var(--f-display)}
+</style>
+<div class="ctls">
+  <label class="ctl">Presupuesto de contexto <output id="c5l1-pv">24.000 tokens</output>
+    <input type="range" id="c5l1-p" min="8000" max="64000" step="1000" value="24000"></label>
+</div>
+<div class="btns" role="group" aria-label="Opciones del motor">
+  <button type="button" id="c5l1-rec" aria-pressed="false">Recortar resultados grandes</button>
+  <button type="button" id="c5l1-res" aria-pressed="false">Resumir la historia antigua</button>
+</div>
+<div class="c5l1-bar" id="c5l1-bar" role="img" aria-label="Barra del presupuesto de contexto"></div>
+<div class="c5l1-escala"><span>0</span><span id="c5l1-max">24.000</span></div>
+<div class="c5l1-blq" id="c5l1-blq"></div>
+<div class="readout texto" id="c5l1-out" aria-live="polite"></div></div></section>
+<section><h2>Compactar: umbrales, qué se resume y dónde se corta</h2><div class="prose"><p>En una sesión larga, tarde o temprano la historia invade la reserva. Entonces el motor <b>compacta</b> (<i>compaction</i>): reemplaza parte de la historia por algo más corto. Hacerlo bien tiene tres decisiones: cuándo, qué y dónde cortar.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es como el acta de una reunión de seis horas. Nadie relee la transcripción completa al día siguiente: se lee el acta, con los acuerdos, los pendientes y quién hace qué. Pero la última media hora, donde se discutía el punto que sigue abierto, se conserva palabra por palabra, porque ahí cualquier matiz importa.</p></div><div class="prose"><p><b>Cuándo.</b> Con un <b>umbral</b> (<i>threshold</i>). El diseño más común define dos números: la reserva (cuántos tokens deben quedar libres para la respuesta) y cuánta historia reciente se conserva literal. La compactación se dispara cuando la historia invade la reserva, no antes. Muchos agentes de código lo hacen solos al llegar a un porcentaje de la ventana, y además dejan que la persona lo pida a mano con un comando.</p><p><b>Qué.</b> En dos fases, de la más barata a la más cara:</p><ol class="steps"><li><span><b>Recorte sin modelo</b> (<i>truncation</i>). Los resultados de herramientas enormes, como un listado de 5.000 líneas o un JSON gigante, se cortan a un tamaño máximo y se marcan: <code>[recortado: 4.870 líneas omitidas]</code>. No cuesta una llamada al modelo y muchas veces alcanza.</span></li><li><span><b>Resumen</b> (<i>summarization</i>). Si el recorte no basta, la parte antigua de la historia se reemplaza por un resumen que escribe el modelo. Aquí está el riesgo: un resumen libre pierde justo lo que no parecía importante. Por eso el arnés exige un <b>resumen estructurado</b>, con campos fijos: objetivo, restricciones, progreso, decisiones tomadas, próximos pasos, datos críticos y archivos tocados. El modelo propone el texto; la forma la fija el contrato, y un validador la comprueba antes de aceptar el resumen.</span></li></ol><p><b>Dónde cortar.</b> La historia se divide en una región antigua (se resume) y una región reciente (se conserva literal). El <b>punto de corte seguro</b> (<i>safe cut point</i>) nunca cae entre una llamada a herramienta y su resultado: separarlos dejaría al modelo con un resultado huérfano o con una llamada sin respuesta, y varios proveedores rechazan directamente un mensaje así.</p></div><figure class="fig fig-flujo" id="05-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 560" style="min-width:680px" role="img" aria-label="Diagrama de secuencia de una compactación: el bucle pide el contexto; el motor mide y detecta que la historia invade la reserva; recorta resultados grandes sin modelo; si no alcanza, elige el punto de corte seguro y pide al modelo un resumen estructurado; el validador revisa los campos; la sesión guarda el resumen sin borrar los originales; el motor devuelve resumen más historia reciente; cada paso publica un evento">
+  <defs>
+    <marker id="d52-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d52-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-fis"/></marker>
+    <marker id="d52-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d52-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d52-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+  </defs>
+  <rect x="10" y="14" width="100" height="46" rx="10" class="c-red"/><text x="60" y="42" class="t t-b k-red" text-anchor="middle">Bucle</text>
+  <rect x="140" y="14" width="130" height="46" rx="10" class="c-fis"/><text x="205" y="35" class="t t-b k-fis" text-anchor="middle">Motor de</text><text x="205" y="51" class="t t-b k-fis" text-anchor="middle">contexto</text>
+  <rect x="300" y="14" width="100" height="46" rx="10" class="c-tra"/><text x="350" y="42" class="t t-b k-tra" text-anchor="middle">Modelo</text>
+  <rect x="430" y="14" width="110" height="46" rx="10" class="d-sis"/><text x="485" y="42" class="t t-b k-sis" text-anchor="middle">Validador</text>
+  <rect x="570" y="14" width="100" height="46" rx="10" class="d-casa"/><text x="620" y="42" class="t t-b k-casa" text-anchor="middle">Sesión</text>
+  <rect x="690" y="14" width="80" height="46" rx="10" class="d-inet"/><text x="730" y="42" class="t t-b k-inet" text-anchor="middle">Eventos</text>
+  <line x1="60" y1="60" x2="60" y2="545" class="vida"/>
+  <line x1="205" y1="60" x2="205" y2="545" class="vida"/>
+  <line x1="350" y1="60" x2="350" y2="545" class="vida"/>
+  <line x1="485" y1="60" x2="485" y2="545" class="vida"/>
+  <line x1="620" y1="60" x2="620" y2="545" class="vida"/>
+  <line x1="730" y1="60" x2="730" y2="545" class="vida"/>
+
+  <line x1="60" y1="100" x2="203" y2="100" class="ln s-red" style="stroke-width:2" marker-end="url(#d52-r)"/>
+  <text x="66" y="93" class="t t-s">① contexto del turno 31</text>
+  <rect x="199" y="118" width="12" height="38" rx="3" class="c-fis"/>
+  <text x="218" y="132" class="t t-s">② mide: 182.000 tokens</text>
+  <text x="218" y="148" class="t t-s t-m">invade la reserva de 20.000</text>
+
+  <rect x="199" y="172" width="12" height="38" rx="3" class="c-fis"/>
+  <text x="218" y="186" class="t t-s">③ fase 1: recorta 3 resultados</text>
+  <text x="218" y="202" class="t t-s t-m">sin modelo · aún no alcanza</text>
+
+  <rect x="199" y="226" width="12" height="30" rx="3" class="c-fis"/>
+  <text x="218" y="245" class="t t-s">④ punto de corte seguro</text>
+
+  <line x1="205" y1="290" x2="348" y2="290" class="ln s-fis" style="stroke-width:2" marker-end="url(#d52-f)"/>
+  <text x="211" y="283" class="t t-s">⑤ resume la región antigua</text>
+  <line x1="350" y1="325" x2="483" y2="325" class="ln s-tra" style="stroke-width:2" marker-end="url(#d52-t)"/>
+  <text x="356" y="318" class="t t-s">⑥ resumen con 7 campos</text>
+  <line x1="485" y1="360" x2="618" y2="360" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d52-s)"/>
+  <text x="491" y="353" class="t t-s">⑦ forma válida</text>
+  <rect x="614" y="374" width="12" height="38" rx="3" class="d-casa"/>
+  <text x="606" y="388" class="t t-s" text-anchor="end">⑧ guarda el resumen</text>
+  <text x="606" y="404" class="t t-s t-m" text-anchor="end">los originales no se borran</text>
+  <line x1="620" y1="440" x2="207" y2="440" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d52-c)"/>
+  <text x="300" y="433" class="t t-s">⑨ resumen + región reciente literal</text>
+  <line x1="205" y1="480" x2="62" y2="480" class="ln s-fis" style="stroke-width:2" marker-end="url(#d52-f)"/>
+  <text x="66" y="473" class="t t-s">⑩ 64.000 tokens</text>
+
+  <g class="k-inet">
+    <circle cx="730" cy="137" r="4.5"/><circle cx="730" cy="191" r="4.5"/><circle cx="730" cy="360" r="4.5"/><circle cx="730" cy="393" r="4.5"/><circle cx="730" cy="480" r="4.5"/>
+  </g>
+  <text x="730" y="520" class="t t-xs t-m" text-anchor="middle">historia</text>
+  <text x="730" y="534" class="t t-xs t-m" text-anchor="middle">compactada</text>
+
+  <g class="t t-xs t-b">
+    <path d="M790 118v140" class="ln s-fis" style="stroke-width:3"/><text x="798" y="180" class="k-fis">SIN</text><text x="798" y="194" class="k-fis">MODELO</text>
+    <path d="M790 274v100" class="ln s-tra" style="stroke-width:3"/><text x="798" y="318" class="k-tra">CON</text><text x="798" y="332" class="k-tra">MODELO</text>
+    <path d="M790 386v100" class="ln" style="stroke-width:3"/><text x="798" y="438" class="t-m">ARMADO</text>
+  </g>
+</svg></div><figcaption><b>El flujo de una compactación.</b> El bucle pide el contexto del turno; el motor mide y ve que la historia invade la reserva. Primero recorta los resultados grandes, sin modelo. Si no alcanza, elige el punto de corte seguro y le pide al modelo un resumen de la región antigua con la forma del contrato. El validador revisa los campos; la sesión guarda el resumen como un bloque nuevo, sin borrar los mensajes originales, y el motor arma el contexto con resumen más región reciente. Cada paso publica un evento.</figcaption></figure><div class="prose"><p>Observa un detalle del diagrama: la sesión <b>no borra</b> los mensajes originales. El resumen reemplaza la historia en lo que ve el modelo, no en lo que guarda el arnés. Si mañana alguien audita la ejecución, o si el resumen resulta malo, los mensajes completos siguen ahí.</p><p>En código, la política de compactación es un dato de configuración, no algo que decide el modelo:</p><div class="code-copia"><pre><code>interface PoliticaDeCompactacion {
+  reservaTokens: number;          // libres para la respuesta
+  conservarRecientesTokens: number; // historia que se deja literal
+  maxCaracteresResultado: number; // fase 1: recorte de resultados
+}
+
+interface ResumenCompactado {
+  objetivo: string;
+  restricciones: string[];
+  progreso: string[];
+  decisiones: string[];
+  proximosPasos: string[];
+  datosCriticos: string[];
+  archivosTocados: string[];
+  primerMensajeConservado: string; // dónde empieza la región literal
+  procedencia: "compactacion";
+}
+
+function compactar(historia: Mensaje[], p: PoliticaDeCompactacion, presupuesto: number) {
+  let h = recortarResultados(historia, p.maxCaracteresResultado); // fase 1
+  if (tokens(h) + p.reservaTokens &lt;= presupuesto) return { historia: h, resumen: null };
+  const corte = corteSeguro(h, p.conservarRecientesTokens); // no separa llamada y resultado
+  const resumen = validarResumen(pedirResumen(h.slice(0, corte))); // fase 2
+  // la sesión guarda los originales: el resumen solo cambia lo que ve el modelo
+  return { historia: h.slice(corte), resumen };
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Ahora mira la ventana llenarse turno a turno. Cada mensaje trae un dato que la tarea necesitará más adelante.</p></div><div class="lab" id="05-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>La ventana que se llena: qué se compacta en cada umbral y qué se pierde</h3></div><p class="hint">Avanza los turnos de una sesión de soporte y mira crecer la historia. Mueve la reserva, la historia reciente que se conserva y el tamaño máximo de un resultado, y elige entre resumen libre y resumen estructurado. La lista de abajo dice qué datos sigue sabiendo el modelo y cuáles se perdieron en cada compactación.</p><style>
+[id="05-lab-2"] .c5l2-bar{display:flex;height:40px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--paper);position:relative}
+[id="05-lab-2"] .c5l2-bar i{display:block;height:100%;transition:width .3s}
+@media (prefers-reduced-motion: reduce){[id="05-lab-2"] .c5l2-bar i{transition:none}}
+[id="05-lab-2"] .c5l2-ley{display:flex;flex-wrap:wrap;gap:6px 14px;font:500 .8rem var(--f-display);color:var(--muted)}
+[id="05-lab-2"] .c5l2-ley i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+[id="05-lab-2"] .c5l2-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
+[id="05-lab-2"] .c5l2-caja{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--card);display:grid;gap:6px;align-content:start}
+[id="05-lab-2"] .c5l2-caja h4{margin:0;font:700 .74rem var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+[id="05-lab-2"] .c5l2-lst{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-family:var(--f-body);font-size:.9rem;line-height:1.4}
+[id="05-lab-2"] .c5l2-lst .tg{display:inline-block;font:700 .66rem var(--f-display);letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-right:6px;color:var(--card);vertical-align:1px}
+[id="05-lab-2"] .c5l2-lst li.no{color:var(--muted)}
+[id="05-lab-2"] .c5l2-log{font:500 .8rem/1.5 var(--f-mono)}
+</style>
+<div class="btns">
+  <button type="button" id="c5l2-atr">◀ Turno anterior</button>
+  <button type="button" id="c5l2-sig" class="primary">Siguiente turno ▶</button>
+  <button type="button" id="c5l2-play" aria-pressed="false">▶ Reproducir</button>
+  <button type="button" id="c5l2-ini">Reiniciar</button>
+</div>
+<div class="ctls">
+  <label class="ctl">Reserva para la respuesta <output id="c5l2-rv"></output><input type="range" id="c5l2-r" min="2000" max="12000" step="1000" value="6000"></label>
+  <label class="ctl">Historia reciente literal <output id="c5l2-kv"></output><input type="range" id="c5l2-k" min="2000" max="14000" step="1000" value="6000"></label>
+  <label class="ctl">Tamaño máximo de un resultado <output id="c5l2-mv"></output><input type="range" id="c5l2-m" min="1000" max="8000" step="500" value="8000"></label>
+</div>
+<div class="opciones"><label>Tipo de resumen
+  <select id="c5l2-tipo"><option value="est">estructurado (7 campos)</option><option value="lib">libre (un párrafo)</option></select></label></div>
+<div class="c5l2-bar" id="c5l2-bar" role="img"></div>
+<div class="c5l2-ley"><span><i style="background:var(--c-red)"></i>fijo (sistema y herramientas)</span><span><i style="background:var(--c-fis)"></i>resumen</span><span><i style="background:var(--c-tra)"></i>historia literal</span><span><i style="background:var(--muted);opacity:.35"></i>reserva</span><span><i style="background:var(--paper);border:1px solid var(--line)"></i>libre</span></div>
+<div class="readout" id="c5l2-out" aria-live="polite"></div>
+<div class="c5l2-cols">
+  <div class="c5l2-caja"><h4>Lo que el modelo sabe en este turno</h4><ul class="c5l2-lst" id="c5l2-dat"></ul></div>
+  <div class="c5l2-caja"><h4>Compactaciones</h4><ul class="c5l2-lst c5l2-log" id="c5l2-log"></ul></div>
+</div></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Cuenta los tokens de tu propio contexto</h3></div><p>Vas a medir cuánto pesa un contexto real con un contador de tokens público y gratuito. Abre https://tiktokenizer.vercel.app (no pide registro).</p><ol class="steps"><li><span>Pega un párrafo de este capítulo en español y anota cuántos tokens cuenta. Pega el mismo texto traducido al inglés (cualquier traductor sirve) y compara.</span></li><li><span>Pega una definición de herramienta en JSON, por ejemplo la de <code>leer_archivo</code> con su esquema del capítulo 3, y anota cuántos tokens ocupa una sola herramienta.</span></li><li><span>Multiplica: si un agente tiene 25 herramientas parecidas, ¿cuántos tokens se van en definiciones antes de que la persona escriba nada?</span></li><li><span>Pega un resultado típico de herramienta, como la salida de un listado de archivos largo, y compara su peso con el de una pregunta del usuario.</span></li></ol><p><b>Qué observar:</b> el español suele usar más tokens que el inglés para el mismo texto, y las herramientas y los resultados pesan mucho más que las frases de la conversación. Los números cambian según el tokenizador (cada familia de modelos tiene el suyo), pero la proporción entre capas se mantiene, y es la que justifica el presupuesto y el recorte de resultados.</p></div></section>
+<section><h2>Sesiones en árbol: bifurcar y volver</h2><div class="prose"><p>Una sesión no tiene por qué ser una línea recta. A veces el agente toma un camino que no sirve: intentó arreglar un error reescribiendo medio módulo y lo empeoró. Lo natural es volver a un punto anterior y probar otra cosa. Si el arnés guarda la sesión como una lista, volver significa borrar. Si la guarda como un <b>árbol</b> (<i>session tree</i>), volver significa abrir una rama nueva desde un <b>punto de control</b> (<i>checkpoint</i>), y la rama abandonada sigue existiendo.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es el historial de un documento compartido con versiones. Vuelves a la versión del martes y sigues escribiendo desde ahí, pero la del miércoles no desaparece: si mañana descubres que tenía un párrafo bueno, lo recuperas. Lo que no haces es pegar el miércoles completo en el texto nuevo; como mucho, una nota que dice qué se intentó.</p></div><div class="prose"><p>Hay dos operaciones que conviene no confundir:</p><ul><li><b>Navegar dentro de la misma sesión</b>: la sesión sigue desde un punto anterior. El arnés guarda un <b>resumen de la rama abandonada</b> (<i>branch summary</i>), con la misma forma estructurada de la compactación, y lo pone en el contexto de la rama nueva. Así el modelo sabe qué se intentó y por qué no funcionó, sin cargar todos los mensajes de ese intento.</li><li><b>Bifurcar en una sesión nueva</b> (<i>fork</i>): se crea otra sesión que comparte la historia hasta el punto de control y desde ahí es independiente. Sirve para explorar dos enfoques en paralelo o para que otra persona continúe sin tocar la sesión original.</li></ul></div><figure class="fig fig-esquema" id="05-diagrama-3"><div class="lienzo"><svg viewBox="0 0 780 340" style="min-width:620px" role="img" aria-label="Una sesión en árbol: tronco de puntos de control 1, 2 y 3; desde el 3 sale la rama A, un intento abandonado y guardado, y la rama B, que continúa llevando el resumen de la rama A; abajo, una bifurcación que crea una sesión nueva copiando el tronco">
+  <text x="20" y="26" class="t t-xs t-b t-m">SESIÓN «ARREGLAR EL CIERRE DE CAJA»</text>
+  <line x1="60" y1="150" x2="300" y2="150" class="ln" style="stroke-width:3"/>
+  <circle cx="60" cy="150" r="16" class="c-red"/><text x="60" y="155" class="t t-b k-red" text-anchor="middle">1</text>
+  <circle cx="180" cy="150" r="16" class="c-red"/><text x="180" y="155" class="t t-b k-red" text-anchor="middle">2</text>
+  <circle cx="300" cy="150" r="16" class="c-red"/><text x="300" y="155" class="t t-b k-red" text-anchor="middle">3</text>
+  <text x="60" y="124" class="t t-s t-m" text-anchor="middle">pedido</text>
+  <text x="180" y="124" class="t t-s t-m" text-anchor="middle">pruebas</text>
+  <text x="300" y="186" class="t t-s t-m" text-anchor="middle">error hallado</text>
+
+  <path d="M316 140 C360 80 400 74 440 74 H594" class="ln ln-d" style="stroke-width:2"/>
+  <circle cx="460" cy="74" r="14" class="caja" style="stroke-dasharray:3 3"/><text x="460" y="79" class="t t-s t-m" text-anchor="middle">4a</text>
+  <circle cx="580" cy="74" r="14" class="caja" style="stroke-dasharray:3 3"/><text x="580" y="79" class="t t-s t-m" text-anchor="middle">5a</text>
+  <text x="400" y="48" class="t t-s t-b t-m">Rama A: reescribir el módulo</text>
+  <text x="610" y="79" class="t t-s t-m">abandonada, guardada</text>
+
+  <path d="M316 152 H596" class="ln s-red" style="stroke-width:3"/>
+  <circle cx="460" cy="150" r="16" class="c-red"/><text x="460" y="155" class="t t-b k-red" text-anchor="middle">4b</text>
+  <circle cx="580" cy="150" r="16" class="c-red"/><text x="580" y="155" class="t t-b k-red" text-anchor="middle">5b</text>
+  <text x="610" y="146" class="t t-s t-b k-red">Rama B: corregir solo</text>
+  <text x="610" y="162" class="t t-s t-b k-red">el redondeo · activa</text>
+
+  <rect x="378" y="96" width="170" height="36" rx="6" class="c-fis"/>
+  <text x="388" y="111" class="t t-xs t-b k-fis">RESUMEN DE LA RAMA A</text>
+  <text x="388" y="125" class="t t-xs">rompió 6 pruebas; no repetir</text>
+  <line x1="460" y1="132" x2="460" y2="134" class="ln s-fis"/>
+
+  <path d="M180 166 C180 250 220 270 260 270 H600" class="ln s-tra" style="stroke-width:2"/>
+  <text x="250" y="252" class="t t-s t-b k-tra">Bifurcación a una sesión nueva</text>
+  <rect x="300" y="282" width="300" height="40" rx="8" class="c-tra"/>
+  <text x="312" y="299" class="t t-s">copia el tronco hasta el punto 2</text>
+  <text x="312" y="314" class="t t-s t-m">y sigue por su cuenta, sin tocar la original</text>
+  <circle cx="620" cy="270" r="14" class="c-tra"/><text x="620" y="275" class="t t-s t-b k-tra" text-anchor="middle">3'</text>
+</svg></div><figcaption><b>Una sesión en árbol.</b> Los círculos son puntos de control y el tronco es la historia compartida. En el punto 3 la sesión se ramificó: la rama A (punteada) fue un intento que no sirvió y quedó guardada; la rama B continúa desde el mismo punto y lleva en su contexto el resumen de la rama A, el recuadro naranja. Abajo, una bifurcación a una sesión nueva, que copia el tronco y sigue por su cuenta.</figcaption></figure><div class="prose"><p>Varios arneses del mercado ya trabajan así. Los agentes de código suelen dejar retomar una sesión anterior y bifurcarla en otra; algunos, como el agente de terminal Pi (https://github.com/earendil-works/pi), muestran la sesión como un árbol navegable y resumen la rama que se deja. Los SDK con persistencia, como LangGraph, guardan un punto de control por paso y permiten reanudar desde cualquiera.</p></div><div class="lab" id="05-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Bifurca una sesión y compara las dos ramas</h3></div><p class="hint">Elige el punto de control desde donde vuelves y la instrucción nueva. Compara lo que ve el modelo en la rama original y en la rama nueva, con y sin el resumen de la rama abandonada. Fíjate en qué error repite la rama nueva cuando no lleva el resumen.</p><style>
+[id="05-lab-3"] .c5l3-scroll{overflow-x:auto}
+[id="05-lab-3"] .c5l3-svg{min-width:520px;width:100%;max-width:640px;height:auto;display:block;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="05-lab-3"] .c5l3-svg text{font-family:var(--f-display)}
+[id="05-lab-3"] .c5l3-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+[id="05-lab-3"] .c5l3-caja{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--card);display:grid;gap:6px;align-content:start}
+[id="05-lab-3"] .c5l3-caja h4{margin:0;font:700 .74rem var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+[id="05-lab-3"] .c5l3-caja ol{margin:0;padding-left:1.3em;display:grid;gap:3px;font-family:var(--f-body);font-size:.88rem;line-height:1.4}
+[id="05-lab-3"] .c5l3-caja li.res{color:var(--c-fis);font-weight:600}
+[id="05-lab-3"] .c5l3-caja li.nuevo{color:var(--c-red);font-weight:600}
+[id="05-lab-3"] .c5l3-caja li.mal{color:var(--warm)}
+[id="05-lab-3"] .c5l3-tk{font:600 .8rem var(--f-mono);color:var(--muted)}
+</style>
+<div class="opciones">
+  <label>Volver al punto de control
+    <select id="c5l3-pc">
+      <option value="1">1 · pedido recibido</option>
+      <option value="2">2 · pruebas corridas: falla el redondeo</option>
+      <option value="3" selected>3 · leyó calcular_total.ts</option>
+      <option value="4">4 · reescribió el módulo</option>
+      <option value="5">5 · ahora fallan 6 pruebas</option>
+    </select></label>
+  <label>Instrucción para la rama nueva
+    <select id="c5l3-ins">
+      <option value="red">«Corrige solo el redondeo»</option>
+      <option value="prueba">«Escribe primero una prueba del caso 0,02»</option>
+      <option value="libre">«Inténtalo de otra forma»</option>
+    </select></label>
+  <label>Operación
+    <select id="c5l3-op">
+      <option value="nav">navegar en la misma sesión</option>
+      <option value="fork">bifurcar en una sesión nueva</option>
+    </select></label>
+</div>
+<div class="btns"><button type="button" id="c5l3-sum" aria-pressed="true">Llevar el resumen de la rama abandonada</button></div>
+<div class="c5l3-scroll"><svg class="c5l3-svg" id="c5l3-svg" viewBox="0 0 640 220" role="img" aria-label="Árbol de la sesión con la rama original y la rama nueva"></svg></div>
+<div class="c5l3-cols">
+  <div class="c5l3-caja"><h4>Rama original: lo que vería el modelo</h4><ol id="c5l3-a"></ol><span class="c5l3-tk" id="c5l3-ta"></span></div>
+  <div class="c5l3-caja"><h4 id="c5l3-hb">Rama nueva: lo que ve el modelo</h4><ol id="c5l3-b"></ol><span class="c5l3-tk" id="c5l3-tb"></span></div>
+</div>
+<div class="readout texto" id="c5l3-out" aria-live="polite"></div></div></section>
+<section><h2>Contexto por proyecto y por agente</h2><div class="prose"><p>No todo el contexto nace en la conversación. Una parte se carga de archivos, según dónde trabaja el agente y qué agente es. El patrón más extendido son los <b>archivos de instrucciones</b> (<i>instruction files</i>) en el repositorio: <code>AGENTS.md</code>, un formato abierto que leen varios agentes de código (https://agents.md), o <code>CLAUDE.md</code> en Claude Code. Se cargan en capas, de lo general a lo particular:</p><ol class="steps"><li><span><b>Global del usuario</b>: preferencias que valen en todos los proyectos.</span></li><li><span><b>Del proyecto</b>: cómo se compila, cómo se corren las pruebas, qué convenciones se siguen.</span></li><li><span><b>De la carpeta</b>: reglas de un subsistema, que solo se cargan cuando el agente trabaja ahí.</span></li><li><span><b>Del agente</b>: las instrucciones de un subagente especializado (capítulo 13), que no hereda todo lo anterior sino lo que su configuración dice.</span></li></ol></div><figure class="fig fig-capas" id="05-diagrama-4"><div class="lienzo"><svg viewBox="0 0 780 330" style="min-width:620px" role="img" aria-label="Capas del contexto por proyecto y por agente: global del usuario, del proyecto, de la carpeta y del pedido; si se contradicen gana la más específica; a la derecha, un subagente que recibe solo las capas que su configuración pide y su encargo, sin la historia del agente principal">
+  <text x="20" y="26" class="t t-xs t-b t-m">AGENTE PRINCIPAL</text>
+  <rect x="20" y="40" width="440" height="52" rx="10" class="c-red"/>
+  <text x="36" y="62" class="t t-b k-red">Global del usuario</text>
+  <text x="36" y="80" class="t t-s">~/.config/… · preferencias en todos los proyectos</text>
+  <rect x="40" y="100" width="420" height="52" rx="10" class="c-enl"/>
+  <text x="56" y="122" class="t t-b k-enl">Del proyecto</text>
+  <text x="56" y="140" class="t t-s">AGENTS.md en la raíz · cómo compilar y probar</text>
+  <rect x="60" y="160" width="400" height="52" rx="10" class="c-fis"/>
+  <text x="76" y="182" class="t t-b k-fis">De la carpeta</text>
+  <text x="76" y="200" class="t t-s">pagos/AGENTS.md · solo si trabaja en pagos/</text>
+  <rect x="80" y="220" width="380" height="52" rx="10" class="c-tra"/>
+  <text x="96" y="242" class="t t-b k-tra">Historia y pedido</text>
+  <text x="96" y="260" class="t t-s">la sesión de esta tarea</text>
+  <path d="M10 44v226" class="ln" style="stroke-width:2"/>
+  <text x="20" y="298" class="t t-s t-m">más general arriba · si chocan, gana la capa más específica</text>
+  <text x="20" y="316" class="t t-s t-m">todas son contexto: sugerencias para el modelo, no reglas</text>
+
+  <path d="M462 126 H540" class="ln s-enl ln-d" style="stroke-width:2"/>
+  <path d="M462 186 H540" class="ln s-fis ln-d" style="stroke-width:2"/>
+  <text x="550" y="26" class="t t-xs t-b t-m">SUBAGENTE «REVISOR»</text>
+  <rect x="540" y="40" width="220" height="232" rx="12" class="caja" style="stroke-width:1.6"/>
+  <rect x="556" y="56" width="188" height="44" rx="8" class="d-sis"/>
+  <text x="566" y="75" class="t t-s t-b k-sis">Sus instrucciones</text>
+  <text x="566" y="91" class="t t-s">revisor.md</text>
+  <rect x="556" y="108" width="188" height="36" rx="8" class="c-enl"/>
+  <text x="566" y="131" class="t t-s t-b k-enl">Proyecto (lo pide)</text>
+  <rect x="556" y="152" width="188" height="36" rx="8" class="c-fis"/>
+  <text x="566" y="175" class="t t-s t-b k-fis">Carpeta pagos/</text>
+  <rect x="556" y="196" width="188" height="60" rx="8" class="d-casa"/>
+  <text x="566" y="216" class="t t-s t-b k-casa">Su encargo</text>
+  <text x="566" y="232" class="t t-s">«revisa este cambio»</text>
+  <text x="566" y="248" class="t t-s t-m">sin la historia del principal</text>
+</svg></div><figcaption><b>Las capas del contexto por proyecto y por agente.</b> De arriba abajo, de lo más general a lo más específico. Cada capa se suma a la anterior y, si se contradicen, gana la más específica. A la derecha, el subagente: recibe solo las capas que su configuración pide, más su propio encargo, y no la historia completa del agente que lo llamó.</figcaption></figure><div class="prose"><p>Dos reglas de diseño evitan sorpresas. La primera: el arnés registra <b>qué archivos de instrucciones cargó</b> en cada turno, como cualquier otro bloque con procedencia. La segunda: estos archivos son <b>contexto, no política</b>. Si <code>AGENTS.md</code> dice «no toques la carpeta <code>prod/</code>», eso es una sugerencia para el modelo; la regla que lo impide vive en el motor de políticas. Es el mismo principio del capítulo 1: los controles no viven en el prompt.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Encuentra los umbrales de compactación de un agente real</h3></div><p>Vas a leer, sin ejecutarlo, el código de Codex CLI, un agente de código de código abierto, para encontrar cómo decide compactar. Necesitas <code>git</code>. El clon no extrae los archivos al disco (<code>--no-checkout</code>): las búsquedas leen directamente la última versión guardada, así que funciona igual en Windows, macOS y Linux.</p><div class="cmds"><div class="cmd-panel" data-so="win mac linux"><div class="cmd-l"><code>git clone --depth 1 --no-checkout https://github.com/openai/codex</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>cd codex</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n "auto_compact_token_limit" HEAD -- codex-rs/core/src/config</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n "auto_compact_token_limit" HEAD -- codex-rs/core/src/agent/child_config.rs</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n "AGENTS.md" HEAD -- codex-rs/core/src/agents_md.rs</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la primera búsqueda, ubica dónde se define el límite de tokens que dispara la compactación automática. Fíjate en que es una opción de configuración (<code>Option</code>): puede venir vacía y tomar un valor por defecto.</span></li><li><span>En la segunda, mira qué hace el arnés con ese límite cuando crea un agente hijo, un subagente: el contexto por agente se configura aparte.</span></li><li><span>En la tercera, lee los comentarios del principio de <code>agents_md.rs</code>: explican en qué orden se buscan y se juntan los <code>AGENTS.md</code>, de la raíz del proyecto hacia la carpeta de trabajo.</span></li><li><span>Cuando termines, puedes borrar la carpeta <code>codex</code>.</span></li></ol><p><b>Qué observar:</b> el umbral es un dato de configuración del arnés, no una decisión del modelo, y la carga de instrucciones por carpeta sigue las capas de la sección anterior. Los nombres de archivos y de opciones cambian entre versiones; si una búsqueda no encuentra nada, prueba con <code>git grep -n -i "compact" HEAD -- codex-rs/core/src</code>.</p></div></section>
+<section><h2>Medir lo que se pierde al compactar</h2><div class="prose"><p>Una compactación que «funciona» puede estar perdiendo información en silencio. El agente sigue trabajando, pero ya no sabe que el cliente pidió no recibir llamadas, o que la prueba 14 se había excluido a propósito. El síntoma aparece veinte turnos después, lejos de la causa. Por eso la compactación se <b>mide</b>, como cualquier otra pieza.</p><p>La técnica más directa es una <b>prueba de retención</b> (<i>retention test</i>): se toma una sesión real, se marcan de antemano los datos que deben sobrevivir (restricciones, decisiones, cifras, nombres de archivo), se compacta y se le pregunta al modelo por cada dato usando solo el contexto compactado. El porcentaje que contesta bien es la <b>tasa de retención</b>. Se compara entre resumen libre y estructurado, entre umbrales distintos y entre modelos de resumen.</p><p>Otras señales que conviene registrar como eventos en cada compactación:</p><ul><li>tokens antes y después, y cuánto se ahorró;</li><li>cuántos resultados recortó la fase 1 y cuántos mensajes resumió la fase 2;</li><li>si el resumen pasó el validador a la primera o hubo que reintentar;</li><li>qué pasó después: si en los turnos siguientes el agente volvió a pedir una información que ya tenía, es señal de que el resumen la perdió.</li></ul></div><div class="caso"><b>Un caso real</b><p>Un equipo que operaba un agente de soporte interno notó que, en las conversaciones largas, el agente volvía a pedirle al empleado datos que ya había dado: el número de equipo, la oficina. El historial completo estaba guardado; el problema estaba en la compactación, que usaba un resumen libre y priorizaba lo último que se había hablado. Pasaron a un resumen estructurado con un campo de datos críticos del caso y una prueba de retención en su banco de evaluación (capítulo 15). Las repreguntas casi desaparecieron, y la prueba quedó como guardia para cuando cambiaran el modelo de resumen.</p></div><div class="prose"><p>La idea que se lleva este capítulo: el modelo no ve el mundo, ve lo que el arnés le arma. Elegir eso, con un presupuesto, con procedencia y sin perder lo importante al resumir, es una pieza de ingeniería con contrato y métricas, no un prompt más largo.</p><p><b>El contexto como un presupuesto que administra el arnés.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Por qué el modelo «olvida» algo que se dijo en la conversación, si la conversación está guardada?</summary><p>Porque el modelo solo ve lo que el motor de contexto pone en cada llamada. Si ese mensaje se quedó fuera por el presupuesto o se perdió en una compactación, para el modelo no existe, aunque el arnés lo tenga guardado.</p></details><details><summary>¿Cuáles son las dos fases de una compactación y por qué ese orden?</summary><p>Primero el recorte de resultados de herramientas grandes, sin modelo, porque es barato y muchas veces alcanza; después, solo si no basta, el resumen de la región antigua, que cuesta una llamada al modelo y puede perder información.</p></details><details><summary>¿Por qué el punto de corte no puede caer entre una llamada a herramienta y su resultado?</summary><p>Porque el modelo quedaría con una llamada sin respuesta o un resultado sin su llamada; pierde el sentido de ese paso y varios proveedores rechazan un historial así.</p></details><details><summary>¿Qué ventaja tiene un resumen estructurado frente a uno libre?</summary><p>Sus campos fijos (objetivo, restricciones, decisiones, próximos pasos, datos críticos) obligan a conservar lo que la tarea necesita, y un validador puede comprobar que estén. Un resumen libre tiende a quedarse con lo último o lo más llamativo.</p></details><details><summary>¿Qué diferencia hay entre navegar a un punto anterior de la misma sesión y bifurcar en una sesión nueva?</summary><p>Navegar cambia desde dónde sigue la misma sesión y guarda un resumen de la rama abandonada; bifurcar crea otra sesión independiente que comparte la historia hasta el punto de control.</p></details><details><summary>Si <code>AGENTS.md</code> dice «no modifiques la carpeta prod/», ¿el agente queda protegido?</summary><p>No. Es contexto, una sugerencia para el modelo. La protección real es una regla en el motor de políticas, que el modelo no puede saltarse con palabras.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Cómo divide un tokenizador el texto en tokens y por qué los idiomas distintos del inglés suelen necesitar más?<small>Pista: busca «byte pair encoding tokenizer».</small></li><li>¿Qué es una prueba de «aguja en un pajar» (<i>needle in a haystack</i>) y qué mide, y qué no, sobre la ventana de un modelo?</li><li>¿Cómo funciona la caché de prompts por prefijo y por qué conviene poner las capas estables al principio del contexto?<small>Pista: busca la documentación de prompt caching de cualquier proveedor.</small></li><li>¿Qué es la recuperación aumentada por generación (RAG) y en qué se diferencia de meter documentos completos en el contexto?</li><li>¿Qué técnicas existen para estimar el número de tokens de un texto sin llamar al tokenizador exacto del modelo?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents <small>lectura, en inglés</small></a><a class="vid" href="https://agents.md" target="_blank" rel="noopener">AGENTS.md <small>formato abierto, en inglés</small></a><a class="vid" href="https://docs.langchain.com/oss/python/langgraph/persistence" target="_blank" rel="noopener">LangGraph: persistencia y puntos de control <small>documentación, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const f=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const B=[
+    {k:'sis',n:'Instrucciones del sistema',t:1200,fijo:1,c:'--c-red',p:'configuración del agente'},
+    {k:'ped',n:'Pedido: «¿Ya salió mi reembolso del cobro duplicado?»',t:150,fijo:1,c:'--d-casa',p:'chat del cliente'},
+    {k:'res',n:'Reserva para la respuesta',t:4000,fijo:1,c:'--muted',p:'política del arnés'},
+    {k:'her',n:'Definiciones de 6 herramientas',t:3600,c:'--c-enl',p:'registro de capacidades'},
+    {k:'reg',n:'Reglas del área de soporte (AGENTS.md)',t:1800,c:'--c-fis',p:'archivo del proyecto'},
+    {k:'crm',n:'Ficha del cliente',t:900,c:'--c-fis',p:'CRM, consulta de este turno'},
+    {k:'rec',n:'Historia reciente (últimos 4 turnos)',t:4000,c:'--c-tra',p:'gestor de sesiones'},
+    {k:'cob',n:'Resultado: historial de cobros',t:6500,tr:1500,c:'--c-enl',p:'herramienta consultar_cobros, turno 9'},
+    {k:'man',n:'Manual completo de reembolsos',t:18000,c:'--c-fis',p:'base documental'},
+    {k:'ant',n:'Historia antigua (turnos 1 a 12)',t:22000,tr:1200,c:'--c-tra',p:'gestor de sesiones'}
+  ];
+  const on={};B.forEach(b=>on[b.k]=true);
+  const Q=[
+    {q:'¿Sabe con qué herramienta consultar el reembolso?',n:['her']},
+    {q:'¿Sabe a qué cliente y a qué plan se refiere?',n:['crm']},
+    {q:'¿Puede señalar cuál es el cobro duplicado?',n:['cob']},
+    {q:'¿Conoce el plazo de 10 días hábiles para reembolsos?',n:['reg','man'],o:1},
+    {q:'¿Recuerda que el cliente pidió «no me llamen, solo correo» (turno 3)?',n:['ant']},
+    {q:'¿Sabe qué le prometió en el turno anterior?',n:['rec']}
+  ];
+  const fl=$('#c5l1-blq');
+  B.forEach(b=>{
+    const d=document.createElement('div');d.className='c5l1-fila';
+    d.innerHTML=`<span class="sw" style="background:var(${b.c})"></span><span>${b.n}</span><span class="tk"></span><span class="pr"></span>`;
+    if(!b.fijo){const bt=document.createElement('button');bt.type='button';bt.setAttribute('aria-pressed','true');bt.textContent='candidato';
+      bt.setAttribute('aria-label','Candidato: '+b.n);
+      bt.addEventListener('click',()=>{on[b.k]=!on[b.k];pintar();});d.querySelector('.pr').before(bt);b.bt=bt;
+      d.style.gridTemplateColumns='auto 1fr auto auto';d.querySelector('.pr').style.gridColumn='2/-1';}
+    fl.appendChild(d);b.el=d;
+  });
+  const rec=$('#c5l1-rec'),res=$('#c5l1-res');
+  [rec,res].forEach(b=>b.addEventListener('click',()=>{b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');pintar();}));
+  $('#c5l1-p').addEventListener('input',pintar);
+  function pintar(){
+    const P=+$('#c5l1-p').value;$('#c5l1-pv').textContent=f(P)+' tokens';$('#c5l1-max').textContent=f(P);
+    const R=rec.getAttribute('aria-pressed')==='true',S=res.getAttribute('aria-pressed')==='true';
+    const tam=b=>(b.k==='cob'&&R)||(b.k==='ant'&&S)?b.tr:b.t;
+    let usado=0;const dentro=new Set(),excl=[];
+    B.filter(b=>b.fijo).forEach(b=>{usado+=b.t;dentro.add(b.k);});
+    B.filter(b=>!b.fijo).forEach(b=>{
+      if(!on[b.k]){excl.push([b,'apagado']);return;}
+      if(usado+tam(b)<=P){usado+=tam(b);dentro.add(b.k);}else excl.push([b,'no cabe']);
+    });
+    const bar=$('#c5l1-bar');bar.innerHTML='';
+    B.filter(b=>dentro.has(b.k)).sort((a,b)=>(a.k==='res')-(b.k==='res')).forEach(b=>{const i=document.createElement('i');i.style.width=(tam(b)/P*100)+'%';
+      i.style.background=`var(${b.c})`;i.style.opacity=b.k==='res'?'.35':'.85';i.title=b.n;bar.appendChild(i);});
+    bar.setAttribute('aria-label',`Presupuesto de ${f(P)} tokens: ocupados ${f(usado)}`);
+    B.forEach(b=>{const t=tam(b),d=dentro.has(b.k);
+      b.el.classList.toggle('fuera',!d);
+      let ex='';if((b.k==='cob'&&R)||(b.k==='ant'&&S))ex=` (era ${f(b.t)})`;
+      b.el.querySelector('.tk').textContent=f(t)+ex;
+      const ee=excl.find(e=>e[0]===b);
+      b.el.querySelector('.pr').textContent='procedencia: '+b.p+(ee?' · fuera: '+ee[1]:'')+(b.k==='ant'&&S&&d?' · resumen estructurado':'')+(b.k==='cob'&&R&&d?' · recortado, conserva los últimos cobros':'');
+      if(b.bt){b.bt.setAttribute('aria-pressed',on[b.k]?'true':'false');b.bt.textContent=on[b.k]?'candidato':'apagado';}
+    });
+    const ok=Q.map(q=>({q:q.q,s:q.o?q.n.some(k=>dentro.has(k)):q.n.every(k=>dentro.has(k))}));
+    const nOk=ok.filter(x=>x.s).length;
+    let h=`<span class="big">Ocupado: ${f(usado)} de ${f(P)} tokens · ${dentro.size} de ${B.length} bloques</span>`;
+    h+='<ul class="c5l1-preg">'+ok.map(x=>`<li>${x.s?'<b class="ok">✔</b>':'<b class="warn">✖</b>'} ${x.q}</li>`).join('')+'</ul>';
+    let nota;
+    if(nOk===Q.length&&usado<=P*0.6)nota='Todo lo que la tarea necesita cabe y sobra espacio: un contexto chico y completo es más barato y suele dar mejores respuestas.';
+    else if(nOk===Q.length)nota='Todo lo necesario entró. Mira cuánto ocupa el manual completo: ¿hace falta, si las reglas del área ya traen el plazo?';
+    else if(!dentro.has('ant')&&on.ant&&!S)nota='La historia antigua no cabe entera y con ella se va la restricción «no me llamen». Prueba «Resumir la historia antigua»: un resumen estructurado la conserva en 1.200 tokens.';
+    else if(!dentro.has('cob')&&on.cob&&!R)nota='El historial de cobros es grande y queda fuera: el agente no puede señalar el cobro duplicado. Prueba «Recortar resultados grandes».';
+    else nota='El motor mete los bloques por prioridad (el orden de la lista) y salta los que no caben. Lo que queda fuera, para el modelo, no existe.';
+    h+=`<span>${nota}</span>`;
+    $('#c5l1-out').innerHTML=h;
+  }
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);const f=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const VENT=32000,FIJO=5000;
+  const D=[
+    {k:'obj',n:'Objetivo: reembolsar el cobro duplicado',tipo:'objetivo'},
+    {k:'res',n:'Restricción: «no me llamen, solo correo»',tipo:'restriccion'},
+    {k:'cli',n:'Dato: cliente 4512, plan Hogar 500',tipo:'dato'},
+    {k:'cob',n:'Dato: el duplicado es del 3 de octubre, 39,90',tipo:'dato'},
+    {k:'dec',n:'Decisión: reembolso a la tarjeta, no saldo a favor',tipo:'decision'},
+    {k:'tic',n:'Dato: ticket abierto T-8812',tipo:'dato'},
+    {k:'via',n:'Detalle: el cliente viaja el viernes',tipo:'detalle'},
+    {k:'pro',n:'Próximo paso: falta el correo de confirmación',tipo:'proximo'}
+  ];
+  // mensajes por turno: [rol, tokens, hechos {k,pos}]
+  const T=[
+    [['usuario',300,[{k:'obj'}]],['asistente',400]],
+    [['usuario',250,[{k:'res'}]],['llamada',100],['resultado',1800,[{k:'cli',pos:'ini'}]]],
+    [['asistente',600]],
+    [['llamada',100],['resultado',7000,[{k:'cob',pos:'fin'}]]],
+    [['asistente',900]],
+    [['usuario',400,[{k:'dec'}]],['asistente',500]],
+    [['llamada',100],['resultado',5000]],
+    [['asistente',700],['llamada',100],['resultado',1200,[{k:'tic',pos:'ini'}]]],
+    [['usuario',300,[{k:'via'}]],['asistente',600]],
+    [['llamada',100],['resultado',6000]],
+    [['asistente',800]],
+    [['llamada',100],['resultado',3000]],
+    [['asistente',700,[{k:'pro'}]]],
+    [['usuario',300],['asistente',600]]
+  ];
+  let turno=1,timer=null;
+  function simular(n,R,K,M,tipo){
+    let h=[];const log=[];const perdido={};
+    for(let t=0;t<n;t++){
+      T[t].forEach(m=>h.push({rol:m[0],tk:m[1],tko:m[1],hechos:(m[2]||[]).map(x=>({...x})),t:t+1}));
+      const tot=()=>h.reduce((a,m)=>a+m.tk,0);
+      if(FIJO+tot()+R<=VENT)continue;
+      // fase 1: recortar resultados grandes
+      let rec=0;
+      h.forEach(m=>{if(m.rol==='resultado'&&m.tk>M){m.tk=M;rec++;
+        m.hechos=m.hechos.filter(x=>{if(x.pos==='fin'){perdido[x.k]='recorte, turno '+(t+1);return false;}return true;});}});
+      if(rec)log.push(`T${t+1} · fase 1: recorta ${rec} resultado${rec>1?'s':''} a ${f(M)}`);
+      if(FIJO+tot()+R<=VENT)continue;
+      // fase 2: corte seguro y resumen
+      let acc=0,cut=h.length;
+      while(cut>0&&acc+h[cut-1].tk<=K){acc+=h[cut-1].tk;cut--;}
+      while(cut<h.length&&h[cut].rol==='resultado')cut++; // nunca empezar en un resultado
+      if(cut===0){log.push(`T${t+1} · no hay región antigua que resumir`);continue;}
+      const viejo=h.slice(0,cut),nuevo=h.slice(cut);
+      let guardados=[];
+      if(tipo==='est'){viejo.forEach(m=>m.hechos.forEach(x=>{const d=D.find(z=>z.k===x.k);if(d.tipo!=='detalle')guardados.push(x);else perdido[x.k]='resumen, turno '+(t+1);}));}
+      else{const ult=viejo.slice(-3);viejo.forEach(m=>m.hechos.forEach(x=>{const d=D.find(z=>z.k===x.k);
+        if(d.tipo==='objetivo'||ult.includes(m))guardados.push(x);else perdido[x.k]='resumen, turno '+(t+1);}));}
+      const tk=tipo==='est'?1200:700;
+      const ant=viejo.reduce((a,m)=>a+m.tk,0);
+      h=[{rol:'resumen',tk,tko:tk,hechos:guardados.map(x=>({k:x.k})),t:t+1}].concat(nuevo);
+      log.push(`T${t+1} · fase 2: resume ${viejo.length} mensajes (${f(ant)} → ${f(tk)})`);
+      if(FIJO+tot()+R>VENT)log.push(`T${t+1} · ¡la historia reciente sola no cabe!`);
+    }
+    return {h,log,perdido};
+  }
+  function pintar(){
+    const R=+$('#c5l2-r').value,K=+$('#c5l2-k').value,M=+$('#c5l2-m').value,tipo=$('#c5l2-tipo').value;
+    $('#c5l2-rv').textContent=f(R);$('#c5l2-kv').textContent=f(K);$('#c5l2-mv').textContent=f(M);
+    const s=simular(turno,R,K,M,tipo);
+    const res=s.h.filter(m=>m.rol==='resumen').reduce((a,m)=>a+m.tk,0);
+    const lit=s.h.filter(m=>m.rol!=='resumen').reduce((a,m)=>a+m.tk,0);
+    const total=FIJO+res+lit;const libre=Math.max(0,VENT-total-R);
+    const seg=[[FIJO,'--c-red',1],[res,'--c-fis',1],[lit,'--c-tra',.85],[Math.min(R,Math.max(0,VENT-total)),'--muted',.35]];
+    const bar=$('#c5l2-bar');bar.innerHTML='';
+    seg.forEach(([v,c,o])=>{const i=document.createElement('i');i.style.width=Math.min(100,v/VENT*100)+'%';i.style.background=`var(${c})`;i.style.opacity=o;bar.appendChild(i);});
+    bar.setAttribute('aria-label',`Ventana de ${f(VENT)} tokens: fijo ${f(FIJO)}, resumen ${f(res)}, historia ${f(lit)}, reserva ${f(R)}`);
+    const sobre=total+R>VENT;
+    $('#c5l2-out').innerHTML=`<span class="big">Turno ${turno} de ${T.length} · ${f(total)} de ${f(VENT)} tokens en uso</span>`+
+      `<span>historia literal ${f(lit)} · resumen ${f(res)} · libre ${f(libre)}</span>`+
+      (sobre?'<span class="warn">La reserva está invadida: el modelo podría quedarse sin espacio para responder.</span>':'');
+    const vivos=new Set();s.h.forEach(m=>m.hechos.forEach(x=>vivos.add(x.k)));
+    const aparecio=new Set();for(let t=0;t<turno;t++)T[t].forEach(m=>(m[2]||[]).forEach(x=>aparecio.add(x.k)));
+    $('#c5l2-dat').innerHTML=D.map(d=>{
+      if(!aparecio.has(d.k))return `<li class="no"><span class="tg" style="background:var(--line);color:var(--muted)">aún no</span>${d.n}</li>`;
+      if(vivos.has(d.k)){const enRes=s.h.some(m=>m.rol==='resumen'&&m.hechos.some(x=>x.k===d.k));
+        return `<li><span class="tg" style="background:var(${enRes?'--c-fis':'--good'})">${enRes?'en resumen':'literal'}</span>${d.n}</li>`;}
+      return `<li><span class="tg" style="background:var(--warm)">perdido</span>${d.n} <small>(${s.perdido[d.k]||''})</small></li>`;
+    }).join('');
+    $('#c5l2-log').innerHTML=s.log.length?s.log.map(l=>`<li>${l}</li>`).join(''):'<li class="no">Todavía no hizo falta compactar.</li>';
+  }
+  function paso(d){turno=Math.min(T.length,Math.max(1,turno+d));pintar();}
+  $('#c5l2-sig').addEventListener('click',()=>paso(1));
+  $('#c5l2-atr').addEventListener('click',()=>paso(-1));
+  $('#c5l2-ini').addEventListener('click',()=>{parar();turno=1;pintar();});
+  function parar(){clearInterval(timer);timer=null;$('#c5l2-play').setAttribute('aria-pressed','false');$('#c5l2-play').textContent='▶ Reproducir';}
+  $('#c5l2-play').addEventListener('click',()=>{
+    if(timer){parar();return;}
+    if(turno>=T.length)turno=0;
+    $('#c5l2-play').setAttribute('aria-pressed','true');$('#c5l2-play').textContent='❚❚ Pausa';
+    timer=setInterval(()=>{if(turno>=T.length){parar();return;}paso(1);},900);
+  });
+  ['#c5l2-r','#c5l2-k','#c5l2-m','#c5l2-tipo'].forEach(id=>$(id).addEventListener('input',pintar));
+  $('#c5l2-tipo').addEventListener('change',pintar);
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);const f=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const P=[
+    {n:'Pedido: «el cierre de caja da 0,02 de diferencia»',t:300},
+    {n:'Corre las pruebas: falla «redondeo del total»',t:2400},
+    {n:'Lee calcular_total.ts',t:3800},
+    {n:'Reescribe el módulo con otra librería de decimales',t:5200,mal:1},
+    {n:'Corre las pruebas: ahora fallan 6',t:2600,mal:1},
+    {n:'Intenta parchar 3 de las pruebas',t:3100,mal:1}
+  ];
+  const INS={red:'«Corrige solo el redondeo»',prueba:'«Escribe primero una prueba del caso 0,02»',libre:'«Inténtalo de otra forma»'};
+  const sum=$('#c5l3-sum');
+  sum.addEventListener('click',()=>{sum.setAttribute('aria-pressed',sum.getAttribute('aria-pressed')==='true'?'false':'true');pintar();});
+  ['#c5l3-pc','#c5l3-ins','#c5l3-op'].forEach(id=>$(id).addEventListener('change',pintar));
+  const ns='http://www.w3.org/2000/svg';
+  function el(tag,a,txt){const e=document.createElementNS(ns,tag);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+  function pintar(){
+    const k=+$('#c5l3-pc').value,ins=$('#c5l3-ins').value,op=$('#c5l3-op').value,S=sum.getAttribute('aria-pressed')==='true';
+    const svg=$('#c5l3-svg');svg.innerHTML='';
+    const X=i=>40+i*95,yA=60,yB=160;
+    // tronco y rama original
+    for(let i=0;i<P.length;i++){
+      if(i>0)svg.appendChild(el('line',{x1:X(i-1),y1:yA,x2:X(i),y2:yA,style:`stroke:var(${i<k?'--c-red':'--muted'});stroke-width:3;${i>=k?'stroke-dasharray:5 4':''}`}));
+    }
+    for(let i=0;i<P.length;i++){
+      const tr=i<k;
+      svg.appendChild(el('circle',{cx:X(i),cy:yA,r:15,style:`fill:var(${tr?'--c-red-s':'--card'});stroke:var(${P[i].mal?'--warm':tr?'--c-red':'--muted'});stroke-width:2;${tr?'':'stroke-dasharray:3 3'}`}));
+      svg.appendChild(el('text',{x:X(i),y:yA+5,'text-anchor':'middle',style:`font-weight:700;font-size:13px;fill:var(${tr?'--c-red':'--muted'})`},String(i+1)));
+    }
+    svg.appendChild(el('text',{x:Math.min(X(k)-10,420),y:yA-26,style:'font-size:11px;fill:var(--muted)'},'rama original: guardada, no se borra'));
+    // rama nueva
+    const col=op==='fork'?'--c-tra':'--c-red';
+    svg.appendChild(el('path',{d:`M${X(k-1)} ${yA+15} C${X(k-1)} ${yB} ${X(k-1)+40} ${yB} ${X(k)} ${yB}`,style:`fill:none;stroke:var(${col});stroke-width:3`}));
+    svg.appendChild(el('line',{x1:X(k),y1:yB,x2:X(k)+95,y2:yB,style:`stroke:var(${col});stroke-width:3`}));
+    [0,1].forEach(j=>{svg.appendChild(el('circle',{cx:X(k)+j*95,cy:yB,r:15,style:`fill:var(${col}-s);stroke:var(${col});stroke-width:2`}));
+      svg.appendChild(el('text',{x:X(k)+j*95,y:yB+5,'text-anchor':'middle',style:`font-weight:700;font-size:12px;fill:var(${col})`},(k+1+j)+'′'));});
+    svg.appendChild(el('text',{x:Math.min(X(k)+120,450),y:yB+5,style:`font-size:12px;font-weight:700;fill:var(${col})`},op==='fork'?'sesión nueva':'misma sesión, rama activa'));
+    if(S&&k<P.length){svg.appendChild(el('rect',{x:X(k)-30,y:yB-52,width:172,height:26,rx:6,style:'fill:var(--c-fis-s);stroke:var(--c-fis)'}));
+      svg.appendChild(el('text',{x:X(k)-22,y:yB-35,style:'font-size:11px;font-weight:700;fill:var(--c-fis)'},'resumen de la rama dejada'));}
+    // listas
+    $('#c5l3-a').innerHTML=P.map(p=>`<li class="${p.mal?'mal':''}">${p.n}</li>`).join('');
+    const tA=P.reduce((a,p)=>a+p.t,0);$('#c5l3-ta').textContent=`${f(tA)} tokens de historia`;
+    let lb=P.slice(0,k).map(p=>`<li class="${p.mal?'mal':''}">${p.n}</li>`);let tB=P.slice(0,k).reduce((a,p)=>a+p.t,0);
+    if(S){lb.push('<li class="res">Resumen: reescribir el módulo rompió 6 pruebas; el fallo original es solo de redondeo. No repetir.</li>');tB+=450;}
+    lb.push(`<li class="nuevo">${INS[ins]}</li>`);tB+=60;
+    $('#c5l3-b').innerHTML=lb.join('');$('#c5l3-tb').textContent=`${f(tB)} tokens de historia`;
+    $('#c5l3-hb').textContent=op==='fork'?'Sesión nueva: lo que ve el modelo':'Rama nueva: lo que ve el modelo';
+    // veredicto
+    let v,cls='';
+    if(k>=4){v=`Volviste a un punto posterior a la reescritura: la rama nueva hereda el módulo roto (punto 4). Volver no deshace nada que esté en el tronco; elige el punto 3 o uno anterior.`;cls='warn';}
+    else if(!S&&ins==='libre'){v='Sin el resumen, el modelo no sabe qué se intentó. Con una instrucción vaga, vuelve a proponer reescribir el módulo: repite el error de la rama abandonada.';cls='warn';}
+    else if(!S){v='La instrucción es precisa y evita el error, pero el modelo no sabe que cambiar de librería rompe 6 pruebas: si más adelante se le ocurre, nada se lo impide.';}
+    else if(k===1){v='El resumen evita repetir el error, pero volviste antes de correr las pruebas: el agente tendrá que correrlas otra vez para saber qué falla.';}
+    else{v='La rama nueva tiene el tronco útil, el resumen de lo que no funcionó y una instrucción clara: menos tokens que la rama original y sin el intento fallido.';cls='ok';}
+    const extra=op==='fork'?' Al bifurcar, la sesión original queda intacta para quien la estaba usando; las dos siguen por separado.':' Al navegar, la misma sesión sigue desde el punto elegido y la rama dejada queda en el árbol, con su resumen.';
+    $('#c5l3-out').innerHTML=`<span class="${cls}" style="font-weight:700">${cls==='ok'?'Buen punto de retorno':cls==='warn'?'Cuidado':'Funciona, con un riesgo'}</span><span>${v}${extra}</span><span>Historia: original ${f(tA)} tokens, nueva ${f(tB)} tokens.</span>`;
+  }
+  pintar();
+})();
+</script>
+</body>
+</html>

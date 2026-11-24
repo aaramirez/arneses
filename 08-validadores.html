@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Validadores · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="validadores">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 08 DE 16</span><h1>Validadores y ganchos</h1><p class="lede">Que una acción esté permitida no quiere decir que esté bien hecha. Los validadores revisan cada acción antes de ejecutarla y su efecto después, y los ganchos dejan meter esas revisiones en cualquier punto del bucle sin tocar su código.</p></header>
+<section><h2>Validadores antes de actuar: esquema, rango y alcance</h2><div class="prose"><p>El motor de políticas del capítulo 7 contesta una pregunta: <b>¿se permite?</b> ¿Puede este usuario, a través de este agente, reembolsar un cobro? Pero una acción permitida puede estar mal hecha. El modelo pide reembolsar 4.800 en vez de 48,00 porque se comió una coma. Pide borrar <code>build/</code> y escribe <code>build /</code>, con un espacio que cambia todo. Pide enviar el informe al cliente 4512 y el informe es del cliente 4521. Ninguna de esas acciones viola una regla de autorización, y todas hacen daño.</p><p>Para eso están los <b>validadores</b> (<i>validators</i>): comprobaciones deterministas o con modelo que revisan una acción, su efecto o la respuesta final, y dicen si está bien. No deciden quién puede hacer qué; deciden si lo que se va a hacer, o lo que se hizo, tiene sentido.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en una farmacia. La receta autoriza al paciente a recibir el medicamento: eso es la política. Pero el farmacéutico igual revisa la dosis, que el medicamento no choque con otro que el paciente ya toma y que el nombre del frasco coincida con el de la receta. Y antes de entregarlo, mira la etiqueta otra vez. La receta dice «puede»; el farmacéutico comprueba «está bien».</p></div><div class="prose"><p>Antes de ejecutar, un arnés serio revisa tres cosas, de la más barata a la más cara:</p><ol class="steps"><li><span><b>Esquema</b> (<i>schema</i>): que los argumentos tengan la forma que declaró la herramienta, con los tipos y campos obligatorios de su <b>JSON Schema</b> (el formato para describir datos que se vio en el capítulo 3). <code>monto</code> es un número, <code>cliente</code> es una cadena con cuatro dígitos, no sobra ningún campo. Es la revisión mínima y la más rápida.</span></li><li><span><b>Rango</b> (<i>range</i>): que los valores sean razonables para el dominio, aunque el esquema los acepte. Un reembolso no puede ser negativo ni superar el cobro original; una fecha de corte no puede estar en el pasado; un <code>LIMIT</code> de consulta no puede ser de diez millones de filas.</span></li><li><span><b>Alcance</b> (<i>scope</i>): que la acción toque solo lo que la tarea necesita. La ruta del archivo está dentro de la carpeta de trabajo; el cliente del reembolso es el mismo del ticket que originó la tarea; el destinatario del correo está en el dominio de la empresa o en la lista de contactos del caso.</span></li></ol><p>El esquema se puede generar a partir de la definición de la herramienta. El rango y el alcance no: dependen del dominio y del estado de la tarea, y por eso son código propio, escrito y probado como cualquier otra regla de negocio.</p></div><figure class="fig fig-flujo" id="08-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 330" style="min-width:700px" role="img" aria-label="Validadores a los dos lados de una acción: la propuesta del modelo pasa por los validadores de esquema, rango y alcance y por la política antes de ejecutarse; después de ejecutar, el validador posterior verifica el efecto; al final de la tarea, el validador de respuesta revisa lo que se entrega. Debajo de cada control, qué hace cuando dice que no.">
+  <defs>
+    <marker id="d81-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d81-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+  </defs>
+  
+  <g class="t t-xs t-b">
+    <path d="M118 22H542" class="ln" style="stroke-width:3;stroke:var(--d-sis)"/><text x="330" y="16" text-anchor="middle" class="k-sis">ANTES DE ACTUAR</text>
+    <path d="M556 22H646" class="ln s-enl" style="stroke-width:3"/><text x="601" y="16" text-anchor="middle" class="k-enl">EFECTO</text>
+    <path d="M660 22H750" class="ln" style="stroke-width:3;stroke:var(--d-sis)"/><text x="705" y="16" text-anchor="middle" class="k-sis">DESPUÉS</text>
+    <path d="M764 22H850" class="ln" style="stroke-width:3;stroke:var(--d-sis)"/><text x="807" y="16" text-anchor="middle" class="k-sis">AL ENTREGAR</text>
+  </g>
+  <g class="t">
+    <rect x="10" y="40" width="94" height="62" rx="10" class="c-tra"/><text x="57" y="66" text-anchor="middle" class="t-b k-tra">Propuesta</text><text x="57" y="84" text-anchor="middle" class="t-s">del modelo</text>
+    <rect x="118" y="40" width="94" height="62" rx="10" class="d-sis"/><text x="165" y="66" text-anchor="middle" class="t-b k-sis">Esquema</text><text x="165" y="84" text-anchor="middle" class="t-s">forma y tipos</text>
+    <rect x="228" y="40" width="94" height="62" rx="10" class="d-sis"/><text x="275" y="66" text-anchor="middle" class="t-b k-sis">Rango</text><text x="275" y="84" text-anchor="middle" class="t-s">valores posibles</text>
+    <rect x="338" y="40" width="94" height="62" rx="10" class="d-sis"/><text x="385" y="66" text-anchor="middle" class="t-b k-sis">Alcance</text><text x="385" y="84" text-anchor="middle" class="t-s">lo de la tarea</text>
+    <rect x="448" y="40" width="94" height="62" rx="10" class="d-sis"/><text x="495" y="66" text-anchor="middle" class="t-b k-sis">Política</text><text x="495" y="84" text-anchor="middle" class="t-s">capítulo 7</text>
+    <rect x="556" y="40" width="90" height="62" rx="10" class="c-enl"/><text x="601" y="66" text-anchor="middle" class="t-b k-enl">Ejecutar</text><text x="601" y="84" text-anchor="middle" class="t-s">la herramienta</text>
+    <rect x="660" y="40" width="90" height="62" rx="10" class="d-sis"/><text x="705" y="66" text-anchor="middle" class="t-b k-sis">Posterior</text><text x="705" y="84" text-anchor="middle" class="t-s">mira el efecto</text>
+    <rect x="764" y="40" width="86" height="62" rx="10" class="d-sis" style="stroke-dasharray:5 4"/><text x="807" y="66" text-anchor="middle" class="t-b k-sis">Respuesta</text><text x="807" y="84" text-anchor="middle" class="t-s">final</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <line x1="104" y1="71" x2="116" y2="71" marker-end="url(#d81-m)"/>
+    <line x1="212" y1="71" x2="226" y2="71" marker-end="url(#d81-m)"/>
+    <line x1="322" y1="71" x2="336" y2="71" marker-end="url(#d81-m)"/>
+    <line x1="432" y1="71" x2="446" y2="71" marker-end="url(#d81-m)"/>
+    <line x1="542" y1="71" x2="554" y2="71" marker-end="url(#d81-m)"/>
+    <line x1="646" y1="71" x2="658" y2="71" marker-end="url(#d81-m)"/>
+    <line x1="750" y1="71" x2="762" y2="71" class="ln-d" marker-end="url(#d81-m)"/>
+  </g>
+  
+  <g style="stroke:var(--d-sis);stroke-width:1.6;fill:none">
+    <line x1="165" y1="102" x2="165" y2="126" marker-end="url(#d81-s)"/>
+    <line x1="275" y1="102" x2="275" y2="126" marker-end="url(#d81-s)"/>
+    <line x1="385" y1="102" x2="385" y2="126" marker-end="url(#d81-s)"/>
+    <line x1="495" y1="102" x2="495" y2="126" marker-end="url(#d81-s)"/>
+    <line x1="705" y1="102" x2="705" y2="126" marker-end="url(#d81-s)"/>
+    <line x1="807" y1="102" x2="807" y2="126" marker-end="url(#d81-s)"/>
+  </g>
+  <g class="t t-s">
+    <text x="165" y="144" text-anchor="middle" class="k-sis">✖ «monto debe</text><text x="165" y="159" text-anchor="middle" class="k-sis">ser un número»</text>
+    <text x="275" y="144" text-anchor="middle" class="k-sis">✖ «supera el</text><text x="275" y="159" text-anchor="middle" class="k-sis">cobro de 48,00»</text>
+    <text x="385" y="144" text-anchor="middle" class="k-sis">✖ «el ticket es</text><text x="385" y="159" text-anchor="middle" class="k-sis">de la 4512»</text>
+    <text x="495" y="144" text-anchor="middle" class="k-sis">✖ denegada o</text><text x="495" y="159" text-anchor="middle" class="k-sis">pide aprobación</text>
+    <text x="705" y="144" text-anchor="middle" class="k-sis">✖ «quedó</text><text x="705" y="159" text-anchor="middle" class="k-sis">pendiente»</text>
+    <text x="807" y="144" text-anchor="middle" class="k-sis">✖ no sale:</text><text x="807" y="159" text-anchor="middle" class="k-sis">promete algo</text><text x="807" y="174" text-anchor="middle" class="k-sis">sin respaldo</text>
+  </g>
+  
+  <path d="M165 182V214H57V106" class="ln" style="stroke:var(--d-sis);stroke-width:1.6;fill:none;stroke-dasharray:5 4" marker-end="url(#d81-s)"/>
+  <path d="M275 182V214M385 182V214M495 182V214M705 182V214H57" class="ln" style="stroke:var(--d-sis);stroke-width:1.6;fill:none;stroke-dasharray:5 4"/>
+  <text x="380" y="232" class="t t-s k-sis" text-anchor="middle">el error vuelve al modelo como resultado de la herramienta (capítulo 2), con lo que hay que arreglar</text>
+  
+  <rect x="10" y="252" width="840" height="64" rx="10" class="caja"/>
+  <text x="24" y="275" class="t t-b">Ejemplo:</text>
+  <text x="92" y="275" class="t t-mono t-s">reembolsar({ cliente: "4512", monto: 48.00 })</text>
+  <text x="24" y="300" class="t t-s t-m">pasa esquema, rango, alcance y política → se ejecuta → el posterior consulta el pago: «aplicado» → la respuesta «ya te devolvimos 48,00» tiene respaldo</text>
+</svg></div><figcaption><b>Validadores a los dos lados de una acción.</b> Se lee de izquierda a derecha. La propuesta del modelo (violeta) pasa primero por los validadores previos (esquema, rango y alcance) y por la política, todos del arnés (rojo ladrillo). Solo entonces la herramienta toca el mundo (verde). Después, el validador posterior comprueba el efecto real. Al final de la tarea, un último validador revisa la respuesta antes de entregarla. Debajo de cada control, qué hace cuando dice que no.</figcaption></figure><div class="prose"><p>Un detalle de orden: los validadores de esquema corren <b>antes</b> que la política, porque no tiene sentido evaluar una regla sobre argumentos mal formados. Los de alcance pueden ir antes o después según el arnés; lo importante es que todos corran antes del efecto y que ninguno dependa de que el modelo «se porte bien».</p></div></section>
+<section><h2>Validadores después de actuar: verificar el efecto</h2><div class="prose"><p>Una herramienta que devuelve «ok» no prueba que el mundo haya cambiado como se esperaba. La API de pagos responde <code>200</code> pero el reembolso quedó en estado <code>pendiente</code>. El comando <code>git push</code> termina sin error pero empujó a la rama equivocada. El archivo se escribió, pero vacío. El modelo, que solo ve el texto del resultado, va a seguir adelante convencido de que todo salió bien.</p><p>El <b>validador posterior</b> (<i>post-action validator</i>) compara el efecto real con el efecto esperado. Lo hace mirando el mundo de nuevo, no releyendo lo que dijo la herramienta:</p><ul><li>después de escribir un archivo, lo vuelve a leer y compara su tamaño o su suma de verificación;</li><li>después de un reembolso, consulta el estado del movimiento en el sistema de pagos;</li><li>después de cambiar código, corre las pruebas o el compilador;</li><li>después de enviar un correo, confirma que el mensaje aparece en la carpeta de enviados con el destinatario correcto.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Es el electricista que, después de cambiar el interruptor, prende la luz. No le basta con que el destornillador haya girado: quiere ver la lámpara encendida. Y si no enciende, lo sabe ahora, con la escalera puesta, y no cuando el cliente llame en la noche.</p></div><div class="prose"><p>Cuando el validador posterior falla, el arnés tiene una ventaja enorme: sabe exactamente qué acción produjo el problema, porque acaba de ocurrir. El resultado que vuelve al modelo cambia de «ok» a un error con datos: «el reembolso quedó en estado pendiente; esperado: aplicado». Es el principio del capítulo 2 aplicado al efecto: los errores son datos que vuelven al modelo.</p><p>Ahora encadena tú los validadores. Cada acción de la lista tiene un defecto distinto; enciende y apaga validadores y mira en cuál se detiene cada una, y cuáles llegan al mundo.</p></div><div class="lab" id="08-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Encadena validadores y mira en cuál se detiene cada acción defectuosa</h3></div><p class="hint">Enciende o apaga cada validador de la cadena (o tócalo en el dibujo). Cada fila es una acción con un defecto: mira en qué eslabón se detiene o si llega al mundo. Apaga el esquema y mira qué tiene que atrapar el resto; enciende el validador con modelo y compara lo que atrapa con lo que cuesta.</p><style>
+[id="08-lab-1"] .c8l1-svg{width:100%;max-width:520px;margin:0 auto;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="08-lab-1"] .c8l1-st{cursor:pointer}
+[id="08-lab-1"] .c8l1-st rect{stroke-width:2;transition:opacity .2s}
+[id="08-lab-1"] .c8l1-st text{font:700 12.5px var(--f-display);fill:var(--ink)}
+[id="08-lab-1"] .c8l1-st text.s{font:500 10.5px var(--f-display);fill:var(--muted)}
+[id="08-lab-1"] .c8l1-st text.n{font:800 15px var(--f-mono);fill:var(--accent)}
+[id="08-lab-1"] .c8l1-st.off rect{stroke-dasharray:5 4;fill:var(--card)!important;opacity:.6}
+[id="08-lab-1"] .c8l1-st.off text{fill:var(--muted)}
+[id="08-lab-1"] .c8l1-st:focus{outline:none}
+[id="08-lab-1"] .c8l1-st:focus-visible rect{stroke:var(--accent)!important;stroke-width:3.5}
+[id="08-lab-1"] .c8l1-tab{width:100%;border-collapse:collapse;font:500 .86rem/1.35 var(--f-display)}
+[id="08-lab-1"] .c8l1-tab th{text-align:left;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 6px;border-bottom:1px solid var(--line)}
+[id="08-lab-1"] .c8l1-tab td{padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+[id="08-lab-1"] .c8l1-tab td small{display:block;color:var(--muted);font-weight:400;font-size:.8rem}
+[id="08-lab-1"] .c8l1-pill{display:inline-block;font:700 .72rem var(--f-display);padding:2px 7px;border-radius:999px;white-space:nowrap;color:var(--card)}
+[id="08-lab-1"] .c8l1-ok{background:var(--good)}
+[id="08-lab-1"] .c8l1-mid{background:var(--c-fis)}
+[id="08-lab-1"] .c8l1-bad{background:var(--warm)}
+[id="08-lab-1"] .c8l1-neu{background:var(--muted)}
+[id="08-lab-1"] .c8l1-tab td small.c8l1-d2{display:none}
+[id="08-lab-1"] .c8l1-tab code{overflow-wrap:anywhere}
+@media (max-width:520px){[id="08-lab-1"] .c8l1-tab td small.c8l1-d2{display:block}[id="08-lab-1"] .c8l1-tab thead{display:none}[id="08-lab-1"] .c8l1-tab tr{display:block;border-bottom:1px solid var(--line);padding:4px 0}[id="08-lab-1"] .c8l1-tab td{display:block;border:0;padding:3px 6px}[id="08-lab-1"] .c8l1-tab th:nth-child(2),[id="08-lab-1"] .c8l1-tab td:nth-child(2){display:none}}
+</style>
+<div class="btns" id="c8l1-btns" role="group" aria-label="Validadores encendidos"></div>
+<svg class="c8l1-svg" id="c8l1-svg" viewBox="0 0 360 276" role="img" aria-label="La cadena de validadores: esquema, rango, alcance y juez con modelo antes del efecto real; validador posterior y validador de respuesta después. Cada eslabón muestra cuántas acciones detiene.">
+  <defs><marker id="c8l1-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
+  <text x="8" y="18" style="font:700 10.5px var(--f-display);fill:var(--muted);letter-spacing:.08em">ANTES DEL EFECTO</text>
+  <line x1="8" y1="140" x2="352" y2="140" style="stroke:var(--c-enl);stroke-width:3"/>
+  <rect x="134" y="130" width="92" height="20" rx="4" style="fill:var(--card)"/>
+  <text x="180" y="144" text-anchor="middle" style="font:700 11px var(--f-display);fill:var(--c-enl)">efecto real</text>
+  <text x="352" y="196" text-anchor="end" style="font:700 10.5px var(--f-display);fill:var(--muted);letter-spacing:.08em">DESPUÉS</text>
+  <g id="c8l1-cadena"></g>
+</svg>
+<div class="tbl"><table class="c8l1-tab" aria-describedby="c8l1-out">
+  <thead><tr><th>Acción propuesta</th><th>Defecto</th><th>Se detiene en</th></tr></thead>
+  <tbody id="c8l1-filas"></tbody>
+</table></div>
+<div class="readout texto" id="c8l1-out" aria-live="polite"></div></div></section>
+<section><h2>Validar la respuesta final: estructura, citas y reglas del dominio</h2><div class="prose"><p>Además de las acciones, el agente produce una <b>respuesta final</b> (<i>final answer</i>): el texto o el objeto que le entrega a la persona o al sistema que lo llamó. También se valida, y aquí hay tres capas:</p><ul><li><b>Estructura.</b> Si quien recibe la respuesta es otro programa, la respuesta tiene un esquema: un JSON con <code>estado</code>, <code>monto</code> y <code>motivo</code>, por ejemplo. Muchos proveedores ofrecen <b>salidas estructuradas</b> (<i>structured outputs</i>), que obligan al modelo a respetar un esquema al generar. Ayudan mucho, pero el arnés igual valida: el contrato es suyo, no del proveedor.</li><li><b>Citas</b> (<i>citations</i>). Si el agente dice «según la política de devoluciones, el plazo es de 30 días», el validador comprueba que la cita apunte a un documento que de verdad estuvo en el contexto y que el fragmento citado exista. Una cifra sin fuente, o con una fuente que el agente nunca leyó, es una <b>alucinación</b> (<i>hallucination</i>), un dato inventado que suena plausible.</li><li><b>Reglas del dominio.</b> Cosas que la respuesta nunca debe hacer, aunque esté bien formada: prometer un reembolso que no se ejecutó, dar un consejo médico o legal, mostrar el número de tarjeta completo, contradecir el resultado de una herramienta. Algunas se revisan con código (una expresión regular para números de tarjeta) y otras necesitan leer el sentido.</li></ul></div><div class="ml"><b>En la práctica</b><p>Un agente de soporte termina con «Listo, ya te devolvimos los US$ 48,00». El validador de respuesta busca en la sesión una llamada a <code>reembolsar</code> con ese monto y un validador posterior que haya confirmado el estado <code>aplicado</code>. Si no las encuentra, la respuesta no sale: el agente promete algo que el arnés no puede respaldar. Esta regla, «no afirmar un efecto que no está en el registro», atrapa una familia entera de errores con pocas líneas de código.</p></div></section>
+<section><h2>Ganchos (<i>hooks</i>) en el ciclo de vida del bucle</h2><div class="prose"><p>Los validadores tienen que correr en momentos precisos: antes de cada herramienta, después de cada herramienta, antes de entregar la respuesta. Si cada uno se programa metido dentro del bucle, el bucle se llena de <code>if</code> y cada regla nueva obliga a tocar el corazón del arnés. La solución es abrir puntos de extensión con nombre: los <b>ganchos</b> (<i>hooks</i>).</p><p>Un gancho es una función, o un programa externo, que el arnés llama en un momento fijo del <b>ciclo de vida</b> (<i>lifecycle</i>) de una ejecución. Le pasa los datos de ese momento y espera una respuesta: seguir, bloquear con un motivo o seguir con un cambio. El bucle del capítulo 2 no cambia de forma; solo emite «estoy por ejecutar <code>borrar</code>» y escucha.</p></div><figure class="fig fig-flujo" id="08-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 340" style="min-width:700px" role="img" aria-label="Los seis puntos de gancho en el ciclo de vida de una ejecución, de izquierda a derecha: inicio de sesión, pedido del usuario, antes de la herramienta, después de la herramienta, antes de compactar y al terminar. Para cada uno, qué datos recibe el gancho y qué puede responder. Los que pueden bloquear tienen borde grueso; los que solo observan o agregan, borde punteado. Entre antes y después de la herramienta, una flecha de vuelta indica que se repiten en cada llamada.">
+  <defs>
+    <marker id="d82-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+  </defs>
+  
+  <line x1="20" y1="96" x2="840" y2="96" class="ln s-red" style="stroke-width:3" marker-end="url(#d82-r)"/>
+  <text x="20" y="20" class="t t-xs t-b k-red">EL BUCLE, DE PRINCIPIO A FIN →</text>
+  <path d="M500 84C500 40 360 40 360 84" class="ln s-red" style="stroke-width:2;fill:none;stroke-dasharray:6 4" marker-end="url(#d82-r)"/>
+  <text x="430" y="38" class="t t-s k-red" text-anchor="middle">en cada llamada a herramienta</text>
+  <g class="k-red">
+    <circle cx="85" cy="96" r="8"/><circle cx="225" cy="96" r="8"/><circle cx="360" cy="96" r="8"/>
+    <circle cx="500" cy="96" r="8"/><circle cx="640" cy="96" r="8"/><circle cx="780" cy="96" r="8"/>
+  </g>
+  <g class="ln" style="stroke-width:1.4">
+    <line x1="85" y1="104" x2="85" y2="124"/><line x1="225" y1="104" x2="225" y2="124"/><line x1="360" y1="104" x2="360" y2="124"/>
+    <line x1="500" y1="104" x2="500" y2="124"/><line x1="640" y1="104" x2="640" y2="124"/><line x1="780" y1="104" x2="780" y2="124"/>
+  </g>
+  
+  <g class="t">
+    <rect x="20" y="124" width="130" height="200" rx="10" class="caja" style="stroke-dasharray:5 4"/>
+    <text x="85" y="146" text-anchor="middle" class="t-b">① Inicio</text>
+    <text x="85" y="162" text-anchor="middle" class="t-s t-m t-mono">session start</text>
+    <text x="30" y="190" class="t-xs t-m">RECIBE</text><text x="30" y="206" class="t-s">proyecto y sesión</text>
+    <text x="30" y="234" class="t-xs t-m">PUEDE</text><text x="30" y="250" class="t-s">agregar contexto,</text><text x="30" y="265" class="t-s">comprobar el entorno</text>
+
+    <rect x="160" y="124" width="130" height="200" rx="10" class="d-sis"/>
+    <text x="225" y="146" text-anchor="middle" class="t-b k-sis">② Pedido</text>
+    <text x="225" y="162" text-anchor="middle" class="t-s t-m t-mono">user prompt</text>
+    <text x="170" y="190" class="t-xs t-m">RECIBE</text><text x="170" y="206" class="t-s">el texto del pedido</text>
+    <text x="170" y="234" class="t-xs t-m">PUEDE</text><text x="170" y="250" class="t-s">bloquear lo que está</text><text x="170" y="265" class="t-s">fuera de alcance o</text><text x="170" y="280" class="t-s">agregar información</text>
+
+    <rect x="300" y="124" width="130" height="200" rx="10" class="d-sis" style="stroke-width:3"/>
+    <text x="365" y="146" text-anchor="middle" class="t-b k-sis">③ Antes de la</text>
+    <text x="365" y="162" text-anchor="middle" class="t-b k-sis">herramienta</text>
+    <text x="310" y="190" class="t-xs t-m">RECIBE</text><text x="310" y="206" class="t-s">llamada y argumentos</text>
+    <text x="310" y="234" class="t-xs t-m">PUEDE</text><text x="310" y="250" class="t-s">bloquear, corregir</text><text x="310" y="265" class="t-s">o escalar</text>
+    <text x="310" y="300" class="t-s t-m t-mono">pre-tool use</text>
+
+    <rect x="440" y="124" width="130" height="200" rx="10" class="d-sis" style="stroke-width:3"/>
+    <text x="505" y="146" text-anchor="middle" class="t-b k-sis">④ Después de la</text>
+    <text x="505" y="162" text-anchor="middle" class="t-b k-sis">herramienta</text>
+    <text x="450" y="190" class="t-xs t-m">RECIBE</text><text x="450" y="206" class="t-s">llamada y resultado</text>
+    <text x="450" y="234" class="t-xs t-m">PUEDE</text><text x="450" y="250" class="t-s">verificar el efecto,</text><text x="450" y="265" class="t-s">volverlo un error,</text><text x="450" y="280" class="t-s">formatear, registrar</text>
+    <text x="450" y="300" class="t-s t-m t-mono">post-tool use</text>
+
+    <rect x="580" y="124" width="130" height="200" rx="10" class="caja" style="stroke-dasharray:5 4"/>
+    <text x="645" y="146" text-anchor="middle" class="t-b">⑤ Antes de</text>
+    <text x="645" y="162" text-anchor="middle" class="t-b">compactar</text>
+    <text x="590" y="190" class="t-xs t-m">RECIBE</text><text x="590" y="206" class="t-s">la historia</text>
+    <text x="590" y="234" class="t-xs t-m">PUEDE</text><text x="590" y="250" class="t-s">guardar lo crítico</text><text x="590" y="265" class="t-s">antes del resumen</text>
+    <text x="590" y="300" class="t-s t-m t-mono">pre-compact</text>
+
+    <rect x="720" y="124" width="130" height="200" rx="10" class="d-sis" style="stroke-width:3"/>
+    <text x="785" y="146" text-anchor="middle" class="t-b k-sis">⑥ Al terminar</text>
+    <text x="785" y="162" text-anchor="middle" class="t-s t-m t-mono">stop</text>
+    <text x="730" y="190" class="t-xs t-m">RECIBE</text><text x="730" y="206" class="t-s">la respuesta final</text>
+    <text x="730" y="234" class="t-xs t-m">PUEDE</text><text x="730" y="250" class="t-s">validarla o impedir</text><text x="730" y="265" class="t-s">que termine si</text><text x="730" y="280" class="t-s">faltan pasos</text>
+  </g>
+  <g class="t t-s">
+    <rect x="560" y="12" width="26" height="14" rx="3" class="d-sis" style="stroke-width:3"/><text x="592" y="24">puede bloquear</text>
+    <rect x="700" y="12" width="26" height="14" rx="3" class="caja" style="stroke-dasharray:5 4"/><text x="732" y="24">observa o agrega</text>
+  </g>
+</svg></div><figcaption><b>Los puntos de gancho en el ciclo de vida de una ejecución.</b> El tiempo corre de izquierda a derecha por el bucle: inicio de sesión, pedido del usuario, antes de cada herramienta, después de cada herramienta, antes de compactar y al terminar. Cada punto dice qué datos recibe el gancho y qué puede responder. Los ganchos que pueden bloquear van con borde grueso; los que solo observan, punteados.</figcaption></figure><div class="prose"><p>Los momentos más comunes en los arneses del mercado son:</p><ul><li><b>Al iniciar la sesión</b> (<i>session start</i>): cargar contexto extra o comprobar que el entorno está listo.</li><li><b>Al recibir el pedido</b> (<i>user prompt submit</i>): rechazar pedidos fuera de alcance o agregar información antes de que los vea el modelo.</li><li><b>Antes de la herramienta</b> (<i>pre-tool use</i>): el lugar natural de los validadores previos. Puede bloquear la llamada y explicar por qué.</li><li><b>Después de la herramienta</b> (<i>post-tool use</i>): validadores posteriores, formateo automático, registro.</li><li><b>Antes de compactar</b> (<i>pre-compact</i>): guardar algo que no debe perderse en el resumen (capítulo 5).</li><li><b>Al terminar</b> (<i>stop</i>): validar la respuesta final o impedir que el agente se detenga si faltan pasos, por ejemplo si las pruebas no pasan.</li></ul><p>Claude Code, por ejemplo, implementa sus ganchos como programas que reciben la llamada en JSON por la entrada estándar; si el programa termina con el código de salida 2, la herramienta se bloquea y el texto de error vuelve al modelo como explicación. El OpenAI Agents SDK los llama <b>barreras</b> (<i>guardrails</i>): de entrada, de salida y de herramienta, y cuando una se activa dispara un <b>cable trampa</b> (<i>tripwire</i>) que detiene la ejecución. La palabra cambia, la pieza es la misma.</p><p>En el arnés del curso, un validador es un gancho con contrato:</p><div class="code-copia"><pre><code>type Momento = "inicio" | "pedido" | "antes_herramienta" | "despues_herramienta"
+             | "antes_compactar" | "fin";
+
+type Veredicto =
+  | { tipo: "seguir" }
+  | { tipo: "bloquear"; motivo: string }                 // vuelve al modelo como error
+  | { tipo: "corregir"; argumentos: unknown; nota: string } // cambio determinista y registrado
+  | { tipo: "escalar"; motivo: string };                 // pasa a una persona (capítulo 9)
+
+interface Gancho {
+  nombre: string;
+  momento: Momento;
+  aplicaA?: string[];                 // herramientas a las que se engancha; vacío: todas
+  clase: "determinista" | "modelo";
+  plazoMs: number;                    // un gancho lento no detiene el bucle para siempre
+  revisar(e: { llamada?: Bloque; resultado?: Bloque; mensajes: Mensaje[] }): Promise&lt;Veredicto&gt;;
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en el <code>plazoMs</code>. Un gancho es código que corre en el camino crítico de cada acción: si se cuelga, se cuelga el agente. El arnés le pone un límite de tiempo y decide qué pasa si se vence. Para un gancho que protege algo, la respuesta segura es <b>cerrar ante la falla</b> (<i>fail closed</i>): si el validador no contestó, la acción no pasa.</p><p>Ahora escribe uno. El gancho más clásico de un agente de código es el que impide borrar fuera de la carpeta del proyecto, y es más difícil de lo que parece.</p></div><div class="lab" id="08-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Escribe un gancho que impide borrar fuera de la carpeta de trabajo</h3></div><p class="hint">Elige cómo compara tu gancho la ruta pedida con la carpeta de trabajo, encendiendo o apagando cada técnica. Diez pedidos de borrado pasan por el gancho: mira cuáles bloquea, cuáles deja pasar y cuáles se le escapan. La meta es 10 de 10 sin bloquear lo que sí se puede borrar.</p><style>
+[id="08-lab-2"] .c8l2-tecs{display:grid;gap:6px}
+[id="08-lab-2"] .c8l2-tecs label{display:flex;gap:8px;align-items:flex-start;font:500 .9rem/1.35 var(--f-display);cursor:pointer}
+[id="08-lab-2"] .c8l2-tecs input{margin-top:3px;accent-color:var(--accent)}
+[id="08-lab-2"] .c8l2-tecs small{color:var(--muted);display:block;font-weight:400}
+[id="08-lab-2"] .c8l2-cod{font:400 .8rem/1.5 var(--f-mono);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0;overflow-x:auto;white-space:pre}
+[id="08-lab-2"] .c8l2-cod .on{color:var(--good);font-weight:600}
+[id="08-lab-2"] .c8l2-cod .off{color:var(--muted);text-decoration:line-through}
+[id="08-lab-2"] .c8l2-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+[id="08-lab-2"] .c8l2-lista li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;align-items:start;padding:7px 9px;border:1px solid var(--line);border-left-width:5px;border-radius:7px;background:var(--card);font:500 .86rem/1.35 var(--f-display)}
+[id="08-lab-2"] .c8l2-lista li.ok{border-left-color:var(--good)}
+[id="08-lab-2"] .c8l2-lista li.esc{border-left-color:var(--warm);background:var(--warm-soft)}
+[id="08-lab-2"] .c8l2-lista code{font-size:.84rem;overflow-wrap:anywhere}
+[id="08-lab-2"] .c8l2-lista .v{font:700 .72rem var(--f-display);text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:4px;color:var(--card);white-space:nowrap}
+[id="08-lab-2"] .c8l2-lista .why{grid-column:1/-1;color:var(--muted);font-weight:400;font-size:.82rem}
+</style>
+<p class="hint">Carpeta de trabajo: <code>/home/ana/proyecto</code>. Carpeta personal: <code>/home/ana</code>. Dentro del proyecto, <code>datos</code> es un enlace simbólico a <code>/mnt/compartido/datos</code>.</p>
+<div class="split">
+  <fieldset class="c8l2-tecs" style="border:0;padding:0;margin:0">
+    <legend class="hint" style="padding:0;margin-bottom:6px">Técnicas de tu gancho</legend>
+    <label><input type="checkbox" id="c8l2-t1"><span>Resolver <code>.</code> y <code>..</code><small>normalizar la ruta antes de comparar</small></span></label>
+    <label><input type="checkbox" id="c8l2-t2"><span>Comparar carpetas completas<small>exigir «proyecto/» y no solo las letras «proyecto»</small></span></label>
+    <label><input type="checkbox" id="c8l2-t3"><span>Expandir <code>~</code><small>la terminal lo cambia por la carpeta personal</small></span></label>
+    <label><input type="checkbox" id="c8l2-t4"><span>Resolver enlaces simbólicos<small>mirar a dónde apunta de verdad</small></span></label>
+    <label><input type="checkbox" id="c8l2-t5"><span>Revisar todos los argumentos<small>no solo el primero del comando</small></span></label>
+  </fieldset>
+  <pre class="c8l2-cod" id="c8l2-cod" aria-label="El código del gancho según las técnicas elegidas"></pre>
+</div>
+<ul class="c8l2-lista" id="c8l2-lista" aria-label="Pedidos de borrado y la decisión del gancho"></ul>
+<div class="readout texto" id="c8l2-out" aria-live="polite"></div></div><div class="prose"><p>Lo que muestra el laboratorio es una lección general: comparar textos no es comparar rutas. <code>../</code> sube de carpeta, <code>~</code> es la carpeta personal, un <b>enlace simbólico</b> (<i>symbolic link</i>) apunta a otro lugar y <code>/proyecto-viejo</code> empieza con las mismas letras que <code>/proyecto</code>. El gancho correcto primero <b>normaliza</b> la ruta (resuelve todo eso a una ruta absoluta y real) y después compara carpetas completas. Y aun así, el gancho es una capa: el entorno aislado del capítulo 10 es la que impide el daño si el gancho tiene un hueco.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Corre un gancho previo que impide borrar fuera del proyecto</h3></div><p>Vas a correr, en tu computadora y sin borrar nada, un gancho escrito en Python que decide si un borrado se permite. Compara una versión ingenua con una correcta. Necesitas Python 3. Crea una carpeta vacía, entra en ella y guarda este archivo como <code>gancho.py</code>:</p><div class="code-copia"><pre><code># gancho.py: gancho previo que impide borrar fuera de la carpeta de trabajo (no borra nada)
+import os
+import sys
+
+TRABAJO = os.path.realpath("proyecto")   # la carpeta de trabajo del agente
+
+def ingenuo(pedida):
+    # resuelve ".." pero compara letras y no expande "~": el error más común
+    return os.path.normpath(os.path.join(TRABAJO, pedida)).startswith(TRABAJO)
+
+def correcto(pedida):
+    # normaliza (~, .., enlaces) y compara carpetas completas
+    real = os.path.realpath(os.path.join(TRABAJO, os.path.expanduser(pedida)))
+    try:
+        return os.path.commonpath([real, TRABAJO]) == TRABAJO
+    except ValueError:                      # otra unidad de disco en Windows
+        return False
+
+CASOS = ["build/tmp.txt", "src/../dist/app.js", "../secreto.txt",
+         "src/../../notas.txt", "../proyecto-viejo/datos.csv", "~/.ssh/id_rsa"]
+
+if len(sys.argv) &gt; 1:                       # modo gancho: una ruta, un código de salida
+    ruta = sys.argv[1]
+    if correcto(ruta):
+        print(f"permitir: {ruta}")
+        sys.exit(0)
+    print(f"bloquear: {ruta} queda fuera de {TRABAJO}", file=sys.stderr)
+    sys.exit(2)                             # 2 = bloquear, como en varios agentes de código
+
+print(f"Carpeta de trabajo: {TRABAJO}\n")
+print(f"{'ruta pedida':32} {'ingenuo':10} correcto")
+for c in CASOS:
+    a = "permite" if ingenuo(c) else "bloquea"
+    b = "permite" if correcto(c) else "bloquea"
+    print(f"{c:32} {a:10} {b}{'   &lt;- se escapa' if a != b else ''}")</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python gancho.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python gancho.py ../secreto.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $LASTEXITCODE</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python gancho.py build/tmp.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $LASTEXITCODE</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 gancho.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 gancho.py ../secreto.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $?</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 gancho.py build/tmp.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $?</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la tabla, busca las filas marcadas «se escapa»: son borrados que la versión ingenua deja pasar y la correcta bloquea.</span></li><li><span>Mira la ruta <code>../proyecto-viejo/datos.csv</code>: ¿por qué la versión ingenua la permite si está fuera?</span></li><li><span>Corre el gancho con una sola ruta y anota el código de salida: 2 cuando bloquea, 0 cuando permite.</span></li><li><span>Agrega a <code>CASOS</code> una ruta absoluta de tu sistema, como <code>C:/Windows/win.ini</code> o <code>/etc/hosts</code>, y vuelve a correrlo.</span></li></ol><p><b>Qué observar:</b> la versión ingenua ya resuelve <code>../</code>, así que atrapa <code>../secreto.txt</code>, pero deja escapar dos rutas: <code>../proyecto-viejo/datos.csv</code>, porque «proyecto-viejo» empieza con las letras de «proyecto» y la comparación es de letras y no de carpetas, y <code>~/.ssh/id_rsa</code>, porque no sabe que la terminal convierte <code>~</code> en tu carpeta personal. La correcta normaliza todo primero y compara carpetas completas. El código de salida es la interfaz del gancho: el arnés no necesita entender Python, solo leer 0 o 2 y el motivo. La carpeta <code>proyecto</code> ni siquiera tiene que existir, porque el gancho solo razona sobre rutas.</p></div></section>
+<section><h2>Validadores deterministas y validadores con modelo</h2><div class="prose"><p>Hasta aquí casi todos los validadores fueron <b>deterministas</b>: código que, ante la misma entrada, da siempre el mismo veredicto. Esquemas, rangos, rutas, expresiones regulares, consultas al sistema para verificar un efecto. Son baratos, rápidos y se pueden probar con casos fijos.</p><p>Pero hay defectos que el código no ve. ¿El resumen que el agente le va a mandar al cliente tiene un tono agresivo? ¿El correo revela, con otras palabras, información de otro cliente? ¿La respuesta contradice el documento que cita, aunque cite bien? Para eso existen los <b>validadores con modelo</b> (<i>model-based validators</i>), también llamados <b>LLM como juez</b> (<i>LLM-as-a-judge</i>, donde LLM es <i>large language model</i>, modelo grande de lenguaje): otro llamado a un modelo, con instrucciones cortas y una salida estructurada (<code>aprueba: sí/no</code>, <code>motivo</code>), que revisa lo que el primero produjo.</p></div><figure class="fig fig-comparacion" id="08-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 400" style="min-width:680px" role="img" aria-label="Comparación entre validadores deterministas y validadores con modelo en siete criterios: qué detectan, costo, tiempo, si dan siempre el mismo veredicto, cómo se prueban, cómo se engañan y dónde conviene cada uno.">
+  <g class="t">
+    <rect x="200" y="10" width="320" height="40" rx="8" class="d-sis"/><text x="360" y="36" text-anchor="middle" class="t-b k-sis">Determinista (código)</text>
+    <rect x="530" y="10" width="320" height="40" rx="8" class="c-tra"/><text x="690" y="36" text-anchor="middle" class="t-b k-tra">Con modelo (LLM como juez)</text>
+  </g>
+  <g class="ln" style="stroke-width:1">
+    <line x1="10" y1="96" x2="850" y2="96"/><line x1="10" y1="142" x2="850" y2="142"/><line x1="10" y1="188" x2="850" y2="188"/>
+    <line x1="10" y1="234" x2="850" y2="234"/><line x1="10" y1="280" x2="850" y2="280"/><line x1="10" y1="326" x2="850" y2="326"/>
+  </g>
+  <g class="t t-b">
+    <text x="14" y="78">Qué detecta</text>
+    <text x="14" y="124">Costo por revisión</text>
+    <text x="14" y="170">Tiempo</text>
+    <text x="14" y="216">¿Mismo veredicto?</text>
+    <text x="14" y="262">Cómo se prueba</text>
+    <text x="14" y="308">Cómo se engaña</text>
+    <text x="14" y="356">Dónde conviene</text>
+  </g>
+  <g class="t t-s">
+    <text x="210" y="72">forma, rangos, rutas, patrones,</text><text x="210" y="87">efectos consultando el sistema</text>
+    <text x="540" y="72">sentido: tono, fugas con otras palabras,</text><text x="540" y="87">contradicciones con la fuente</text>
+    <rect x="210" y="112" width="8" height="16" rx="2" class="d-sis"/><text x="226" y="125">casi cero</text>
+    <rect x="540" y="112" width="200" height="16" rx="2" class="c-tra"/><text x="748" y="125">una llamada</text>
+    <rect x="210" y="158" width="10" height="16" rx="2" class="d-sis"/><text x="228" y="171">milisegundos</text>
+    <rect x="540" y="158" width="200" height="16" rx="2" class="c-tra"/><text x="748" y="171">segundos</text>
+    <text x="210" y="216" class="k-enl t-b">✔ siempre el mismo</text>
+    <text x="540" y="216" class="k-sis t-b">◐ puede variar entre corridas</text>
+    <text x="210" y="256">pruebas unitarias con casos fijos:</text><text x="210" y="271">pasa o no pasa</text>
+    <text x="540" y="256">casos etiquetados y tasas de falsos</text><text x="540" y="271">positivos y negativos (capítulo 15)</text>
+    <text x="210" y="302">huecos en la regla (rutas con «..»,</text><text x="210" y="317">formatos que no se previeron)</text>
+    <text x="540" y="302">los mismos huecos, más una inyección</text><text x="540" y="317">de prompts en el texto que revisa</text>
+    <text x="210" y="350" class="t-b">primero y siempre, en cada acción</text>
+    <text x="210" y="366">si se puede escribir como código, va aquí</text>
+    <text x="540" y="350" class="t-b">solo donde el código no llega</text>
+    <text x="540" y="366">la respuesta a un cliente, no cada lectura</text>
+  </g>
+  <text x="850" y="392" class="t t-xs t-m" text-anchor="end">las barras sugieren el orden de magnitud, no una medición</text>
+</svg></div><figcaption><b>Validadores deterministas frente a validadores con modelo.</b> Cada fila es un criterio: qué detectan, costo, tiempo, si dan siempre el mismo veredicto, cómo se prueban y cómo pueden ser engañados. Las barras sugieren el orden de magnitud, no una medición. La última fila dice dónde conviene cada uno: el determinista primero y siempre; el de modelo, solo donde el código no llega.</figcaption></figure><div class="prose"><p>Las reglas para usarlos bien salen de su naturaleza probabilística:</p><ul><li><b>El determinista va primero.</b> Si una regla se puede escribir como código, se escribe como código. El validador con modelo cubre el resto, no reemplaza lo que el código ya resuelve.</li><li><b>El juez también se puede engañar.</b> Lee el mismo texto que el agente, y una inyección de prompts en ese texto puede intentar convencerlo de que todo está bien. Por eso su salida es un veredicto con forma fija, que el arnés interpreta, y nunca texto libre que se ejecuta.</li><li><b>Tiene falsos positivos y falsos negativos.</b> Un <b>falso positivo</b> (<i>false positive</i>) bloquea algo que estaba bien; un <b>falso negativo</b> (<i>false negative</i>) deja pasar algo malo. Se miden con un conjunto de casos etiquetados, como cualquier clasificador, y la medición se repite al cambiar el modelo juez (capítulo 15).</li><li><b>Cuesta en cada acción.</b> Un juez en cada llamada a herramienta puede duplicar el costo y el tiempo de la tarea. Se pone donde el riesgo lo justifica: la respuesta que sale a un cliente, no cada lectura de un archivo.</li></ul></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Compara los ganchos de dos arneses del mercado</h3></div><p>Vas a leer la documentación pública de dos arneses y ubicar en cada uno los momentos y las respuestas de este capítulo. Abre la <a href="https://docs.claude.com/en/docs/claude-code/hooks" target="_blank" rel="noopener">guía de ganchos de Claude Code</a> y la <a href="https://openai.github.io/openai-agents-python/guardrails/" target="_blank" rel="noopener">guía de barreras del OpenAI Agents SDK</a>.</p><ol class="steps"><li><span>En Claude Code, haz una lista de los eventos de gancho. Empareja cada uno con un punto de la figura de los puntos de gancho de este capítulo.</span></li><li><span>Busca qué código de salida bloquea una herramienta y a dónde va el mensaje de error.</span></li><li><span>En el Agents SDK, encuentra los tres tipos de barrera (de entrada, de salida y de herramienta) y qué es el <i>tripwire</i>.</span></li><li><span>Busca si las barreras de entrada corren en paralelo con el agente o antes que él, y qué consecuencia tiene eso en costo.</span></li><li><span>Para cada arnés, anota si un validador puede ser un programa externo, una función o un llamado a otro modelo.</span></li></ol><p><b>Qué observar:</b> los dos arneses ofrecen la misma pieza con otro nombre: puntos fijos del ciclo de vida donde una revisión puede seguir, bloquear o detener. Uno la expone como programas externos que cualquiera escribe en el lenguaje que quiera; el otro, como funciones dentro del programa. Las páginas cambian con cada versión, así que confía en lo que encuentres tú.</p></div></section>
+<section><h2>Cuando un validador falla: reintentar, corregir o escalar</h2><div class="prose"><p>Un validador que dice «no» todavía no resolvió nada. Falta decidir qué pasa con la tarea, y hay cuatro salidas, de la más suave a la más dura:</p><ol class="steps"><li><span><b>Reintentar</b> (<i>retry</i>). El error vuelve al modelo como resultado de la herramienta, con un mensaje que diga qué falló y cómo arreglarlo: «el monto 4800 supera el cobro original de 48,00; revisa el separador decimal». Un buen mensaje es la mitad de la corrección. Un mensaje vago («entrada inválida») produce el mismo error otra vez.</span></li><li><span><b>Corregir</b> (<i>repair</i>). Si el arreglo es obvio y seguro, el propio arnés lo aplica: quitar un espacio al final de una ruta, convertir <code>"48,00"</code> en <code>48.00</code>, ordenar los campos de un JSON. La corrección se registra, y solo se permite para cambios que no alteran la intención.</span></li><li><span><b>Escalar</b> (<i>escalate</i>). Si el defecto no se puede corregir solo o el riesgo es alto, la acción pasa a una persona: el servicio de interacción humana del capítulo 9.</span></li><li><span><b>Abortar</b> (<i>abort</i>). Si la violación es grave (un intento de leer secretos, una inyección detectada), la ejecución se detiene y queda una alerta.</span></li></ol></div><figure class="fig fig-esquema" id="08-diagrama-4"><div class="lienzo"><svg viewBox="0 0 860 420" style="min-width:680px" role="img" aria-label="Árbol de decisión cuando un validador dice que no. Si la violación es grave, se aborta y se alerta. Si hay una corrección determinista segura, el arnés corrige y registra. Si no, el error vuelve al modelo con cómo arreglarlo, hasta tres intentos; al agotarse, se escala a una persona. A la derecha, el contador de intentos de una llamada.">
+  <defs>
+    <marker id="d84-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d84-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+  </defs>
+  <g class="t">
+    <rect x="200" y="12" width="240" height="42" rx="10" class="d-sis"/><text x="320" y="38" text-anchor="middle" class="t-b k-sis">✖ Un validador dice que no</text>
+
+    <path d="M320 80L440 112L320 144L200 112Z" class="caja"/><text x="320" y="108" text-anchor="middle" class="t-b">¿Es grave?</text><text x="320" y="124" text-anchor="middle" class="t-s t-m">secretos, inyección</text>
+    <rect x="530" y="90" width="170" height="44" rx="10" class="c-apl"/><text x="615" y="110" text-anchor="middle" class="t-b k-apl">Abortar</text><text x="615" y="126" text-anchor="middle" class="t-s">y dejar una alerta</text>
+
+    <path d="M320 172L450 206L320 240L190 206Z" class="caja"/><text x="320" y="202" text-anchor="middle" class="t-b">¿Corrección segura?</text><text x="320" y="218" text-anchor="middle" class="t-s t-m">no cambia la intención</text>
+    <rect x="530" y="184" width="170" height="44" rx="10" class="c-enl"/><text x="615" y="204" text-anchor="middle" class="t-b k-enl">Corregir</text><text x="615" y="220" text-anchor="middle" class="t-s">y registrar el cambio</text>
+
+    <rect x="200" y="266" width="240" height="50" rx="10" class="c-tra"/><text x="320" y="287" text-anchor="middle" class="t-b k-tra">Error al modelo</text><text x="320" y="304" text-anchor="middle" class="t-s">con qué falló y cómo arreglarlo</text>
+
+    <path d="M320 336L430 366L320 396L210 366Z" class="caja"/><text x="320" y="371" text-anchor="middle" class="t-b">¿Intentos &lt; 3?</text>
+    <rect x="530" y="344" width="170" height="44" rx="10" class="d-casa"/><text x="615" y="364" text-anchor="middle" class="t-b k-casa">Escalar</text><text x="615" y="380" text-anchor="middle" class="t-s">a una persona (cap. 9)</text>
+  </g>
+  <g class="ln" style="stroke-width:2;fill:none">
+    <line x1="320" y1="54" x2="320" y2="78" marker-end="url(#d84-m)"/>
+    <line x1="440" y1="112" x2="528" y2="112" marker-end="url(#d84-m)"/>
+    <line x1="320" y1="144" x2="320" y2="170" marker-end="url(#d84-m)"/>
+    <line x1="450" y1="206" x2="528" y2="206" marker-end="url(#d84-m)"/>
+    <line x1="320" y1="240" x2="320" y2="264" marker-end="url(#d84-m)"/>
+    <line x1="320" y1="316" x2="320" y2="334" marker-end="url(#d84-m)"/>
+    <line x1="430" y1="366" x2="528" y2="366" marker-end="url(#d84-m)"/>
+  </g>
+  <path d="M210 366H40V33H198" class="ln s-tra" style="stroke-width:2;fill:none;stroke-dasharray:6 4" marker-end="url(#d84-t)"/>
+  <g class="t t-s">
+    <text x="452" y="104" class="t-b">sí</text><text x="328" y="162" class="t-b">no</text>
+    <text x="462" y="198" class="t-b">sí</text><text x="328" y="256" class="t-b">no</text>
+    <text x="446" y="358" class="t-b">no</text>
+    <text x="48" y="190" class="k-tra t-b">sí: el modelo</text><text x="48" y="205" class="k-tra t-b">propone de nuevo</text>
+  </g>
+  
+  <g class="t">
+    <text x="730" y="20" class="t-xs t-b t-m">UNA LLAMADA,</text><text x="730" y="34" class="t-xs t-b t-m">TRES INTENTOS</text>
+    <rect x="730" y="44" width="120" height="40" rx="8" class="c-tra"/><text x="740" y="61" class="t-s t-b">intento 1</text><text x="740" y="76" class="t-s t-mono">monto: 4800 ✖</text>
+    <rect x="730" y="94" width="120" height="40" rx="8" class="c-tra"/><text x="740" y="111" class="t-s t-b">intento 2</text><text x="740" y="126" class="t-s t-mono">monto: 480 ✖</text>
+    <rect x="730" y="144" width="120" height="40" rx="8" class="c-tra"/><text x="740" y="161" class="t-s t-b">intento 3</text><text x="740" y="176" class="t-s t-mono">monto: 48 ✔</text>
+    <text x="730" y="208" class="t-s t-m">si el 3 fallaba,</text><text x="730" y="223" class="t-s t-m">se escalaba</text>
+  </g>
+</svg></div><figcaption><b>Qué hacer cuando un validador dice que no.</b> Se lee de arriba abajo como un árbol de decisión. Primero: ¿es grave? Si sí, se aborta. Si no: ¿hay una corrección determinista segura? Si sí, el arnés corrige y registra. Si no, el error vuelve al modelo con un mensaje que dice cómo arreglarlo, hasta un máximo de reintentos. Al agotarse, se escala a una persona. A la derecha, el contador de reintentos de cada llamada.</figcaption></figure><div class="prose"><p>El punto delicado es el <b>límite de reintentos</b>. Sin él, un modelo terco y un validador estricto entran en un bucle que solo se corta cuando se acaba el presupuesto. El arnés cuenta los rechazos por llamada y por validador, y a la tercera vez escala o aborta. Ese contador es otro dato que va al registro: un validador que rechaza mucho es una señal de que la herramienta está mal descrita, o de que la regla es demasiado estricta.</p></div><div class="caso"><b>Un caso real</b><p>Un equipo que operaba un agente interno de facturación agregó un validador de rango al reembolso: el monto no podía superar el cobro original. En la primera semana, el validador rechazó decenas de pedidos, y el modelo los reintentaba con el mismo monto. Al mirar el registro vieron por qué: el mensaje de error decía solo «monto inválido». Lo cambiaron por uno que daba el cobro original y el separador decimal esperado, y los reintentos exitosos pasaron a ser casi todos al primer intento. El validador no cambió; cambió lo que le decía al modelo.</p></div><div class="prose"><p>La idea que se lleva este capítulo: el arnés no confía en que una acción esté bien porque estaba permitida, ni en que un efecto ocurrió porque la herramienta dijo «ok». Revisa antes, revisa después y revisa lo que entrega, con ganchos que se agregan sin tocar el bucle.</p><p><b>Validadores a los dos lados de cada acción.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿En qué se diferencia una política de un validador?</summary><p>La política decide si la acción se permite, según quién la pide y qué es. El validador decide si la acción, su efecto o la respuesta están bien hechos: forma, rango, alcance, efecto real, citas y reglas del dominio.</p></details><details><summary>¿Por qué no basta con que la herramienta devuelva «ok»?</summary><p>Porque el texto del resultado no prueba el efecto. El validador posterior mira el mundo de nuevo (vuelve a leer el archivo, consulta el estado del pago, corre las pruebas) y compara con lo esperado.</p></details><details><summary>¿Por qué un gancho que compara rutas como texto deja escapar borrados?</summary><p>Porque <code>../</code>, <code>~</code> y los enlaces simbólicos cambian a dónde apunta una ruta, y una carpeta como <code>proyecto-viejo</code> empieza con las mismas letras que <code>proyecto</code>. Hay que normalizar la ruta y comparar carpetas completas.</p></details><details><summary>¿Qué debe hacer el arnés si un gancho de seguridad no responde a tiempo?</summary><p>Cerrar ante la falla: la acción no pasa. Por eso cada gancho tiene un plazo y una decisión por defecto.</p></details><details><summary>¿Cuándo conviene un validador con modelo y qué riesgos trae?</summary><p>Cuando el defecto depende del sentido del texto y el código no lo ve (tono, fugas de información con otras palabras, contradicciones). Cuesta en cada uso, tiene falsos positivos y negativos que hay que medir, y también se puede engañar con una inyección; por eso su salida es un veredicto con forma fija.</p></details><details><summary>¿Por qué un validador necesita un límite de reintentos?</summary><p>Porque sin él un modelo que repite el mismo error y un validador que lo rechaza entran en un bucle que solo se corta con el presupuesto. Al agotar los reintentos se escala o se aborta.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es la sintaxis «JSONPath» o «JSON Pointer» y cómo la usan los mensajes de error de un validador de JSON Schema para decir qué campo falló?<small>Pista: busca «JSON Schema output formats».</small></li><li>¿Qué es un ataque TOCTOU (<i>time of check to time of use</i>) y por qué afecta a un gancho que revisa una ruta antes de que la herramienta la use?</li><li>¿Qué son los enlaces duros (<i>hard links</i>) y por qué un gancho que resuelve enlaces simbólicos no los detecta?</li><li>¿Qué sesgos conocidos tienen los modelos cuando se usan como jueces, por ejemplo el sesgo de posición o la preferencia por respuestas largas?<small>Pista: busca «LLM-as-a-judge bias».</small></li><li>¿Cómo se calculan la precisión y la exhaustividad (<i>precision</i> y <i>recall</i>) de un clasificador, y cuál de las dos importa más en un validador de seguridad?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://docs.claude.com/en/docs/claude-code/hooks" target="_blank" rel="noopener">Claude Code: hooks <small>documentación, en inglés</small></a><a class="vid" href="https://openai.github.io/openai-agents-python/guardrails/" target="_blank" rel="noopener">OpenAI Agents SDK: guardrails <small>documentación, en inglés</small></a><a class="vid" href="https://json-schema.org/understanding-json-schema" target="_blank" rel="noopener">Understanding JSON Schema <small>guía, en inglés</small></a><a class="vid" href="https://owasp.org/www-project-top-10-for-large-language-model-applications/" target="_blank" rel="noopener">OWASP Top 10 para aplicaciones con LLM <small>referencia, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const ST=[
+    {k:'esq',n:'Esquema',s:'forma y tipos',x:8,y:28,c:'--d-sis',f:'--d-sis-s',fase:'antes',clase:'det'},
+    {k:'ran',n:'Rango',s:'valores',x:96,y:28,c:'--d-sis',f:'--d-sis-s',fase:'antes',clase:'det'},
+    {k:'alc',n:'Alcance',s:'lo de la tarea',x:184,y:28,c:'--d-sis',f:'--d-sis-s',fase:'antes',clase:'det'},
+    {k:'jue',n:'Juez',s:'con modelo',x:272,y:28,c:'--c-tra',f:'--c-tra-s',fase:'antes',clase:'mod'},
+    {k:'pos',n:'Posterior',s:'mira el efecto',x:96,y:172,c:'--d-sis',f:'--d-sis-s',fase:'despues',clase:'det'},
+    {k:'res',n:'Respuesta',s:'al entregar',x:184,y:172,c:'--d-sis',f:'--d-sis-s',fase:'respuesta',clase:'det'}
+  ];
+  // atrapan: validadores que detectan el defecto, en cualquier orden; el primero encendido de la cadena gana
+  const AC=[
+    {a:'reembolsar({monto:"48,00"})',d:'el monto llega como texto',at:['esq','jue']},
+    {a:'reembolsar({monto:4800})',d:'cobro original: 48,00; se comió la coma',at:['ran','jue']},
+    {a:'consultar_ventas({limite:10000000})',d:'trae diez millones de filas',at:['ran']},
+    {a:'reembolsar({cliente:"4521"})',d:'el ticket es de la cliente 4512',at:['alc','jue']},
+    {a:'borrar({ruta:"build /"})',d:'un espacio convierte el borrado en «/»',at:['esq','alc']},
+    {a:'enviar_correo({para:"ana@ejemplo.net"})',d:'destinatario externo que no está en el caso',at:['alc','jue']},
+    {a:'escribir_archivo("informe.csv")',d:'devuelve ok pero el archivo quedó vacío',at:['pos']},
+    {a:'git_push("feature/x")',d:'empujó a la rama principal',at:['pos']},
+    {a:'Respuesta: «Ya te devolvimos US$ 48,00»',d:'no hay reembolso aplicado en el registro',at:['res','jue'],resp:true},
+    {a:'Respuesta con datos de otra cliente',d:'los da con otras palabras, sin números',at:['jue'],resp:true},
+    {a:'leer_archivo("ventas/2026-10.csv")',d:'ninguno: es una acción correcta',at:[],fp:'jue'},
+    {a:'Respuesta: «Tu saldo es 0,00»',d:'ninguno: correcta, pero muy escueta',at:[],resp:true,fp:'jue'}
+  ];
+  const on={esq:true,ran:true,alc:true,jue:false,pos:true,res:true};
+  const ns='http://www.w3.org/2000/svg';
+  const g=$('#c8l1-cadena'),bt=$('#c8l1-btns');
+  ST.forEach((s,i)=>{
+    const e=document.createElementNS(ns,'g');e.setAttribute('class','c8l1-st');e.setAttribute('tabindex','0');e.setAttribute('role','button');
+    e.innerHTML=`<rect x="${s.x}" y="${s.y}" width="80" height="94" rx="10" style="fill:var(${s.f});stroke:var(${s.c})"/>`+
+      `<text x="${s.x+40}" y="${s.y+20}" text-anchor="middle">${s.n}</text><text class="s" x="${s.x+40}" y="${s.y+36}" text-anchor="middle">${s.s}</text>`+
+      `<text class="s" x="${s.x+40}" y="${s.y+51}" text-anchor="middle">${s.clase==='mod'?'probabilístico':'determinista'}</text>`+
+      `<text class="n" x="${s.x+40}" y="${s.y+80}" text-anchor="middle">0</text>`;
+    g.appendChild(e);s.g=e;
+    if(i<3||i===4){const l=document.createElementNS(ns,'line');l.setAttribute('x1',s.x+80);l.setAttribute('x2',ST[i+1].x-1);l.setAttribute('y1',s.y+47);l.setAttribute('y2',s.y+47);l.style.stroke='var(--muted)';l.style.strokeWidth='1.6';l.setAttribute('marker-end','url(#c8l1-m)');g.appendChild(l);}
+    const b=document.createElement('button');b.type='button';b.textContent=s.n+(s.clase==='mod'?' (modelo)':'');bt.appendChild(b);s.b=b;
+    const tog=()=>{on[s.k]=!on[s.k];pintar();};
+    b.addEventListener('click',tog);e.addEventListener('click',tog);
+    e.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();tog();}});
+  });
+  const flecha=document.createElementNS(ns,'path');flecha.setAttribute('d','M312 122V158H40V218H94');flecha.style.stroke='var(--muted)';flecha.style.strokeWidth='1.6';flecha.style.fill='none';flecha.setAttribute('marker-end','url(#c8l1-m)');g.insertBefore(flecha,g.firstChild);
+  const idx=k=>ST.findIndex(s=>s.k===k);
+  function donde(a){
+    const cand=a.at.filter(k=>on[k]&&!(a.resp&&['esq','ran','alc','pos'].includes(k))).sort((x,y)=>idx(x)-idx(y));
+    return cand[0]||null;
+  }
+  function pintar(){
+    const cnt={};ST.forEach(s=>cnt[s.k]=0);
+    let antes=0,despues=0,llegan=[],fps=0,defectos=0,llegaResp=0;
+    const filas=AC.map(a=>{
+      let pill,txt;
+      if(!a.at.length){
+        if(a.fp&&on[a.fp]){cnt[a.fp]++;fps++;pill='c8l1-mid';txt='Juez: bloqueo innecesario';}
+        else{pill='c8l1-neu';txt=a.resp?'Sale: estaba bien':'Pasa: estaba bien';}
+      }else{
+        defectos++;
+        const k=donde(a);
+        if(!k){pill='c8l1-bad';txt=a.resp?'Llega a la persona':'Llega al mundo';llegan.push(a);}
+        else{cnt[k]++;const s=ST[idx(k)];
+          if(a.resp){antes++;pill='c8l1-ok';txt=s.n+': no sale';}
+          else if(s.fase==='antes'){antes++;pill='c8l1-ok';txt=s.n+': antes del efecto';}
+          else{despues++;pill='c8l1-mid';txt=s.n+': ya ocurrió, se detecta';}
+        }
+      }
+      return `<tr><td><code>${a.a}</code><small class="c8l1-d2">${a.d}</small></td><td>${a.d}</td><td><span class="c8l1-pill ${pill}">${txt}</span></td></tr>`;
+    });
+    $('#c8l1-filas').innerHTML=filas.join('');
+    ST.forEach(s=>{s.g.classList.toggle('off',!on[s.k]);s.g.querySelector('.n').textContent=on[s.k]?cnt[s.k]:'–';
+      s.g.setAttribute('aria-label',`${s.n}: ${on[s.k]?'encendido, detiene '+cnt[s.k]:'apagado'}. Toca para cambiar.`);
+      s.b.setAttribute('aria-pressed',on[s.k]?'true':'false');});
+    const nAcc=AC.length,seg=on.jue?nAcc*1.2:0,usd=on.jue?nAcc*0.004:0;
+    let h=`<span class="big">${antes} de ${defectos} defectos detenidos antes de hacer daño</span>`;
+    h+=`<span>${despues} detectados después del efecto (hay que deshacerlo) · <b class="${llegan.length?'warn':'ok'}">${llegan.length} ${llegan.length===1?'llega':'llegan'} al mundo o a la persona</b></span>`;
+    if(llegan.length)h+=`<span>Se escapan: ${llegan.map(a=>'<code>'+a.a.replace(/\(.*$/,'')+'</code>').join(', ')}.</span>`;
+    h+=on.jue?`<span>El juez con modelo agrega unos ${seg.toFixed(1).replace('.',',')} s y US$ ${usd.toFixed(3).replace('.',',')} a estas ${nAcc} revisiones, y bloqueó ${fps} ${fps===1?'cosa correcta':'cosas correctas'} (falsos positivos).</span>`
+      :`<span>Sin juez: costo extra cero, pero lo que depende del sentido del texto no lo ve ningún código.</span>`;
+    if(!on.esq&&on.alc)h+=`<span>Sin esquema, el borrado de «build /» lo frena el alcance: otra capa cubre el hueco.</span>`;
+    if(!on.pos)h+=`<span class="warn">Sin validador posterior, el archivo vacío y el push a la rama principal pasan como «ok».</span>`;
+    $('#c8l1-out').innerHTML=h;
+  }
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const WS='/home/ana/proyecto',HOME='/home/ana',LINK=['/home/ana/proyecto/datos','/mnt/compartido/datos'];
+  const CASOS=[
+    {c:'rm build/tmp.txt'},
+    {c:'rm src/../dist/app.js'},
+    {c:'rm ../secreto.txt',falta:['t1'],w:'«..» sube a /home/ana: hay que resolverlo antes de comparar.'},
+    {c:'rm src/./../../.bashrc',falta:['t1'],w:'Dos «..» seguidos salen del proyecto aunque el texto empiece dentro.'},
+    {c:'rm /home/ana/proyecto-viejo/datos.csv',falta:['t2'],w:'Empieza con las letras de «/home/ana/proyecto», pero es otra carpeta.'},
+    {c:'rm ~/.ssh/id_rsa',falta:['t3'],w:'«~» es /home/ana: la clave SSH personal de Ana.'},
+    {c:'rm datos/clientes.csv',falta:['t4'],w:'«datos» apunta a /mnt/compartido: borra el archivo compartido de todos.'},
+    {c:'rm build/a.txt ../notas.txt',falta:['t5','t1'],w:'El primer argumento está dentro; el segundo, no.'},
+    {c:'rm -r build /',falta:['t5'],w:'Un espacio de más: el segundo argumento es la raíz del disco.'},
+    {c:'rm /home/ana/proyecto/logs/app.log'}
+  ];
+  function norm(p){const out=[];p.split('/').forEach(s=>{if(!s||s==='.')return;if(s==='..')out.pop();else out.push(s);});return '/'+out.join('/');}
+  function decide(c,t){
+    let args=c.split(/\s+/).slice(1).filter(a=>!a.startsWith('-'));
+    if(!t.t5)args=args.slice(0,1);
+    const fuera=[];
+    args.forEach(a=>{
+      let p=a;
+      if(p.startsWith('~')&&t.t3)p=HOME+p.slice(1);
+      if(!p.startsWith('/'))p=WS+'/'+p;
+      if(t.t1)p=norm(p);
+      if(t.t4&&(p===LINK[0]||p.startsWith(LINK[0]+'/')))p=LINK[1]+p.slice(LINK[0].length);
+      const dentro=t.t2?(p===WS||p.startsWith(WS+'/')):p.startsWith(WS);
+      if(!dentro)fuera.push(p);
+    });
+    return {bloquea:fuera.length>0,fuera};
+  }
+  function real(c){return decide(c,{t1:1,t2:1,t3:1,t4:1,t5:1});}
+  function codigo(t){
+    const L=(on,s)=>`<span class="${on?'on':'off'}">${s}</span>`;
+    return ['function gancho(cmd) {',
+      '  for (let r of '+(t.t5?L(1,'args(cmd)'):'[args(cmd)[0]]')+') {',
+      '    '+L(t.t3,'r = expandirHome(r);'),
+      '    r = unir(TRABAJO, r);',
+      '    '+L(t.t1,'r = normalizar(r);'),
+      '    '+L(t.t4,'r = resolverEnlaces(r);'),
+      '    if (!'+(t.t2?L(1,'dentro(r, TRABAJO)'):'r.startsWith(TRABAJO)')+')',
+      '      return bloquear(r);',
+      '  }',
+      '  return seguir();',
+      '}'].join('\n');
+  }
+  const ids=['t1','t2','t3','t4','t5'];
+  function pintar(){
+    const t={};ids.forEach(i=>t[i]=$('#c8l2-'+i).checked);
+    $('#c8l2-cod').innerHTML=codigo(t);
+    let aciertos=0,esc=[],fp=0;
+    $('#c8l2-lista').innerHTML=CASOS.map(k=>{
+      const d=decide(k.c,t),r=real(k.c);
+      const ok=d.bloquea===r.bloquea;if(ok)aciertos++;
+      if(!ok&&!d.bloquea)esc.push(k);if(!ok&&d.bloquea)fp++;
+      const v=d.bloquea?['bloquea','var(--good)']:(r.bloquea?['se escapa','var(--warm)']:['permite','var(--accent)']);
+      const why=!ok&&!d.bloquea?`<span class="why">${k.w}</span>`:(d.bloquea?`<span class="why">Fuera: ${d.fuera.join(', ')}</span>`:'');
+      return `<li class="${ok?'ok':'esc'}"><span class="v" style="background:${v[1]}">${v[0]}</span><code>${k.c}</code>${why}</li>`;
+    }).join('');
+    const faltan=[...new Set(esc.flatMap(k=>k.falta.filter(f=>!t[f])))];
+    const nombres={t1:'resolver . y ..',t2:'comparar carpetas completas',t3:'expandir ~',t4:'resolver enlaces',t5:'revisar todos los argumentos'};
+    let h=`<span class="big">${aciertos} de ${CASOS.length} decisiones correctas</span>`;
+    if(esc.length)h+=`<span class="warn">${esc.length} ${esc.length===1?'borrado se escapa':'borrados se escapan'} del proyecto.</span><span>Le falta a tu gancho: ${faltan.map(f=>nombres[f]).join(', ')}.</span>`;
+    else h+=`<span class="ok">Ningún borrado sale de la carpeta de trabajo, y los tres que sí se podían borrar pasan.</span><span>Aun así, el gancho es una capa: un comando como <code>find . -delete</code> o un script que borra por dentro no tiene rutas que revisar. Por eso existe el entorno aislado (capítulo 10).</span>`;
+    if(fp)h+=`<span class="warn">${fp} bloqueos innecesarios.</span>`;
+    $('#c8l2-out').innerHTML=h;
+  }
+  ids.forEach(i=>$('#c8l2-'+i).addEventListener('change',pintar));
+  pintar();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Registros y auditoría · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="registros-y-auditoria">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 11 DE 16</span><h1>Registros, auditoría y gobierno de datos</h1><p class="lede">Tarde o temprano alguien va a preguntar qué hizo el agente, por qué y con qué permiso. Este capítulo arma el libro de auditoría que responde sin dudas, las reglas que deciden qué datos se guardan y cuáles nunca salen, y la observabilidad que muestra a cada audiencia lo que le toca ver.</p></header>
+<section><h2>Qué registrar de cada turno y de cada acción</h2><div class="prose"><p>Un lunes llega un correo de finanzas: la cliente 4512 recibió dos reembolsos por el mismo cobro, y el agente de atención fue quien los hizo. La pregunta es sencilla: ¿qué pasó? Para contestarla no basta con saber que el agente «llamó a <code>reembolsar</code>». Hace falta saber quién pidió la tarea, qué vio el modelo en ese turno, qué propuso, qué regla lo permitió, en qué versión estaba esa regla, quién aprobó (si alguien aprobó) y qué respondió el sistema de cobros. Si falta una sola de esas piezas, la respuesta es una suposición.</p><p>El capítulo 6 armó el bus de eventos, y es tentador pensar que con eso alcanza. No alcanza, porque en un arnés serio conviven <b>tres señales distintas</b>, cada una con su propósito, su público y sus reglas:</p><ul><li>Los <b>eventos</b> (<i>events</i>) <b>observan</b>: cuentan lo que pasa para que la interfaz, los costos o las alertas reaccionen. Si un suscriptor se cae, el evento se pierde para él y el agente sigue. Son útiles, pero no son prueba de nada.</li><li>Las <b>trazas</b> (<i>traces</i>) y la <b>telemetría</b> (<i>telemetry</i>) <b>diagnostican</b>: cuánto tardó cada paso, dónde falló, cuántos tokens gastó. Están pensadas para ingeniería y operación, se muestrean, se recortan y se borran en semanas.</li><li>Las <b>entradas de auditoría</b> (<i>audit records</i>) <b>prueban</b>: qué se decidió, quién lo decidió, bajo qué regla y con qué versión de cada pieza. No se muestrean, no se editan y se guardan el tiempo que diga la norma.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Un avión comercial lleva varias cosas que registran el vuelo. Las pantallas de la cabina muestran todo en vivo a los pilotos; los sistemas de mantenimiento guardan datos del motor para el taller; y la caja negra, naranja y blindada, guarda lo esencial para reconstruir un accidente. Nadie diseña la caja negra para que se vea bonita ni para que el taller la consulte cada día: la diseñan para que sobreviva y para que nadie la pueda reescribir. El libro de auditoría es la caja negra del agente.</p></div><figure class="fig fig-comparacion" id="11-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 400" style="min-width:700px" role="img" aria-label="Tabla comparativa de las tres señales del arnés. Eventos: observan qué pasó, los consumen la interfaz, los costos y las alertas, pueden perderse, no se recortan por audiencia y duran horas o días. Trazas: diagnostican cuánto tardó y dónde falló, las consumen ingeniería y operación, se muestrean, se recortan por audiencia y duran semanas. Auditoría: prueba qué se decidió, con qué regla y versión, la consume cumplimiento, no puede perderse ni editarse, tiene su propia clasificación y dura años.">
+  <g class="t">
+    <rect x="200" y="12" width="210" height="52" rx="10" class="c-red"/>
+    <text x="305" y="35" text-anchor="middle" class="t-b k-red">Eventos</text>
+    <text x="305" y="53" text-anchor="middle" class="t-s">observan: qué pasó</text>
+    <rect x="425" y="12" width="210" height="52" rx="10" class="c-fis"/>
+    <text x="530" y="35" text-anchor="middle" class="t-b k-fis">Trazas y telemetría</text>
+    <text x="530" y="53" text-anchor="middle" class="t-s">diagnostican: cuánto, dónde</text>
+    <rect x="650" y="12" width="198" height="52" rx="10" class="d-inet" style="stroke-width:2.5"/>
+    <text x="749" y="35" text-anchor="middle" class="t-b k-inet">Auditoría</text>
+    <text x="749" y="53" text-anchor="middle" class="t-s">prueba: qué se decidió</text>
+  </g>
+  <g class="t t-xs t-b t-m">
+    <text x="12" y="100">QUIÉN LA CONSUME</text>
+    <text x="12" y="160">QUÉ LLEVA</text>
+    <text x="12" y="220">¿PUEDE PERDERSE?</text>
+    <text x="12" y="280">¿SE RECORTA POR</text><text x="12" y="294">AUDIENCIA?</text>
+    <text x="12" y="350">CUÁNTO SE GUARDA</text>
+  </g>
+  <g class="ln">
+    <line x1="12" y1="126" x2="848" y2="126"/><line x1="12" y1="186" x2="848" y2="186"/>
+    <line x1="12" y1="246" x2="848" y2="246"/><line x1="12" y1="316" x2="848" y2="316"/>
+  </g>
+  <g class="t t-s">
+    <text x="305" y="94" text-anchor="middle">interfaz, costos, alertas,</text>
+    <text x="305" y="110" text-anchor="middle">integraciones</text>
+    <text x="530" y="94" text-anchor="middle">ingeniería y operación</text>
+    <text x="530" y="110" text-anchor="middle">(herramientas de monitoreo)</text>
+    <text x="749" y="94" text-anchor="middle">cumplimiento, auditoría</text>
+    <text x="749" y="110" text-anchor="middle">interna, investigaciones</text>
+
+    <text x="305" y="154" text-anchor="middle">tipo, momento, ejecución,</text>
+    <text x="305" y="170" text-anchor="middle">datos que decide quien publica</text>
+    <text x="530" y="154" text-anchor="middle">duraciones, tokens, errores;</text>
+    <text x="530" y="170" text-anchor="middle">contenido solo si se activa</text>
+    <text x="749" y="154" text-anchor="middle">actor, regla, resultado,</text>
+    <text x="749" y="170" text-anchor="middle">versiones, hash anterior</text>
+
+    <text x="305" y="214" text-anchor="middle">sí: si un suscriptor se cae,</text>
+    <text x="305" y="230" text-anchor="middle">el agente sigue</text>
+    <text x="530" y="214" text-anchor="middle">sí: se muestrean</text>
+    <text x="530" y="230" text-anchor="middle">(una de cada N ejecuciones)</text>
+    <text x="749" y="214" text-anchor="middle" class="t-b k-inet">no: si no se puede escribir,</text>
+    <text x="749" y="230" text-anchor="middle" class="t-b k-inet">la acción no ocurre</text>
+
+    <text x="305" y="282" text-anchor="middle">no: su contenido lo decide</text>
+    <text x="305" y="298" text-anchor="middle">cada pieza que publica</text>
+    <text x="530" y="282" text-anchor="middle">sí: cada destino tiene</text>
+    <text x="530" y="298" text-anchor="middle">su techo de captura</text>
+    <text x="749" y="282" text-anchor="middle">no: tiene su propia</text>
+    <text x="749" y="298" text-anchor="middle">clasificación y acceso</text>
+
+    <text x="305" y="346" text-anchor="middle">horas o días</text>
+    <text x="530" y="346" text-anchor="middle">días o semanas</text>
+    <text x="749" y="346" text-anchor="middle" class="t-b k-inet">años, según la norma</text>
+  </g>
+  <text x="12" y="388" class="t t-s t-m">Las tres pueden nacer del mismo momento (una decisión de política), pero se guardan en lugares distintos y con reglas distintas.</text>
+</svg></div><figcaption><b>Tres señales, tres propósitos.</b> Cada columna es una señal del arnés: eventos, trazas y auditoría. Lee las filas de arriba abajo: para qué sirve cada una, quién la consume, si puede perderse, si se recorta según la audiencia y cuánto tiempo se guarda. La columna de auditoría es la única que no se puede perder ni editar: por eso no se mezcla con las otras dos, aunque nazcan del mismo momento.</figcaption></figure><div class="prose"><p>¿Qué se registra en el libro de auditoría? No todo lo que pasa, sino cada <b>decisión crítica</b>: la admisión de una tarea, cada decisión de política, cada aprobación o rechazo humano, cada uso de una credencial, cada efecto real en un sistema externo, cada traspaso, y también cada <b>cambio de configuración</b>: una regla editada, una herramienta nueva, un modelo distinto. Lo último se olvida a menudo, y es justo lo que hace falta cuando la pregunta es «¿por qué ayer sí se permitía y hoy no?».</p><p>Cada entrada responde seis preguntas: <b>quién</b> (la identidad verificada del actor y en nombre de quién actuaba, capítulo 7), <b>qué</b> (la acción, con sus argumentos o un resumen de ellos), <b>por qué</b> (la regla que decidió y su resultado), <b>cuándo</b>, <b>dónde</b> (ejecución, paso y traza) y <b>con qué versiones</b>. Esta última es la que convierte un registro en evidencia. Se llama <b>fijar versiones</b> (<i>version pinning</i>): la entrada guarda la versión exacta del agente, de las instrucciones, de la política, de la configuración del modelo y del contrato de la herramienta en el instante de la decisión. Si la regla cambia mañana, la entrada sigue diciendo contra qué regla se decidió hoy.</p><div class="code-copia"><pre><code>interface EntradaAuditoria {
+  id: string;
+  secuencia: number;               // posición en el libro: 1, 2, 3…
+  tipo: "admision" | "politica" | "aprobacion" | "credencial"
+      | "efecto" | "traspaso" | "configuracion";
+  actor: string;                   // identidad verificada: persona, agente o servicio
+  enNombreDe?: string;             // la persona para quien trabajaba el agente
+  sujeto: string;                  // referencia a la decisión: "decision:pol-5531"
+  resultado: string;               // "permitir", "aprobada", "cobro #2"…
+  versiones: { agente: string; instrucciones: string; politica: string;
+               modelo: string; herramienta?: string };
+  ejecucion?: string; paso?: number; traza?: string;
+  momento: string;
+  hashAnterior: string;            // la cadena de la sección siguiente
+  hash: string;
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en dos decisiones de diseño. La primera: la entrada no tiene ningún campo de estado, como «pendiente» o «verificada». Un registro que puede cambiar de estado invita a escribirle encima. La segunda: <code>sujeto</code> es una referencia a la decisión original, no una copia. El libro de auditoría prueba que la decisión ocurrió y con qué versiones; la decisión completa sigue viviendo donde nació.</p></div></section>
+<section><h2>El libro de auditoría: registros que no se pueden alterar</h2><div class="prose"><p>Un registro que un administrador puede editar con un <code>UPDATE</code> no prueba nada ante una auditora, ni ante un juez, ni ante el propio equipo cuando hay un incidente y alguien tiene interés en que la historia sea otra. El <b>libro de auditoría</b> (<i>audit ledger</i>) es la pieza que garantiza que lo escrito no se cambia, y lo hace con tres capas.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en el libro de actas de una notaría, con las páginas numeradas y cosidas. Si alguien arranca una página, se nota el salto en la numeración. Si alguien reescribe un acta, tendría que reescribir también la firma y el sello de cada acta posterior, que remite a la anterior. Y una vez al mes, la notaría deposita una copia del índice en un archivo público que no controla. Para falsificar una página habría que falsificar el libro entero y el archivo público.</p></div><div class="prose"><p><b>Primera capa: solo agregar</b> (<i>append-only</i>). El libro solo tiene una operación de escritura, agregar al final. No hay función para actualizar ni para borrar, ni en el código ni en los permisos de la base de datos: la cuenta con la que escribe el arnés no tiene permiso de <code>UPDATE</code> ni de <code>DELETE</code> sobre esa tabla. Y la escritura es obligatoria: si el libro no puede registrar una decisión crítica, la acción no ocurre. Un efecto sin su entrada de auditoría es justo lo que el libro existe para impedir.</p><p><b>Segunda capa: la cadena de hashes</b> (<i>hash chain</i>). Cada entrada guarda un <b>hash</b> (<i>hash</i>, resumen criptográfico), una huella de pocos caracteres calculada a partir de su contenido con una función como SHA-256, y además el hash de la entrada anterior. Si alguien cambia una coma en la entrada 3, su hash ya no coincide; y como la entrada 4 guardaba el hash viejo de la 3, la cadena se rompe desde ese punto hasta el final. Verificar el libro es recorrerlo y recalcular.</p><div class="code-copia"><pre><code>function agregar(libro: EntradaAuditoria[], nueva: Omit&lt;EntradaAuditoria, "secuencia" | "hashAnterior" | "hash"&gt;) {
+  const anterior = libro.at(-1);
+  const entrada = { ...nueva, secuencia: (anterior?.secuencia ?? 0) + 1,
+                    hashAnterior: anterior?.hash ?? "0".repeat(64) };
+  entrada.hash = sha256(canonico(entrada));   // JSON con las claves en orden fijo
+  libro.push(entrada);                         // la única escritura posible
+  return entrada;
+}
+
+function verificar(libro: EntradaAuditoria[]): number | null {
+  let previo = "0".repeat(64);
+  for (const e of libro) {
+    const { hash, ...resto } = e;
+    if (e.hashAnterior !== previo || sha256(canonico(resto)) !== hash) return e.secuencia;
+    previo = hash;
+  }
+  return null;                                 // null: la cadena está íntegra
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p><b>Tercera capa: el anclaje</b> (<i>anchoring</i>). La cadena tiene un punto débil: quien controla toda la base de datos podría cambiar una entrada y recalcular todos los hashes siguientes. Para cerrar ese hueco, cada cierto tiempo (cada hora, cada día) el arnés toma el hash de la última entrada y lo deposita <b>fuera de su alcance</b>: lo firma con una clave que el equipo de operación no tiene, lo escribe en un almacenamiento de otra cuenta o lo publica en un sistema externo. Si alguien recalcula la cadena, el último hash ya no coincide con el anclado. Los registros de transparencia de certificados de la web funcionan con una idea parecida, a gran escala.</p></div><figure class="fig fig-esquema" id="11-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 380" style="min-width:720px" role="img" aria-label="Cadena de hashes de cinco entradas del libro de auditoría. Cada entrada guarda su contenido, el hash de la anterior y su propio hash. En la entrada 3 alguien cambió el monto de 25 a 250: su hash recalculado ya no coincide, la entrada 4 apunta a un hash que no existe y desde ahí la cadena queda rota. Abajo, el anclaje: el hash de la entrada 5 se depositó fuera del arnés y delata incluso una cadena recalculada.">
+  <defs>
+    <marker id="d112-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d112-i" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+  </defs>
+  
+  <g class="t">
+    <rect x="12" y="40" width="150" height="150" rx="10" class="d-inet"/>
+    <text x="24" y="62" class="t-xs t-b k-inet">ENTRADA 1</text>
+    <text x="24" y="84" class="t-s">admisión · ana</text>
+    <text x="24" y="100" class="t-s">admitida</text>
+    <text x="24" y="132" class="t-xs t-m">ANTERIOR</text><text x="24" y="148" class="t-s t-mono">000000…</text>
+    <text x="24" y="168" class="t-xs t-m">HASH</text><text x="24" y="183" class="t-s t-mono t-b">b00a03…</text>
+
+    <rect x="182" y="40" width="150" height="150" rx="10" class="d-inet"/>
+    <text x="194" y="62" class="t-xs t-b k-inet">ENTRADA 2</text>
+    <text x="194" y="84" class="t-s">política v12</text>
+    <text x="194" y="100" class="t-s">permitir</text>
+    <text x="194" y="132" class="t-xs t-m">ANTERIOR</text><text x="194" y="148" class="t-s t-mono">b00a03…</text>
+    <text x="194" y="168" class="t-xs t-m">HASH</text><text x="194" y="183" class="t-s t-mono t-b">57ad0a…</text>
+
+    <rect x="352" y="40" width="150" height="150" rx="10" class="c-apl" style="stroke-width:2.5"/>
+    <text x="364" y="62" class="t-xs t-b k-apl">ENTRADA 3 · ALTERADA</text>
+    <text x="364" y="84" class="t-s">efecto · reembolso</text>
+    <text x="364" y="100" class="t-s"><tspan style="text-decoration:line-through">25,00</tspan> <tspan class="t-b k-apl">250,00</tspan></text>
+    <text x="364" y="132" class="t-xs t-m">ANTERIOR</text><text x="364" y="148" class="t-s t-mono">57ad0a…</text>
+    <text x="364" y="168" class="t-xs t-m">HASH GUARDADO</text><text x="364" y="183" class="t-s t-mono t-b">d6c57a…</text>
+
+    <rect x="522" y="40" width="150" height="150" rx="10" class="d-inet" style="stroke-dasharray:5 4"/>
+    <text x="534" y="62" class="t-xs t-b k-inet">ENTRADA 4</text>
+    <text x="534" y="84" class="t-s">efecto · correo</text>
+    <text x="534" y="100" class="t-s">enviado</text>
+    <text x="534" y="132" class="t-xs t-m">ANTERIOR</text><text x="534" y="148" class="t-s t-mono">d6c57a…</text>
+    <text x="534" y="168" class="t-xs t-m">HASH</text><text x="534" y="183" class="t-s t-mono t-b">e42b85…</text>
+
+    <rect x="692" y="40" width="156" height="150" rx="10" class="d-inet" style="stroke-dasharray:5 4"/>
+    <text x="704" y="62" class="t-xs t-b k-inet">ENTRADA 5</text>
+    <text x="704" y="84" class="t-s">configuración</text>
+    <text x="704" y="100" class="t-s">política v13</text>
+    <text x="704" y="132" class="t-xs t-m">ANTERIOR</text><text x="704" y="148" class="t-s t-mono">e42b85…</text>
+    <text x="704" y="168" class="t-xs t-m">HASH</text><text x="704" y="183" class="t-s t-mono t-b">536675…</text>
+  </g>
+  
+  <g class="ln" style="stroke-width:2">
+    <path d="M182 144H164" marker-end="url(#d112-m)"/>
+    <path d="M352 144H334" marker-end="url(#d112-m)"/>
+    <path d="M522 144H504" marker-end="url(#d112-m)"/>
+    <path d="M692 144H674" marker-end="url(#d112-m)"/>
+  </g>
+  <text x="12" y="26" class="t t-s t-m">Cada entrada guarda el hash de la anterior: las flechas van hacia atrás.</text>
+  
+  <g class="t t-s">
+    <rect x="352" y="204" width="320" height="58" rx="8" class="c-apl"/>
+    <text x="364" y="224">✖ recalculado: sha256(entrada 3) = <tspan class="t-mono t-b k-apl">9f12c4…</tspan></text>
+    <text x="364" y="242">no coincide con d6c57a…, y la entrada 4 apunta</text>
+    <text x="364" y="257">a un hash que ya no existe: rota desde la 3</text>
+    <text x="12" y="224" class="t-b k-inet">✔ entradas 1 y 2: íntegras</text>
+    <text x="12" y="242" class="t-m">la verificación recalcula cada</text>
+    <text x="12" y="257" class="t-m">hash y lo compara con el guardado</text>
+  </g>
+  
+  <line x1="12" y1="284" x2="848" y2="284" class="ln ln-d"/>
+  <text x="12" y="306" class="t t-xs t-b t-m">FUERA DEL ARNÉS</text>
+  <g class="t">
+    <rect x="560" y="296" width="288" height="72" rx="10" class="caja" style="stroke-width:2"/>
+    <text x="574" y="318" class="t-b">Ancla del día · firmada</text>
+    <text x="574" y="338" class="t-s">último hash publicado: <tspan class="t-mono t-b">536675…</tspan></text>
+    <text x="574" y="356" class="t-s t-m">otra cuenta, otra clave, otro equipo</text>
+    <path d="M770 190V294" class="ln ln-d" style="stroke-width:2" marker-end="url(#d112-i)"/>
+    <text x="12" y="330" class="t-s">Si quien alteró la entrada 3 recalcula toda la cadena, la verificación</text>
+    <text x="12" y="347" class="t-s">interna vuelve a dar «íntegra», pero el nuevo hash de la entrada 5</text>
+    <text x="12" y="364" class="t-s">ya no es <tspan class="t-mono">536675…</tspan>: el ancla lo delata.</text>
+  </g>
+</svg></div><figcaption><b>La cadena de hashes y su anclaje.</b> Cada bloque es una entrada del libro, con su contenido, el hash de la entrada anterior y su propio hash. Las flechas muestran que cada entrada remite a la anterior. En la entrada 3 alguien cambió el monto: su hash ya no coincide y la entrada 4 apunta a un hash que ya no existe, así que todo lo que sigue queda marcado. Abajo, el anclaje: el hash de la entrada 5 depositado fuera del arnés, que delata incluso a quien recalcula la cadena completa.</figcaption></figure><div class="prose"><p>En la práctica, las tres capas se apoyan en infraestructura conocida: tablas con permisos de solo inserción, almacenamiento <b>WORM</b> (<i>write once, read many</i>, se escribe una vez y se lee muchas) como el bloqueo de objetos de los servicios de almacenamiento en la nube, y servicios de firma o de sellado de tiempo. El arnés no inventa nada nuevo: aplica a las decisiones del agente lo que los bancos aplican a sus transacciones desde hace décadas. Los hashes y las firmas a fondo están en el curso de <a href="https://aaramirez.github.io/criptografia/temario.html" target="_blank" rel="noopener">Criptografía</a>.</p><p>Prueba la cadena en el laboratorio. Primero verifícala intacta; después cambia una entrada y mira dónde se rompe; por último, ponte en el lugar de quien quiere esconder el cambio y recalcula todo.</p></div><div class="lab" id="11-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Altera un registro y mira cómo la cadena de hashes lo detecta</h3></div><p class="hint">Elige una entrada y cambia su monto o su resultado, o bórrala. Mira qué hashes dejan de coincidir. Después toca «Recalcular la cadena desde aquí», como haría alguien que quiere esconder el cambio, y enciende el anclaje externo para ver qué lo delata.</p><style>
+[id="11-lab-2"] .c11l2-ch{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+[id="11-lab-2"] .c11l2-ch li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);font:500 .8rem/1.3 var(--f-display)}
+[id="11-lab-2"] .c11l2-ch li .n{font:700 .8rem var(--f-mono);color:var(--muted)}
+[id="11-lab-2"] .c11l2-ch li .h{grid-column:2/4;font:500 .74rem var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+[id="11-lab-2"] .c11l2-ch li .h b{color:var(--ink)}
+[id="11-lab-2"] .c11l2-ch li .h .x{color:var(--warm);font-weight:700}
+[id="11-lab-2"] .c11l2-ch li .e{font:700 .74rem var(--f-display);padding:2px 7px;border-radius:5px;background:var(--good-soft);color:var(--good)}
+[id="11-lab-2"] .c11l2-ch li.rota{border-color:var(--warm);background:var(--warm-soft)}
+[id="11-lab-2"] .c11l2-ch li.rota .e{background:var(--warm);color:var(--card)}
+[id="11-lab-2"] .c11l2-ch li.sel{outline:2px solid var(--accent);outline-offset:1px}
+[id="11-lab-2"] .c11l2-ancla{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;font:500 .8rem var(--f-display)}
+[id="11-lab-2"] .c11l2-ancla code{font:700 .78rem var(--f-mono)}
+[id="11-lab-2"] input[type=text]{width:100%;box-sizing:border-box;font:500 .85rem var(--f-mono);padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+</style>
+<div class="opciones">
+  <label>Entrada que vas a tocar
+    <select id="c11l2-sel"></select></label>
+  <label>Su resultado (edítalo)
+    <input type="text" id="c11l2-txt" spellcheck="false"></label>
+</div>
+<div class="btns" role="group" aria-label="Acciones sobre el libro">
+  <button type="button" id="c11l2-borrar">Borrar la entrada</button>
+  <button type="button" id="c11l2-recalc">Recalcular la cadena desde aquí</button>
+  <button type="button" id="c11l2-anc" aria-pressed="false">Anclaje externo</button>
+  <button type="button" id="c11l2-rest">Restaurar el libro</button>
+</div>
+<ol class="c11l2-ch" id="c11l2-ch" aria-label="Libro de auditoría"></ol>
+<div class="c11l2-ancla" id="c11l2-ancla"></div>
+<div class="readout texto" id="c11l2-out" aria-live="polite"></div>
+<p class="hint">Para que el laboratorio sea rápido, el «hash» es un resumen simplificado de 8 caracteres (FNV-1a). Un arnés real usa SHA-256, como la práctica de esta sección.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Arma una cadena de hashes y altérala</h3></div><p>Vas a correr en Python 3, sin red, un libro de auditoría mínimo con SHA-256: agrega cinco entradas, lo verifica, cambia un monto y lo verifica otra vez. Crea un archivo <code>cadena.py</code> con este contenido:</p><div class="code-copia"><pre><code># cadena.py: un libro de auditoría mínimo con cadena de hashes (sin red)
+import hashlib
+import json
+
+def canonico(d):
+    return json.dumps(d, sort_keys=True, ensure_ascii=False).encode()
+
+def agregar(libro, datos):
+    anterior = libro[-1]["hash"] if libro else "0" * 64
+    e = {"secuencia": len(libro) + 1, "hashAnterior": anterior, **datos}
+    e["hash"] = hashlib.sha256(canonico(e)).hexdigest()
+    libro.append(e)
+
+def verificar(libro):
+    previo = "0" * 64
+    for e in libro:
+        resto = {k: v for k, v in e.items() if k != "hash"}
+        if e["hashAnterior"] != previo or hashlib.sha256(canonico(resto)).hexdigest() != e["hash"]:
+            return f"rota en la entrada {e['secuencia']}"
+        previo = e["hash"]
+    return "íntegra"
+
+libro = []
+agregar(libro, {"tipo": "admision", "actor": "ana", "resultado": "admitida"})
+agregar(libro, {"tipo": "politica", "actor": "arnes", "resultado": "permitir", "politica": "v12"})
+agregar(libro, {"tipo": "efecto", "actor": "agente-atencion", "resultado": "reembolso 25.00 a 4512"})
+agregar(libro, {"tipo": "efecto", "actor": "agente-atencion", "resultado": "correo enviado a 4512"})
+agregar(libro, {"tipo": "configuracion", "actor": "ops-3", "resultado": "politica v13 publicada"})
+
+for e in libro:
+    print(e["secuencia"], e["hash"][:12], "&lt;-", e["hashAnterior"][:12], e["resultado"])
+ancla = libro[-1]["hash"]
+print("verificación:", verificar(libro), "| ancla:", ancla[:12])
+
+libro[2]["resultado"] = "reembolso 250.00 a 4512"          # alguien cambia el monto
+print("después de cambiar la entrada 3:", verificar(libro))
+
+for i in range(2, len(libro)):                              # y recalcula todo para esconderlo
+    libro[i]["hashAnterior"] = libro[i - 1]["hash"]
+    resto = {k: v for k, v in libro[i].items() if k != "hash"}
+    libro[i]["hash"] = hashlib.sha256(canonico(resto)).hexdigest()
+print("después de recalcular:", verificar(libro))
+print("¿coincide con el ancla?", libro[-1]["hash"] == ancla)</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python cadena.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 cadena.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Mira la primera tabla: cada hash nuevo empieza distinto, y la columna de la derecha repite el hash de la fila anterior.</span></li><li><span>Anota en qué entrada se rompe la cadena después del cambio de monto.</span></li><li><span>Mira las dos últimas líneas: la cadena recalculada parece íntegra, pero el último hash ya no coincide con el ancla.</span></li><li><span>Cambia en el script <code>250.00</code> por <code>25.00</code> (el valor original) y vuelve a correrlo: ¿qué dice ahora la verificación después del cambio?</span></li></ol><p><b>Qué observar:</b> un cambio mínimo en una entrada cambia su hash por completo, y la verificación señala exactamente dónde está la alteración. Recalcular la cadena engaña a la verificación interna, no al ancla guardada aparte: por eso el anclaje vive fuera del alcance de quien opera el arnés. El resultado es el mismo en cualquier sistema, porque SHA-256 es una norma.</p></div></section>
+<section><h2>Reconstruir y repetir una ejecución</h2><div class="prose"><p>Volvamos al reembolso doble de la cliente 4512. Con el libro de auditoría, el diario de pasos del capítulo 6 y la sesión guardada, la investigación ya no es arqueología: es seguir un hilo. El hilo es el <b>identificador de traza</b> (<i>trace id</i>) y el número de ejecución, que aparecen en cada entrada.</p><p>Reconstruir una ejecución tiene tres pasos:</p><ol class="steps"><li><span><b>Ordenar</b>. Se filtran del libro todas las entradas de la ejecución y se ponen en secuencia. Ahí aparece la línea de tiempo de decisiones: quién pidió, qué se admitió, qué propuso el modelo, qué decidió la política, qué efectos ocurrieron.</span></li><li><span><b>Ver lo que vio el modelo</b>. Para cada turno, la sesión guarda el contexto ensamblado, o una referencia y un hash que prueban cuál fue. Así se responde la pregunta que más importa en un incidente con un agente: ¿el modelo se equivocó con buena información, o hizo lo razonable con información mala?</span></li><li><span><b>Reproducir</b>. Con las respuestas del modelo y los resultados de las herramientas grabados, se vuelve a recorrer la ejecución paso a paso, sin llamar a nada real. Es la reproducción para depurar del capítulo 6: ningún efecto se repite.</span></li></ol></div><figure class="fig fig-flujo" id="11-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 500" style="min-width:720px" role="img" aria-label="Diagrama de secuencia de una reconstrucción. La investigadora pide al libro de auditoría las entradas de la ejecución y recibe la lista ordenada con la cadena verificada. Luego pide al gestor de sesiones el contexto de cada turno y comprueba su hash. Después pide al reproductor que recorra la ejecución; el reproductor toma de la sesión las respuestas del modelo y los resultados grabados y la recorre paso a paso sin efectos reales. Al final se escribe el informe con la causa, los síntomas y las versiones.">
+  <defs>
+    <marker id="d113-i" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+    <marker id="d113-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+    <marker id="d113-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d113-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  <g class="t">
+    <rect x="12" y="12" width="120" height="50" rx="10" class="caja"/>
+    <use href="#i-persona" x="18" y="20" width="30" height="30" class="ico"/>
+    <text x="90" y="34" text-anchor="middle" class="t-b">Persona que</text><text x="90" y="51" text-anchor="middle" class="t-b">investiga</text>
+    <rect x="162" y="12" width="120" height="50" rx="10" class="d-inet"/>
+    <text x="222" y="34" text-anchor="middle" class="t-b k-inet">Libro de</text><text x="222" y="51" text-anchor="middle" class="t-b k-inet">auditoría</text>
+    <rect x="312" y="12" width="120" height="50" rx="10" class="d-casa"/>
+    <text x="372" y="34" text-anchor="middle" class="t-b k-casa">Gestor de</text><text x="372" y="51" text-anchor="middle" class="t-b k-casa">sesiones</text>
+    <rect x="462" y="12" width="120" height="50" rx="10" class="c-red"/>
+    <text x="522" y="42" text-anchor="middle" class="t-b k-red">Reproductor</text>
+    <rect x="612" y="12" width="90" height="50" rx="10" class="caja"/>
+    <text x="657" y="42" text-anchor="middle" class="t-b">Informe</text>
+  </g>
+  <g>
+    <line x1="72" y1="62" x2="72" y2="488" class="vida"/><line x1="222" y1="62" x2="222" y2="488" class="vida"/>
+    <line x1="372" y1="62" x2="372" y2="488" class="vida"/><line x1="522" y1="62" x2="522" y2="488" class="vida"/>
+    <line x1="657" y1="62" x2="657" y2="488" class="vida"/>
+  </g>
+  <g class="t t-s">
+    <line x1="72" y1="100" x2="220" y2="100" class="ln" style="stroke-width:2;stroke:var(--d-inet)" marker-end="url(#d113-i)"/>
+    <text x="78" y="93">① entradas de ejec-204</text>
+    <line x1="222" y1="136" x2="74" y2="136" class="ln" style="stroke-width:2;stroke:var(--d-inet)" marker-end="url(#d113-i)"/>
+    <text x="80" y="129">② en orden · cadena ✔</text>
+
+    <line x1="72" y1="182" x2="370" y2="182" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d113-c)"/>
+    <text x="78" y="175">③ contexto del turno 3 (referencia y hash)</text>
+    <line x1="372" y1="218" x2="74" y2="218" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d113-c)"/>
+    <text x="80" y="211">④ contexto ensamblado · hash coincide ✔</text>
+
+    <line x1="72" y1="264" x2="520" y2="264" class="ln s-red" style="stroke-width:2" marker-end="url(#d113-r)"/>
+    <text x="78" y="257">⑤ reproducir ejec-204 con resultados grabados</text>
+    <line x1="522" y1="298" x2="374" y2="298" class="ln s-red" style="stroke-width:2" marker-end="url(#d113-r)"/>
+    <text x="384" y="291">⑥ grabaciones</text>
+    <line x1="372" y1="330" x2="520" y2="330" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d113-c)"/>
+    <text x="380" y="323">⑦ modelo + herramientas</text>
+    <rect x="516" y="340" width="12" height="44" rx="3" class="c-red"/>
+    <text x="534" y="356" class="t-b k-red">⑧ paso a paso,</text>
+    <text x="534" y="372" class="t-b k-red">sin efectos reales</text>
+    <line x1="522" y1="404" x2="74" y2="404" class="ln s-red" style="stroke-width:2" marker-end="url(#d113-r)"/>
+    <text x="80" y="397">⑨ línea de tiempo: qué vio, qué propuso, qué decidió el arnés</text>
+
+    <line x1="72" y1="450" x2="655" y2="450" class="ln" style="stroke-width:2" marker-end="url(#d113-m)"/>
+    <text x="78" y="443">⑩ causa, síntomas y versiones de cada pieza</text>
+  </g>
+  <g class="t">
+    <rect x="730" y="80" width="118" height="70" rx="8" class="d-inet"/>
+    <text x="789" y="104" text-anchor="middle" class="t-xs t-b k-inet">ORDENAR</text>
+    <text x="789" y="124" text-anchor="middle" class="t-s">① ②</text>
+    <text x="789" y="140" text-anchor="middle" class="t-s t-m">1 ida y vuelta</text>
+    <rect x="730" y="164" width="118" height="70" rx="8" class="d-casa"/>
+    <text x="789" y="186" text-anchor="middle" class="t-xs t-b k-casa">VER LO QUE</text>
+    <text x="789" y="200" text-anchor="middle" class="t-xs t-b k-casa">VIO EL MODELO</text>
+    <text x="789" y="222" text-anchor="middle" class="t-s">③ ④ por turno</text>
+    <rect x="730" y="248" width="118" height="170" rx="8" class="c-red"/>
+    <text x="789" y="272" text-anchor="middle" class="t-xs t-b k-red">REPRODUCIR</text>
+    <text x="789" y="292" text-anchor="middle" class="t-s">⑤ a ⑨</text>
+    <text x="789" y="316" text-anchor="middle" class="t-s t-m">las herramientas</text>
+    <text x="789" y="332" text-anchor="middle" class="t-s t-m">con efectos se</text>
+    <text x="789" y="348" text-anchor="middle" class="t-s t-m">reemplazan por</text>
+    <text x="789" y="364" text-anchor="middle" class="t-s t-m">sus resultados</text>
+    <text x="789" y="380" text-anchor="middle" class="t-s t-m">grabados</text>
+    <rect x="730" y="430" width="118" height="44" rx="8" class="caja"/>
+    <text x="789" y="457" text-anchor="middle" class="t-xs t-b">INFORMAR ⑩</text>
+  </g>
+</svg></div><figcaption><b>El flujo de una reconstrucción.</b> Cinco participantes: la persona que investiga, el libro de auditoría, el gestor de sesiones, el reproductor y el informe. La investigadora pide las entradas de una ejecución, verifica la cadena, pide los contextos de cada turno y reproduce la ejecución con los resultados grabados, sin tocar sistemas reales. A la derecha, las fases: ordenar, ver lo que vio el modelo, reproducir e informar.</figcaption></figure><div class="prose"><p>La parte difícil de una reconstrucción no es técnica: es distinguir la <b>causa</b> de los <b>síntomas</b>. En un incidente típico hay varias entradas que «se ven mal»: el segundo cobro, el correo que confirmaba el reembolso, la alerta de finanzas. Todas son consecuencias. La causa suele estar antes y verse inocente: una herramienta declarada con política de repetición «segura» cuando no lo era, un contexto que trajo el ticket de otro cliente, una regla que alguien cambió el viernes. Por eso los cambios de configuración van al mismo libro: sin ellos, la causa queda fuera del hilo.</p></div><div class="lab" id="11-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Reconstruye una ejecución desde el libro de auditoría y encuentra la acción que causó el error</h3></div><p class="hint">Elige un incidente. Lee las entradas del libro en orden, filtra por tipo de actor y toca la entrada que crees que causó el problema. El laboratorio te dice si encontraste la causa, un síntoma o una entrada que estaba bien, y por qué.</p><style>
+[id="11-lab-1"] .c11l1-lib{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+[id="11-lab-1"] .c11l1-lib button{width:100%;text-align:left;display:grid;grid-template-columns:34px 118px minmax(0,1fr);gap:4px 8px;align-items:start;font:500 .8rem/1.35 var(--f-display);background:var(--card);padding:7px 9px}
+[id="11-lab-1"] .c11l1-lib button .n{font:700 .78rem var(--f-mono);color:var(--muted)}
+[id="11-lab-1"] .c11l1-lib button .a{font:700 .7rem var(--f-display);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:5px;text-align:center}
+[id="11-lab-1"] .c11l1-lib button .v{grid-column:3;font:500 .72rem var(--f-mono);color:var(--muted)}
+[id="11-lab-1"] .a.modelo{background:var(--c-tra-s);color:var(--c-tra)}
+[id="11-lab-1"] .a.arnes{background:var(--c-red-s);color:var(--c-red)}
+[id="11-lab-1"] .a.persona{background:var(--accent-soft);color:var(--accent)}
+[id="11-lab-1"] .a.herramienta{background:var(--c-enl-s);color:var(--c-enl)}
+[id="11-lab-1"] .a.config{background:var(--warm-soft);color:var(--warm)}
+[id="11-lab-1"] .c11l1-lib button.causa{border-color:var(--good);background:var(--good-soft)}
+[id="11-lab-1"] .c11l1-lib button.sintoma{border-color:var(--warm);background:var(--warm-soft)}
+[id="11-lab-1"] .c11l1-lib button.oculta{display:none}
+@media (max-width:520px){[id="11-lab-1"] .c11l1-lib button{grid-template-columns:28px minmax(0,1fr)}[id="11-lab-1"] .c11l1-lib button .a{grid-column:2;justify-self:start}[id="11-lab-1"] .c11l1-lib button .t,[id="11-lab-1"] .c11l1-lib button .v{grid-column:2}}
+</style>
+<div class="opciones" style="grid-template-columns:minmax(0,1fr)">
+  <label>Incidente
+    <select id="c11l1-inc">
+      <option value="doble">La cliente 4512 recibió dos reembolsos por el mismo cobro</option>
+      <option value="correo">Un correo a la cliente 4512 traía datos de otro cliente</option>
+      <option value="aprob">Un reembolso de US$ 180 salió sin que nadie lo aprobara</option>
+    </select></label>
+</div>
+<div class="btns" role="group" aria-label="Filtrar por actor" id="c11l1-fil">
+  <button type="button" data-f="todo" aria-pressed="true">Todo</button>
+  <button type="button" data-f="modelo" aria-pressed="false">Modelo</button>
+  <button type="button" data-f="arnes" aria-pressed="false">Arnés</button>
+  <button type="button" data-f="persona" aria-pressed="false">Personas</button>
+  <button type="button" data-f="herramienta" aria-pressed="false">Herramientas</button>
+  <button type="button" data-f="config" aria-pressed="false">Configuración</button>
+</div>
+<ol class="c11l1-lib" id="c11l1-lib" aria-label="Entradas del libro de auditoría"></ol>
+<div class="readout texto" id="c11l1-out" aria-live="polite"></div></div><div class="caso"><b>Un caso real</b><p>Un equipo que operaba un agente de reembolsos recibió una pregunta de su área de cumplimiento: ¿con qué regla se habían aprobado los reembolsos de un trimestre por encima de cierto monto? Los registros decían «política: permitir» en cada caso, pero las políticas se editaban en el mismo archivo y nadie sabía qué decía ese archivo tres meses antes. Tardaron semanas en reconstruirlo desde el historial del repositorio y correos. Después agregaron la versión de la política, de las instrucciones y del modelo a cada entrada de auditoría, y registraron cada publicación de reglas como una entrada más. La siguiente pregunta de cumplimiento se respondió con una consulta.</p></div></section>
+<section><h2>Retención e identidad en los registros</h2><div class="prose"><p>Guardar todo para siempre parece lo más seguro, y es un error. Los registros de un agente están llenos de datos personales: nombres, montos, conversaciones con clientes. Muchas leyes de protección de datos piden guardarlos <b>solo el tiempo necesario</b>, y otras normas, de finanzas o de salud, piden guardar ciertos registros <b>por lo menos</b> varios años. El arnés tiene que cumplir las dos cosas a la vez, y para eso cada tipo de dato lleva su <b>política de retención</b> (<i>retention policy</i>):</p><ul><li>Las <b>trazas</b> con contenido: días o pocas semanas. Sirven para depurar, no para recordar.</li><li>Las <b>sesiones</b> con las conversaciones: lo que diga el negocio, por ejemplo meses.</li><li>El <b>libro de auditoría</b>: años, según la norma que aplique.</li><li>Una <b>retención por orden legal</b> (<i>legal hold</i>): cuando hay un litigio o una investigación, se suspende el borrado de lo que toca al caso, aunque su plazo ya haya vencido. La suspensión tiene precedencia sobre cualquier plazo.</li></ul><p>Una regla más, que viene de la ejecución durable: el diario de una ejecución no se evalúa para borrarse mientras esa ejecución pueda necesitarlo para recuperarse. Borrar el diario de una tarea que está esperando una aprobación de dos días sería romper el arnés para cumplir un plazo.</p><p>Aparece entonces un choque: el libro de auditoría no se puede alterar, pero una persona tiene derecho a que se borren sus datos. La salida es no meter los datos personales en el libro. La entrada guarda un <b>seudónimo</b> (<i>pseudonym</i>), un identificador que no dice quién es la persona, y una referencia al dato; el dato vive aparte, cifrado con una clave propia de esa persona. Para «borrar» a la persona se destruye su clave, y el dato queda ilegible para siempre sin tocar la cadena. Esta técnica se conoce como <b>borrado criptográfico</b> (<i>crypto-shredding</i>).</p></div><div class="ml"><b>En la práctica</b><p>Cuando se diseña la entrada de auditoría, conviene preguntar campo por campo: «¿esto lo necesita una auditora dentro de cinco años, o lo necesita un ingeniero esta semana?». El monto, la regla y la versión van al libro. El texto completo de la conversación va a la sesión, con su propia retención, y el libro guarda solo su hash. Si la entrada de auditoría empieza a parecerse a una traza, es señal de que se están mezclando las dos señales.</p></div><div class="prose"><p>La identidad merece el mismo cuidado. Una entrada que dice «actor: agente-atencion» no alcanza: el agente actúa siempre <b>en nombre de alguien</b> (capítulo 7), y la aprobación la dio una persona con identidad verificada (capítulo 9). Por eso cada entrada guarda las dos identidades, la del actor y la de la persona para quien trabajaba, ambas tomadas del sistema de identidad y nunca de lo que diga un texto. Cuando la tarea viene de otro agente, la cadena de identidades llega hasta la persona que la originó, un tema que vuelve en el capítulo 13.</p></div></section>
+<section><h2>El motor de gobierno de datos: clasificación y datos que no salen</h2><div class="prose"><p>Hasta aquí el capítulo habla de lo que el arnés guarda <b>sobre</b> el agente. Falta lo que el agente <b>toca</b>: las facturas, los contratos, la nómina, los datos de salud. El capítulo 7 decide si una persona puede ver un dato; el capítulo 5 decide si un dato es relevante para el turno. Ninguno de los dos responde una tercera pregunta: <b>¿qué reglas viajan con este dato?</b> ¿Puede ir al proveedor del modelo? ¿Puede quedar en una traza? ¿Cuánto tiempo puede guardarse? ¿Puede salir del país? Esa es la tarea del <b>motor de gobierno de datos</b> (<i>data governance engine</i>).</p></div><div class="analogia"><b>Imagínalo así</b><p>En un hospital, cada expediente lleva una etiqueta de color en la tapa: blanco, amarillo, rojo. La etiqueta no dice quién lo puede abrir (eso lo decide el sistema de acceso), sino cómo se trata: si puede salir del edificio, si se puede fotocopiar, cuándo se destruye. La etiqueta va pegada al expediente y lo acompaña a cualquier oficina. Nadie la decide en el pasillo según lo que le parezca el contenido.</p></div><div class="prose"><p>La pieza central es la <b>etiqueta de gobierno</b> (<i>governance label</i>): un registro que acompaña a cada dato desde que entra al arnés. Lleva el <b>nivel de clasificación</b> (<i>data classification</i>), por ejemplo público, interno, confidencial o restringido; el requisito de <b>residencia</b> (<i>data residency</i>), dónde puede procesarse o guardarse; su plazo de retención y si tiene una retención por orden legal; y de dónde vino, su <b>linaje</b> (<i>lineage</i>).</p><div class="code-copia"><pre><code>type Clasificacion = "publico" | "interno" | "confidencial" | "restringido";
+
+interface EtiquetaDeGobierno {
+  sujeto: string;                 // el dato al que acompaña: "resultado:consultar_cobros#7"
+  clasificacion: Clasificacion;   // nunca un "esSensible: boolean"
+  residencia?: string;            // p. ej. "solo-region-local"
+  retencionHasta?: string;
+  ordenLegal: boolean;            // suspende cualquier borrado
+  linaje?: string;                // de qué fuente o transformación viene
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Lo importante es <b>quién pone la etiqueta</b>: la fuente, no el modelo. La herramienta que consulta el CRM sabe que sus resultados son confidenciales y lo declara en su contrato; el conector de documentos lee la clasificación que el documento ya trae. El modelo nunca decide si algo es sensible, por la misma razón por la que no decide los permisos.</p><p>Con la etiqueta puesta, el motor se consulta en cada frontera por la que el dato quiere pasar:</p><ul><li><b>Al contexto</b>: ¿este dato puede ir al proveedor de modelos configurado? Un dato restringido con residencia local no puede ir a un modelo que corre en otra región; el arnés elige otro modelo a través de la puerta del capítulo 4, o lo deja fuera.</li><li><b>A la respuesta</b>: ¿la audiencia de esta conversación puede ver este nivel? En un canal público, el techo baja.</li><li><b>A los registros y trazas</b>: ¿se guarda el contenido, un resumen, un hash o nada?</li><li><b>Al exterior</b>: ¿esta herramienta puede enviarlo afuera? Un correo a un dominio externo con datos confidenciales se bloquea, lo pida quien lo pida. A esta defensa se le llama <b>prevención de fuga de datos</b> (<i>DLP</i>, <i>data loss prevention</i>).</li></ul><p>La etiqueta se hereda: un resumen hecho a partir de un dato confidencial es confidencial, y un dato que combina dos fuentes toma la clasificación más alta. Así una compactación del capítulo 5 no sirve para «lavar» un dato.</p></div><figure class="fig fig-arquitectura" id="11-diagrama-4"><div class="lienzo"><svg viewBox="0 0 860 440" style="min-width:720px" role="img" aria-label="Arquitectura del gobierno de datos. El CRM entrega a la herramienta un resultado con su etiqueta: confidencial y residencia local. En cuatro fronteras el motor de gobierno decide: al contexto pasa solo hacia el modelo de la región local y no hacia uno de otra región; a la traza llega solo un hash; a la respuesta llega completo porque la conversación es privada; y el correo a un dominio externo se bloquea. Cada decisión queda en el libro de auditoría.">
+  <defs>
+    <marker id="d114-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d114-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+    <marker id="d114-i" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+  </defs>
+  
+  <g class="t">
+    <rect x="12" y="160" width="104" height="60" rx="10" class="caja"/>
+    <use href="#i-servidor" x="20" y="173" width="30" height="30" class="ico"/>
+    <text x="86" y="195" text-anchor="middle" class="t-b">CRM</text>
+    <rect x="146" y="160" width="140" height="60" rx="10" class="c-enl"/>
+    <text x="216" y="185" text-anchor="middle" class="t-b k-enl">consultar_cobros</text>
+    <text x="216" y="204" text-anchor="middle" class="t-s">cliente 4512</text>
+    <rect x="146" y="232" width="140" height="62" rx="8" class="caja" style="stroke-dasharray:4 3"/>
+    <text x="156" y="250" class="t-xs t-b t-m">ETIQUETA</text>
+    <text x="156" y="267" class="t-s t-b">confidencial</text>
+    <text x="156" y="284" class="t-s">residencia: local</text>
+    <path d="M116 190H144" class="ln s-enl" style="stroke-width:2" marker-end="url(#d114-e)"/>
+    <text x="146" y="314" class="t-s t-m">la pone la fuente,</text>
+    <text x="146" y="330" class="t-s t-m">nunca el modelo</text>
+  </g>
+  
+  <path d="M286 190H316M316 56V338" class="ln" style="stroke-width:2.5"/>
+  <g class="ln" style="stroke-width:2">
+    <path d="M316 56H338"/><path d="M316 140H338"/><path d="M316 240H338"/><path d="M316 338H338"/>
+  </g>
+  
+  <g>
+    <path d="M354 40L370 56L354 72L338 56Z" class="d-sis"/>
+    <path d="M354 124L370 140L354 156L338 140Z" class="d-sis"/>
+    <path d="M354 224L370 240L354 256L338 240Z" class="d-sis"/>
+    <path d="M354 322L370 338L354 354L338 338Z" class="d-sis"/>
+  </g>
+  <g class="t t-xs t-b t-m">
+    <text x="380" y="30">AL CONTEXTO</text><text x="380" y="114">A LA TRAZA</text>
+    <text x="380" y="214">A LA RESPUESTA</text><text x="380" y="312">AL EXTERIOR</text>
+  </g>
+  
+  <g class="ln" style="stroke-width:2">
+    <path d="M370 56H398" marker-end="url(#d114-m)"/>
+    <path d="M370 140H398" marker-end="url(#d114-m)"/>
+    <path d="M370 240H398" marker-end="url(#d114-m)"/>
+    <path d="M370 338H398" marker-end="url(#d114-m)"/>
+  </g>
+  <g class="t">
+    <rect x="400" y="36" width="200" height="44" rx="8" class="c-tra"/>
+    <text x="412" y="55" class="t-b k-tra">✔ Modelo · región local</text>
+    <text x="412" y="72" class="t-s">pasa completo al contexto</text>
+    <rect x="618" y="36" width="230" height="44" rx="8" class="c-tra" style="stroke-dasharray:5 4"/>
+    <text x="630" y="55" class="t-b k-tra">✖ Modelo · otra región</text>
+    <text x="630" y="72" class="t-s">la puerta elige el local</text>
+
+    <rect x="400" y="120" width="200" height="44" rx="8" class="c-fis"/>
+    <text x="412" y="139" class="t-b k-fis">Destino de trazas</text>
+    <text x="412" y="156" class="t-s">solo un hash: <tspan class="t-mono">9f12c4…</tspan></text>
+
+    <rect x="400" y="220" width="200" height="44" rx="8" class="d-casa"/>
+    <text x="412" y="239" class="t-b k-casa">Respuesta a Ana</text>
+    <text x="412" y="256" class="t-s">completo: sesión privada</text>
+    <rect x="618" y="220" width="230" height="44" rx="8" class="d-casa" style="stroke-dasharray:5 4"/>
+    <text x="630" y="239" class="t-b k-casa">Canal público</text>
+    <text x="630" y="256" class="t-s">el techo bajaría: resumen sin datos</text>
+
+    <rect x="400" y="318" width="200" height="44" rx="8" class="c-enl"/>
+    <text x="412" y="337" class="t-b k-enl">enviar_correo</text>
+    <text x="412" y="354" class="t-s">a proveedor@externo.ejemplo</text>
+    <rect x="618" y="318" width="230" height="44" rx="8" class="d-sis"/>
+    <text x="630" y="337" class="t-b k-sis">✖ Bloqueado (DLP)</text>
+    <text x="630" y="354" class="t-s">confidencial no sale del dominio</text>
+    <path d="M600 340H616" class="ln" style="stroke-width:2" marker-end="url(#d114-m)"/>
+  </g>
+  
+  <path d="M354 354V396" class="ln ln-d" style="stroke-width:2" marker-end="url(#d114-i)"/>
+  <rect x="146" y="398" width="702" height="34" rx="8" class="d-inet"/>
+  <text x="160" y="420" class="t t-s"><tspan class="t-b k-inet">Libro de auditoría:</tspan> cada decisión del motor (frontera, etiqueta, regla, resultado) queda registrada.</text>
+  <g class="t t-s">
+    <path d="M22 384L32 394L22 404L12 394Z" class="d-sis"/>
+    <text x="40" y="390">motor de</text><text x="40" y="405">gobierno</text>
+  </g>
+</svg></div><figcaption><b>La etiqueta que viaja con el dato.</b> A la izquierda, la fuente (el CRM) entrega el resultado con su etiqueta «confidencial, residencia local». En cada frontera, marcada con un rombo, el motor de gobierno decide: al contexto pasa solo hacia el modelo de la región local, a la traza llega solo un hash, a la respuesta llega completo porque la audiencia es privada, y el correo a un dominio externo se bloquea. Abajo, el libro de auditoría registra cada decisión del motor.</figcaption></figure><div class="prose"><p>Las leyes de protección de datos y las obligaciones que imponen están en el curso de <a href="https://aaramirez.github.io/proteccion-de-datos/temario.html" target="_blank" rel="noopener">Protección de datos</a>. Aquí lo que importa es la arquitectura: las reglas viven en el arnés, se aplican en cada frontera y no dependen de que el modelo se porte bien.</p></div></section>
+<section><h2>Observabilidad por audiencia: ingeniería, operación y cumplimiento</h2><div class="prose"><p>El último problema es de público. Ingeniería quiere trazas detalladas para encontrar por qué un turno tardó doce segundos. Operación quiere tableros: ejecuciones por minuto, tasa de error, gasto por hora, aprobaciones pendientes. Cumplimiento quiere el libro de auditoría, con identidades y versiones, y nada más. Y la persona que usa el agente quiere ver en la interfaz qué está haciendo, sin ver los datos de otros. Darles a todos la misma vista es darles a todos demasiado.</p><p>La <b>observabilidad por audiencia</b> (<i>audience-scoped observability</i>) aplica a la telemetría la misma idea que el gobierno de datos aplica a todo lo demás: cada destino tiene un <b>techo de captura</b> (<i>capture ceiling</i>), la clasificación máxima que puede recibir y si recibe el contenido o solo la forma. La regla clave es <b>recortar antes de enviar</b>: cada destino recibe el registro ya recortado. Lo que su techo excluyó nunca le llegó, así que no hay forma de recuperarlo desde ahí, ni por error ni por un acceso indebido.</p><p>La audiencia de la sesión también importa, en las dos direcciones. Si la conversación es pública, por ejemplo un canal abierto, baja el techo de lo que el agente puede responder. Si es privada, por ejemplo una persona hablando de su salud, baja el techo de lo que ven los operadores en las trazas. Si el canal no dice cuál es su audiencia, el arnés asume lo más restrictivo en las dos.</p><p>Para las trazas, el estándar del mercado es <b>OpenTelemetry</b>, un proyecto abierto que define cómo se describen y se envían trazas, métricas y registros. Tiene <b>convenciones semánticas</b> (<i>semantic conventions</i>) específicas para IA generativa: nombres fijos para el modelo pedido, los tokens usados, la herramienta ejecutada o el agente invocado. Con ellas, las trazas del agente se ven en las mismas herramientas que el resto de los sistemas. La observabilidad en general, con sus métricas, alertas y tableros, está en el curso de <a href="https://aaramirez.github.io/devops/temario.html" target="_blank" rel="noopener">DevOps</a>.</p></div><div class="lab" id="11-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Una misma ejecución vista por cada audiencia</h3></div><p class="hint">Elige quién mira (ingeniería, operación, cumplimiento o la persona usuaria), la clasificación del dato que tocó el agente y la audiencia de la sesión. Enciende o apaga la captura de contenido. Mira qué campos llegan completos, cuáles como hash y cuáles nunca salen del arnés.</p><style>
+[id="11-lab-3"] .c11l3-rec{display:grid;gap:5px}
+[id="11-lab-3"] .c11l3-rec div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;align-items:center;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--card);font:500 .8rem/1.3 var(--f-display)}
+[id="11-lab-3"] .c11l3-rec div span:first-child{font:700 .72rem var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+[id="11-lab-3"] .c11l3-rec div span:last-child{font:500 .78rem var(--f-mono);overflow-wrap:anywhere}
+[id="11-lab-3"] .c11l3-rec .completo{border-color:var(--good)}
+[id="11-lab-3"] .c11l3-rec .hash{border-color:var(--accent);background:var(--accent-soft)}
+[id="11-lab-3"] .c11l3-rec .resumen{border-color:var(--c-fis);background:var(--c-fis-s)}
+[id="11-lab-3"] .c11l3-rec .nunca{border-style:dashed;opacity:.65}
+[id="11-lab-3"] .c11l3-rec .nunca span:last-child{color:var(--muted);font-family:var(--f-display);font-style:italic}
+@media (max-width:520px){[id="11-lab-3"] .c11l3-rec div{grid-template-columns:minmax(0,1fr)}}
+</style>
+<div class="opciones">
+  <label>Quién mira
+    <select id="c11l3-aud">
+      <option value="ing" selected>Ingeniería (trazas)</option>
+      <option value="ops">Operación (tableros y alertas)</option>
+      <option value="cum">Cumplimiento (libro de auditoría)</option>
+      <option value="usr">La persona usuaria (interfaz)</option>
+    </select></label>
+  <label>Clasificación del dato que tocó el agente
+    <select id="c11l3-cla">
+      <option value="0">Interno</option>
+      <option value="1" selected>Confidencial (cobros)</option>
+      <option value="2">Restringido (salud)</option>
+    </select></label>
+  <label>Audiencia de la sesión
+    <select id="c11l3-ses">
+      <option value="priv" selected>Privada: Ana y su caso</option>
+      <option value="pub">Pública: un canal abierto</option>
+      <option value="desc">Desconocida: el canal no lo dice</option>
+    </select></label>
+</div>
+<div class="btns"><button type="button" id="c11l3-cap" aria-pressed="false">Captura de contenido en trazas (opcional)</button></div>
+<p class="legend"><span><i style="background:var(--good)"></i>completo</span> · <span><i style="background:var(--accent)"></i>solo hash</span> · <span><i style="background:var(--c-fis)"></i>resumen sin datos</span> · <span><i style="background:var(--line)"></i>nunca le llega</span></p>
+<div class="c11l3-rec" id="c11l3-rec" aria-label="Registro tal como lo recibe esta audiencia"></div>
+<div class="readout texto" id="c11l3-out" aria-live="polite"></div></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Encuentra qué atributos de una traza de agente son opcionales por privacidad</h3></div><p>Vas a descargar, sin instalar nada, la convención de OpenTelemetry para el tramo (<i>span</i>) que describe la ejecución de una herramienta, y buscar qué atributos se capturan siempre y cuáles solo si alguien lo activa. Es un archivo de texto de unos 70 KB.</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>curl.exe -sL https://raw.githubusercontent.com/open-telemetry/semantic-conventions-genai/main/docs/gen-ai/execute-tool.md -o execute-tool.md</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>findstr /N /C:"Required" execute-tool.md</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>findstr /N /C:"Opt-In" execute-tool.md</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>findstr /N /C:"sensitive information" execute-tool.md</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>curl -sL https://raw.githubusercontent.com/open-telemetry/semantic-conventions-genai/main/docs/gen-ai/execute-tool.md -o execute-tool.md</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>grep -n "Required" execute-tool.md</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>grep -n "Opt-In" execute-tool.md</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>grep -n "sensitive information" execute-tool.md</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la búsqueda de <code>Required</code>, fíjate en las primeras líneas: los atributos marcados solo <code>Required</code> (sin «Conditionally») son obligatorios en el tramo de una herramienta, como el nombre de la operación y el de la herramienta.</span></li><li><span>En la de <code>Opt-In</code>, mira qué atributos solo se capturan si alguien lo activa: los argumentos de la llamada y su resultado.</span></li><li><span>En la última, cuenta cuántas veces el documento advierte que un atributo puede tener información sensible.</span></li><li><span>Compara con el capítulo: ¿qué techo de captura tendría una traza que guarda los argumentos de <code>reembolsar</code> de la cliente 4512?</span></li></ol><p><b>Qué observar:</b> la norma separa la forma de la ejecución (qué herramienta, cuánto tardó) de su contenido (con qué datos y qué respondió), y deja el contenido apagado por defecto. Es el techo de captura del capítulo hecho estándar. La convención está en desarrollo y se mudó hace poco a su propio repositorio, así que los nombres pueden cambiar; si la descarga falla, busca el repositorio <code>semantic-conventions-genai</code> de OpenTelemetry en GitHub.</p></div><div class="prose"><p>La idea que se lleva este capítulo: un agente al que se le confía trabajo real tiene que poder explicarse después, ante quien sea y años más tarde, sin que nadie haya podido retocar la historia. Y los datos que toca llevan sus reglas pegadas, para que ni el modelo ni un registro descuidado las saquen de donde deben estar.</p><p><b>Auditoría inalterable: todo lo que el agente hizo se puede reconstruir.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿En qué se diferencian un evento, una traza y una entrada de auditoría?</summary><p>El evento observa y puede perderse sin que el agente se detenga; la traza diagnostica, se muestrea, se recorta por audiencia y dura poco; la entrada de auditoría prueba qué se decidió, con qué regla y versiones, no se edita y se guarda años.</p></details><details><summary>¿Por qué cada entrada de auditoría guarda las versiones de la política, las instrucciones y el modelo?</summary><p>Porque esas piezas cambian. Sin la versión, no se puede saber contra qué regla se decidió en ese momento; con ella, la entrada sigue siendo evidencia aunque la regla se edite después.</p></details><details><summary>Si alguien cambia una entrada y recalcula todos los hashes siguientes, ¿cómo se detecta?</summary><p>Con el anclaje: el hash de la última entrada se depositó antes fuera del alcance del arnés (firmado, en otra cuenta o en un sistema externo), y el recalculado ya no coincide.</p></details><details><summary>¿Cómo se concilia un libro inalterable con el derecho de una persona a que se borren sus datos?</summary><p>El libro guarda un seudónimo y una referencia, no el dato personal. El dato vive aparte, cifrado con una clave propia de la persona; para borrarlo se destruye la clave (borrado criptográfico).</p></details><details><summary>¿Quién pone la etiqueta de clasificación a un dato y por qué no el modelo?</summary><p>La fuente: la herramienta o el conector que lo trae, según su contrato. El modelo es probabilístico y puede ser manipulado; la clasificación tiene que aplicarse con independencia de lo que razone.</p></details><details><summary>¿Qué significa «recortar antes de enviar» en la observabilidad por audiencia?</summary><p>Que cada destino de telemetría recibe el registro ya recortado según su techo de captura. Lo que el techo excluyó nunca le llegó, así que no puede recuperarse desde ese destino.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es un árbol de Merkle y por qué los registros de transparencia de certificados lo usan en lugar de una cadena simple?<small>Pista: busca «Merkle tree Certificate Transparency <a href="https://www.rfc-editor.org/rfc/rfc6962" target="_blank" rel="noopener">RFC 6962</a>».</small></li><li>¿Qué es una autoridad de sellado de tiempo y qué prueba un sello de tiempo según la <a href="https://www.rfc-editor.org/rfc/rfc3161" target="_blank" rel="noopener">RFC 3161</a>?</li><li>¿Qué diferencia legal hay entre datos seudonimizados y datos anonimizados en el Reglamento General de Protección de Datos europeo?<small>Pista: busca «pseudonymisation vs anonymisation GDPR recital 26».</small></li><li>¿Qué campos tiene el encabezado <code>traceparent</code> de la norma W3C Trace Context y cómo viaja un identificador de traza entre servicios?</li><li>¿Por qué ciertas normas financieras exigen almacenamiento WORM para algunos registros, y qué dice al respecto la regla 17a-4 de la SEC de Estados Unidos?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://github.com/open-telemetry/semantic-conventions-genai" target="_blank" rel="noopener">OpenTelemetry: convenciones semánticas para IA generativa <small>repositorio, en inglés</small></a><a class="vid" href="https://datatracker.ietf.org/doc/html/rfc6962" target="_blank" rel="noopener">RFC 6962: Certificate Transparency <small>norma, en inglés</small></a><a class="vid" href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html" target="_blank" rel="noopener">Amazon S3 Object Lock <small>documentación de un almacenamiento WORM, en inglés</small></a><a class="vid" href="https://csrc.nist.gov/pubs/sp/800/92/final" target="_blank" rel="noopener">NIST SP 800-92: guía de gestión de registros <small>guía, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const BASE=[
+    ['admisión','ana','tarea admitida'],
+    ['política v12','arnés','permitir reembolso'],
+    ['efecto','agente-atencion','reembolso 25,00 a 4512'],
+    ['efecto','agente-atencion','correo enviado a 4512'],
+    ['configuración','ops-3','política v13 publicada']
+  ];
+  const fnv=t=>{let h=0x811c9dc5;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');};
+  const cont=e=>[e.seq,e.tipo,e.actor,e.res,e.ant].join('|');
+  let libro,ancla,anc=false,ult='';
+  function nuevo(){libro=[];let prev='00000000';BASE.forEach((b,i)=>{const e={seq:i+1,tipo:b[0],actor:b[1],res:b[2],ant:prev};e.hash=fnv(cont(e));prev=e.hash;libro.push(e);});ancla=libro[libro.length-1].hash;ult='';}
+  function verif(){let prev='00000000',rota=-1;const est=libro.map((e,i)=>{const calc=fnv(cont(e));const okAnt=e.ant===prev,okH=calc===e.hash;if(rota<0&&!(okAnt&&okH))rota=i;prev=e.hash;return{calc,okAnt,okH};});return{est,rota};}
+  function llenarSel(){const v=$('#c11l2-sel').value;$('#c11l2-sel').innerHTML=libro.map((e,i)=>`<option value="${i}">#${e.seq} · ${e.tipo}</option>`).join('');if(v&&+v<libro.length)$('#c11l2-sel').value=v;$('#c11l2-txt').value=libro[+$('#c11l2-sel').value||0].res;}
+  function pintar(){
+    const {est,rota}=verif();const sel=+$('#c11l2-sel').value||0;
+    $('#c11l2-ch').innerHTML=libro.map((e,i)=>{const s=est[i];const mal=rota>=0&&i>=rota;
+      return `<li class="${mal?'rota':''} ${i===sel?'sel':''}"><span class="n">#${e.seq}</span><span>${e.tipo} · ${e.actor} · <b>${e.res}</b></span><span class="e">${mal?'✖':'✔'}</span>
+      <span class="h">anterior <b class="${s.okAnt?'':'x'}">${e.ant}</b> · guardado <b>${e.hash}</b>${s.okH?'':` · recalculado <b class="x">${s.calc}</b>`}</span></li>`;}).join('');
+    const fin=libro.length?libro[libro.length-1].hash:'—';
+    $('#c11l2-ancla').innerHTML=anc?`Ancla firmada fuera del arnés: <code>${ancla}</code> · último hash del libro: <code>${fin}</code> ${fin===ancla?'<span class="e" style="color:var(--good)">coincide</span>':'<b style="color:var(--warm)">no coincide</b>'}`:'<span class="hint">Anclaje apagado: nadie guardó el último hash fuera del arnés.</span>';
+    let h;
+    if(rota>=0)h=`<span class="big">Cadena rota desde la entrada #${libro[rota].seq}</span><span class="warn">${est[rota].okH?'La entrada apunta a un hash anterior que ya no existe: falta o cambió una entrada antes de ella.':'Su contenido ya no produce el hash guardado: alguien la cambió.'} Todo lo que sigue queda en duda.</span>`;
+    else{h=`<span class="big">La verificación interna dice: íntegra</span>`;
+      if(anc&&fin!==ancla)h+=`<span class="ok">Pero el ancla la delata: el último hash ya no es el que se firmó afuera. Alguien reescribió la historia y recalculó la cadena.</span>`;
+      else if(!anc&&ult==='recalc')h+=`<span class="warn">Engañada: alguien cambió una entrada y recalculó todos los hashes. Sin un ancla externa, no hay forma de notarlo. Enciende «Anclaje externo».</span>`;
+      else h+=`<span class="ok">Cada entrada produce su hash y apunta al de la anterior.</span><span class="hint">Cambia el resultado de una entrada (por ejemplo 25,00 → 250,00) o bórrala.</span>`;}
+    $('#c11l2-out').innerHTML=h;
+  }
+  $('#c11l2-sel').addEventListener('change',()=>{$('#c11l2-txt').value=libro[+$('#c11l2-sel').value].res;pintar();});
+  $('#c11l2-txt').addEventListener('input',()=>{libro[+$('#c11l2-sel').value].res=$('#c11l2-txt').value;ult='edit';pintar();});
+  $('#c11l2-borrar').addEventListener('click',()=>{if(libro.length<2)return;libro.splice(+$('#c11l2-sel').value,1);ult='borrar';llenarSel();pintar();});
+  $('#c11l2-recalc').addEventListener('click',()=>{const i=Math.max(0,Math.min(+$('#c11l2-sel').value,libro.length-1));let prev=i?libro[i-1].hash:'00000000';
+    for(let k=i;k<libro.length;k++){libro[k].ant=prev;libro[k].hash=fnv(cont(libro[k]));prev=libro[k].hash;}ult='recalc';pintar();});
+  $('#c11l2-anc').addEventListener('click',()=>{anc=!anc;$('#c11l2-anc').setAttribute('aria-pressed',anc);pintar();});
+  $('#c11l2-rest').addEventListener('click',()=>{nuevo();llenarSel();pintar();});
+  nuevo();llenarSel();$('#c11l2-sel').value='2';$('#c11l2-txt').value=libro[2].res;pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  // [actor, texto, versiones, veredicto: c=causa, s=sintoma, b=bien, explicación]
+  const INC={
+    doble:[
+      ['config','ops-2 publica las instrucciones v8 del agente de atención: tono más formal en las respuestas.','hace 5 días','b','Un cambio real, pero de estilo: no toca cómo se ejecutan las herramientas.'],
+      ['config','ops-3 publica el contrato de la herramienta reembolsar v2.1: política de repetición «segura».','hace 3 días','c','Esta es la causa. Un reembolso no es idempotente: declararlo «seguro» le dio permiso al arnés para reintentarlo a ciegas. Todo lo demás se ve mal, pero es consecuencia de este cambio.'],
+      ['persona','Ana pide: «reembolsa el cobro duplicado de la cliente 4512».','ejec-204 · paso 0','b','Un pedido normal, de una persona con permiso. Nada raro aquí.'],
+      ['arnes','Admisión: tarea admitida, presupuesto US$ 1,00.','admisión v4','b','La admisión funcionó como debía.'],
+      ['modelo','Propone reembolsar(C-7731, 25,00).','modelo m-2026-09 · instrucciones v8','b','La propuesta es correcta: el cobro C-7731 era el duplicado.'],
+      ['arnes','Política: permitir (reembolso menor de US$ 50).','política v12','b','La regla se aplicó bien: el monto estaba por debajo del umbral.'],
+      ['herramienta','reembolsar: la pasarela cobra la devolución #1; la respuesta vence por tiempo.','reembolsar v2.1','s','Un corte de red es normal. El problema no es que fallara, sino lo que hizo el arnés después.'],
+      ['arnes','Reintento automático de reembolsar: repetición «segura», sin clave de idempotencia.','bucle v3 · reembolsar v2.1','s','Es el momento del daño, pero el arnés solo obedeció lo que decía el contrato de la herramienta. ¿Quién decidió que era seguro reintentar?'],
+      ['herramienta','reembolsar: devolución #2 a la cliente 4512.','reembolsar v2.1','s','El segundo reembolso es el síntoma que vio finanzas.'],
+      ['modelo','Responde: «listo, el reembolso está hecho».','ejec-204 · fin','b','El modelo no sabía del reintento: desde su lado, todo salió bien.']
+    ],
+    correo:[
+      ['config','ops-1 publica la herramienta buscar_tickets v3: búsqueda por texto en lugar de por número de cliente.','hace 1 semana','c','Esta es la causa. La búsqueda por texto devuelve tickets parecidos de otros clientes, y nadie agregó un filtro por cliente. El modelo hizo lo razonable con información mala.'],
+      ['config','ops-3 sube el límite de correos por hora del agente de 20 a 40.','hace 4 días','b','Cambia cuántos correos se pueden mandar, no qué dicen.'],
+      ['persona','Ana pide: «mándale a la cliente 4512 el detalle de su último cobro».','ejec-311 · paso 0','b','Pedido normal.'],
+      ['arnes','Política: permitir enviar_correo al contacto registrado del cliente.','política v12','b','El destinatario era el correcto: la política no tenía nada que objetar.'],
+      ['herramienta','buscar_tickets("cobro 4512") devuelve T-88 (cliente 4512) y T-91 (cliente 4521).','buscar_tickets v3','s','Aquí aparece el dato ajeno, pero la herramienta solo hizo lo que su nueva versión dice. ¿Por qué empezó a buscar así?'],
+      ['arnes','Contexto ensamblado con T-88 y T-91 (hash 4c1e…).','contexto v5','s','El motor de contexto incluyó lo que era relevante; filtrar por permisos o por cliente no era su tarea.'],
+      ['modelo','Redacta el correo con el monto de T-91.','modelo m-2026-09 · instrucciones v8','s','Es un error del modelo, pero con dos tickets casi iguales en el contexto. Es un síntoma, no la causa.'],
+      ['herramienta','enviar_correo a la cliente 4512: entregado.','enviar_correo v1','s','El efecto final: el que vio la cliente.']
+    ],
+    aprob:[
+      ['config','ops-1 publica la política v13: el umbral de aprobación de reembolsos baja de US$ 150 a US$ 100.','hace 3 días','b','Un cambio que hace la regla más estricta, no más laxa: por eso este reembolso sí pidió aprobación.'],
+      ['config','ops-3 cambia el valor por defecto de las aprobaciones vencidas: siVence = «aprobar».','hace 2 días','c','Esta es la causa. Una aprobación que nadie contesta debería rechazarse o escalar (capítulo 9). Con este cambio, el silencio se convirtió en un «sí».'],
+      ['persona','Luis pide: «devuelve los US$ 180 del equipo que la cliente 4512 no recibió».','ejec-377 · paso 0','b','Pedido normal.'],
+      ['modelo','Propone reembolsar(C-8120, 180,00).','modelo m-2026-09','b','La propuesta era correcta en monto y cobro.'],
+      ['arnes','Política: pedir aprobación (reembolso mayor de US$ 100).','política v13','b','La regla funcionó: pidió aprobación.'],
+      ['arnes','Solicitud de aprobación enviada a supervisión, plazo 2 horas.','interacción v2','b','Bien: con plazo y destinatario.'],
+      ['arnes','Plazo vencido sin respuesta: resolución automática «aprobada».','interacción v2 · config c-55','s','Parece la causa, pero el arnés aplicó la configuración vigente. ¿Quién la cambió?'],
+      ['herramienta','reembolsar(C-8120, 180,00): devolución hecha.','reembolsar v2.2','s','El efecto que nadie aprobó.']
+    ]
+  };
+  let filtro='todo',elegida=-1;
+  function pintar(){
+    const inc=INC[$('#c11l1-inc').value];
+    $('#c11l1-lib').innerHTML=inc.map((e,i)=>{
+      const cl=(filtro!=='todo'&&e[0]!==filtro?'oculta ':'')+(i===elegida?(e[3]==='c'?'causa':e[3]==='s'?'sintoma':''):'');
+      const nom={modelo:'modelo',arnes:'arnés',persona:'persona',herramienta:'herramienta',config:'configuración'}[e[0]];
+      return `<li><button type="button" data-i="${i}" class="${cl}" aria-pressed="${i===elegida}"><span class="n">#${i+1}</span><span class="a ${e[0]}">${nom}</span><span class="t">${e[1]}</span><span class="v">${e[2]}</span></button></li>`;
+    }).join('');
+    let h;
+    if(elegida<0)h=`<span class="big">${inc.length} entradas en orden</span><span class="hint">Toca la entrada que crees que causó el incidente. Pista: la causa suele estar antes y verse inocente.</span>`;
+    else{const e=inc[elegida];
+      h=e[3]==='c'?`<span class="big">#${elegida+1}: encontraste la causa</span><span class="ok">${e[4]}</span>`
+       :e[3]==='s'?`<span class="big">#${elegida+1}: es un síntoma</span><span class="warn">${e[4]}</span>`
+       :`<span class="big">#${elegida+1}: esta entrada estuvo bien</span><span>${e[4]}</span>`;
+      if(e[3]!=='c')h+=`<span class="hint">Prueba el filtro «Configuración»: sin los cambios de reglas y herramientas en el mismo libro, la causa quedaría fuera del hilo.</span>`;
+    }
+    $('#c11l1-out').innerHTML=h;
+  }
+  $('#c11l1-lib').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;elegida=+b.dataset.i;pintar();});
+  $('#c11l1-fil').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;filtro=b.dataset.f;
+    document.querySelectorAll('#c11l1-fil button').forEach(x=>x.setAttribute('aria-pressed',x===b));pintar();});
+  $('#c11l1-inc').addEventListener('change',()=>{elegida=-1;pintar();});
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  let cap=false;
+  const NIV=['interno','confidencial','restringido'];
+  const H=t=>{let h=0x811c9dc5;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h.toString(16).padStart(8,'0')+'…';};
+  function pintar(){
+    const aud=$('#c11l3-aud').value,cla=+$('#c11l3-cla').value,ses=$('#c11l3-ses').value;
+    $('#c11l3-cap').setAttribute('aria-pressed',cap);
+    const args=cla===2?'{"paciente":"P-311","diagnostico":"…"}':'{"cliente":"4512","cobro":"C-7731","monto":25.00}';
+    const res=cla===2?'cita reprogramada':'devolución #1 aprobada';
+    const conv=cla===2?'«Necesito mover la cita del control de …»':'«Me cobraron dos veces el mes pasado…»';
+    // techo de captura de ingeniería
+    let techo=cap?1:-1; if(cap&&(ses==='priv'||ses==='desc'))techo=0;
+    const ing=v=>techo<0?['nunca','captura apagada: nunca sale del arnés']:(cla<=techo?['completo',v]:['hash','hash '+H(v)]);
+    const usrTecho=(ses==='priv')?1:-1;
+    const F={
+      ing:[['Traza y paso','completo','traza 7f3a… · ejec-204 · paso 3'],['Herramienta','completo','reembolsar · 840 ms · ok'],['Tokens y costo','completo','2.310 tokens · US$ 0,012'],['Quién','hash','seudónimo u-'+H('ana')],
+           ['Argumentos',...ing(args)],['Resultado',...ing(res)],['Conversación',...ing(conv)],['Versiones','completo','política v12 · modelo m-2026-09']],
+      ops:[['Herramienta','completo','reembolsar · 840 ms · ok'],['Tokens y costo','completo','sumados por hora y por agente'],['Quién','nunca','no hace falta para un tablero'],['Argumentos','nunca','no hace falta para un tablero'],
+           ['Resultado','resumen','estado: ok'],['Conversación','nunca','no hace falta para un tablero'],['Versiones','completo','política v12 · modelo m-2026-09']],
+      cum:[['Entrada','completo','#5531 · tipo efecto · hash anterior 57ad…'],['Quién','completo','agente-atencion en nombre de ana (verificada)'],['Regla','completo','permitir · política v12'],
+           ['Argumentos',cla===2?'hash':'completo',cla===2?'hash '+H(args)+' (el dato vive en la sesión)':args],['Resultado','completo',res],['Conversación','hash','referencia S-17 · hash '+H(conv)],['Versiones','completo','agente v3 · instrucciones v8 · política v12 · modelo m-2026-09 · reembolsar v2.2'],['Duración y tokens','nunca','no prueban nada: van en las trazas']],
+      usr:[['Lo que hace','completo','«Estoy procesando la devolución…»'],['Resultado',...(cla<=usrTecho&&cla<2?['completo',res+' · US$ 25,00 a la cuenta 4512']:['resumen','«Listo, tu solicitud quedó procesada»'])],['Quién más participó','nunca','identidades de operadores y supervisores'],['Versiones y reglas','nunca','detalle interno del arnés']]
+    };
+    $('#c11l3-rec').innerHTML=F[aud].map(f=>`<div class="${f[1]}"><span>${f[0]}</span><span>${f[2]}</span></div>`).join('');
+    const nom={ing:'Ingeniería',ops:'Operación',cum:'Cumplimiento',usr:'La persona usuaria'}[aud];
+    let h=`<span class="big">${nom} · dato ${NIV[cla]} · sesión ${ses==='priv'?'privada':ses==='pub'?'pública':'desconocida'}</span>`;
+    if(aud==='ing'){
+      if(!cap)h+=`<span>Ve la forma de la ejecución (qué herramienta, cuánto tardó, cuánto costó), no su contenido. Es el valor por defecto de las convenciones de OpenTelemetry.</span>`;
+      else if(techo===0)h+=`<span class="ok">Captura encendida, pero la sesión ${ses==='priv'?'es privada':'no declara su audiencia'}: el techo baja a «interno» y lo ${cla?'confidencial llega solo como hash':'interno llega completo'}.</span>`;
+      else h+=`<span class="warn">Captura encendida en una sesión pública: llega hasta lo confidencial${cla===2?', y lo restringido solo como hash':''}. Lo que se dijo en público ya es público; el resto se recorta igual.</span>`;
+    }
+    if(aud==='ops')h+=`<span>Operación vive de agregados: tasas, tiempos y costos. No necesita saber a quién se le devolvió el dinero, así que nunca se lo envían.</span>`;
+    if(aud==='cum')h+=`<span>Cumplimiento ve identidades verificadas, la regla y todas las versiones: lo que hace falta para probar. ${cla===2?'El dato restringido no entra al libro: queda su hash y vive en la sesión, con su propia retención.':'No ve duraciones ni tokens: eso es diagnóstico, no prueba.'}</span>`;
+    if(aud==='usr')h+=ses==='priv'?`<span class="ok">Sesión privada: Ana ve el resultado con sus datos${cla===2?', salvo lo restringido, que se resume':''}.</span>`:`<span class="warn">Con audiencia ${ses==='pub'?'pública':'desconocida'}, el techo de la respuesta baja: el agente confirma sin mostrar montos ni cuentas.</span>`;
+    h+=`<span class="hint">Cada destino recibe el registro ya recortado: lo que su techo excluyó no se puede recuperar desde ahí.</span>`;
+    $('#c11l3-out').innerHTML=h;
+  }
+  $('#c11l3-cap').addEventListener('click',()=>{cap=!cap;pintar();});
+  ['#c11l3-aud','#c11l3-cla','#c11l3-ses'].forEach(s=>$(s).addEventListener('change',pintar));
+  pintar();
+})();
+</script>
+</body>
+</html>

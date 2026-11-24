@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La puerta a los modelos · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="puerta-a-los-modelos">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 04 DE 16</span><h1>La puerta a los modelos (*model gateway*)</h1><p class="lede">El arnés no debería saber con qué proveedor habla. Toda llamada a un modelo pasa por una sola puerta que traduce formatos, cuenta tokens y dinero, aprovecha la caché, reintenta cuando el proveedor falla y pasa a un respaldo cuando no vuelve.</p></header>
+<section><h2>La interfaz de proveedor: aislar el arnés del modelo</h2><div class="prose"><p>En el bucle del capítulo 2, el modelo llegaba como un parámetro con un solo método, <code>completar</code>. Esa línea esconde una decisión de arquitectura: <b>el arnés no llama a ningún proveedor directamente</b>. Llama a una interfaz propia, y detrás de ella hay una pieza que se encarga de todo lo que tiene que ver con modelos. Esa pieza es la <b>puerta a los modelos</b> (<i>model gateway</i>).</p></div><div class="analogia"><b>Imagínalo así</b><p>Cuando viajas con tus aparatos, no cambias el cable de cada uno en cada país: llevas un adaptador de enchufe. Tus aparatos tienen una sola forma de conectarse y el adaptador se ocupa de la forma de cada pared. Si además el adaptador te dice cuánta energía gastaste y corta la corriente cuando hay un pico, ya no es solo un adaptador: es un tablero eléctrico. La puerta a los modelos es las dos cosas.</p></div><div class="prose"><p>¿Por qué no llamar al SDK del proveedor desde el bucle? Porque cada línea que lo usa ata al arnés a ese proveedor. Los nombres de los campos, la forma de los bloques, los motivos de parada y los errores cambian de uno a otro, como viste en el capítulo 2. Un arnés atado a un proveedor no puede cambiar de modelo sin reescribirse, no puede usar un respaldo cuando el proveedor se cae y no puede medir el costo de forma pareja. El principio del capítulo 1, «el modelo es reemplazable», se cumple aquí o no se cumple.</p><p>La puerta tiene una interfaz pequeña, con los tipos del arnés y no los del proveedor:</p><div class="code-copia"><pre><code>interface Solicitud {
+  agente: string;                      // quién llama: decide modelo y presupuesto
+  sistema: string;
+  mensajes: Mensaje[];
+  herramientas: Definicion[];
+  maxTokensSalida: number;
+}
+
+interface Uso {
+  entrada: number; cacheLeida: number; cacheEscrita: number; salida: number;
+  costoUSD: number;
+}
+
+interface Respuesta {
+  bloques: Bloque[];
+  parada: Parada;                       // ya traducida: fin_de_turno, uso_de_herramienta…
+  uso: Uso;
+  modelo: string;                       // quién respondió de verdad (puede ser el respaldo)
+  intentos: number;
+}
+
+interface PuertaModelos {
+  completar(s: Solicitud, senal: AbortSignal): Promise&lt;Respuesta&gt;;
+  transmitir(s: Solicitud, senal: AbortSignal): AsyncIterable&lt;EventoModelo&gt;;
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en lo que <b>no</b> está: no hay nombre de proveedor ni de modelo. El bucle dice qué agente llama, y la puerta decide con qué modelo, según su configuración. Y la respuesta dice quién respondió de verdad, porque con un respaldo puede no ser el modelo de siempre.</p></div><figure class="fig fig-arquitectura" id="04-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 480" style="min-width:680px" role="img" aria-label="Arquitectura de la puerta a los modelos: arriba el arnés con el bucle y el motor de contexto; en el centro la puerta con cinco etapas, catálogo, forma del prompt para la caché, límites de tasa, reintentos y respaldo, y uso y costo; abajo tres adaptadores, uno por proveedor, y los proveedores: dos en la nube y un modelo propio; el uso y el costo bajan al registro">
+  <defs>
+    <marker id="d41-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  
+  <rect x="20" y="14" width="820" height="96" rx="12" class="d-oper"/>
+  <text x="36" y="36" class="t t-xs t-b k-oper">ARNÉS</text>
+  <rect x="60" y="46" width="200" height="50" rx="10" class="c-red"/><text x="160" y="69" class="t t-b k-red" text-anchor="middle">Bucle</text><text x="160" y="86" class="t t-s t-m" text-anchor="middle">pide por agente, no por modelo</text>
+  <rect x="290" y="46" width="200" height="50" rx="10" class="c-red"/><text x="390" y="69" class="t t-b k-red" text-anchor="middle">Motor de contexto</text><text x="390" y="86" class="t t-s t-m" text-anchor="middle">lo estable primero</text>
+  <rect x="620" y="46" width="200" height="50" rx="10" class="d-inet"/><text x="720" y="69" class="t t-b" text-anchor="middle">Registro de uso</text><text x="720" y="86" class="t t-s t-m" text-anchor="middle">tokens, costo, latencia</text>
+  <line x1="160" y1="96" x2="160" y2="138" class="ln" style="stroke-width:2" marker-end="url(#d41-m)"/>
+  <line x1="390" y1="96" x2="390" y2="138" class="ln" style="stroke-width:2" marker-end="url(#d41-m)"/>
+  <text x="168" y="124" class="t t-s t-m">Solicitud</text>
+  <line x1="726" y1="190" x2="726" y2="99" class="ln ln-d" style="stroke-width:2" marker-end="url(#d41-m)"/>
+
+  
+  <rect x="20" y="140" width="820" height="140" rx="12" class="d-sis"/>
+  <text x="36" y="164" class="t t-b k-sis">Puerta a los modelos</text>
+  <text x="200" y="164" class="t t-s t-m">una sola interfaz: completar() y transmitir()</text>
+  <g class="t t-s">
+    <rect x="40" y="190" width="146" height="70" rx="8" class="caja"/><text x="113" y="214" text-anchor="middle" class="t-b">① Catálogo</text><text x="113" y="231" text-anchor="middle">agente → modelo</text><text x="113" y="247" text-anchor="middle" class="t-m">y su respaldo</text>
+    <rect x="200" y="190" width="146" height="70" rx="8" class="caja"/><text x="273" y="214" text-anchor="middle" class="t-b">② Caché</text><text x="273" y="231" text-anchor="middle">puntos de corte</text><text x="273" y="247" text-anchor="middle" class="t-m">y orden estable</text>
+    <rect x="360" y="190" width="146" height="70" rx="8" class="caja"/><text x="433" y="214" text-anchor="middle" class="t-b">③ Límites de tasa</text><text x="433" y="231" text-anchor="middle">cupo por minuto</text><text x="433" y="247" text-anchor="middle" class="t-m">repartido por agente</text>
+    <rect x="520" y="190" width="146" height="70" rx="8" class="caja"/><text x="593" y="214" text-anchor="middle" class="t-b">④ Reintentos</text><text x="593" y="231" text-anchor="middle">espera con jitter,</text><text x="593" y="247" text-anchor="middle" class="t-m">cortacircuitos, respaldo</text>
+    <rect x="680" y="190" width="146" height="70" rx="8" class="caja"/><text x="753" y="214" text-anchor="middle" class="t-b">⑤ Uso y costo</text><text x="753" y="231" text-anchor="middle">tokens × precio</text><text x="753" y="247" text-anchor="middle" class="t-m">del catálogo</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <line x1="186" y1="225" x2="198" y2="225" marker-end="url(#d41-m)"/>
+    <line x1="346" y1="225" x2="358" y2="225" marker-end="url(#d41-m)"/>
+    <line x1="506" y1="225" x2="518" y2="225" marker-end="url(#d41-m)"/>
+    <line x1="666" y1="225" x2="678" y2="225" marker-end="url(#d41-m)"/>
+  </g>
+
+  
+  <g class="t t-s">
+    <rect x="60" y="316" width="200" height="44" rx="10" class="c-tra"/><text x="160" y="343" text-anchor="middle" class="t-b k-tra">Adaptador A</text>
+    <rect x="330" y="316" width="200" height="44" rx="10" class="c-tra"/><text x="430" y="343" text-anchor="middle" class="t-b k-tra">Adaptador B</text>
+    <rect x="600" y="316" width="200" height="44" rx="10" class="c-tra"/><text x="700" y="343" text-anchor="middle" class="t-b k-tra">Adaptador local</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <line x1="160" y1="280" x2="160" y2="314" marker-end="url(#d41-m)"/>
+    <line x1="430" y1="280" x2="430" y2="314" marker-end="url(#d41-m)"/>
+    <line x1="700" y1="280" x2="700" y2="314" marker-end="url(#d41-m)"/>
+  </g>
+  <text x="168" y="302" class="t t-s t-m">traduce formatos y errores</text>
+
+  
+  <rect x="20" y="384" width="820" height="84" rx="12" class="d-inet"/>
+  <text x="36" y="404" class="t t-xs t-b k-inet">PROVEEDORES</text>
+  <g class="t t-s">
+    <rect x="60" y="412" width="200" height="44" rx="10" class="caja"/><text x="160" y="432" text-anchor="middle" class="t-b">Proveedor A</text><text x="160" y="448" text-anchor="middle" class="t-m">API en la nube</text>
+    <rect x="330" y="412" width="200" height="44" rx="10" class="caja"/><text x="430" y="432" text-anchor="middle" class="t-b">Proveedor B</text><text x="430" y="448" text-anchor="middle" class="t-m">API en la nube</text>
+    <rect x="600" y="412" width="200" height="44" rx="10" class="caja"/><text x="700" y="432" text-anchor="middle" class="t-b">Modelo propio</text><text x="700" y="448" text-anchor="middle" class="t-m">servidor de la empresa</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <line x1="160" y1="360" x2="160" y2="410" marker-end="url(#d41-m)"/>
+    <line x1="430" y1="360" x2="430" y2="410" marker-end="url(#d41-m)"/>
+    <line x1="700" y1="360" x2="700" y2="410" marker-end="url(#d41-m)"/>
+  </g>
+</svg></div><figcaption><b>La puerta a los modelos, entre el arnés y los proveedores.</b> Arriba, en la franja del arnés, el bucle y el motor de contexto, que solo conocen la interfaz de la puerta. En el centro, la puerta y sus etapas, en el orden en que pasa cada llamada: elegir el modelo en el catálogo, ordenar el prompt para la caché, respetar los límites de tasa, reintentar o pasar al respaldo, y contar tokens y costo. Abajo, un adaptador por proveedor traduce al formato de cada uno, y al pie están los proveedores: dos en la nube y un modelo propio. La línea punteada sube al registro de uso: cada llamada deja sus tokens, su costo y su latencia.</figcaption></figure></section>
+<section><h2>Adaptadores para varios proveedores</h2><div class="prose"><p>Cada proveedor se conecta con un <b>adaptador</b> (<i>adapter</i>): un módulo que traduce la solicitud del arnés al formato del proveedor y la respuesta del proveedor al formato del arnés. El resto de la puerta no sabe que existen formatos distintos.</p><p>Lo que traduce un adaptador es concreto. Algunos ejemplos entre dos de las APIs más usadas:</p><div class="tbl"><table><thead><tr><th>Qué</th><th>Arnés</th><th>Anthropic (Messages)</th><th>OpenAI (Chat Completions)</th></tr></thead><tbody><tr><td>Instrucciones</td><td><code>sistema</code></td><td>campo <code>system</code> aparte</td><td>un mensaje con rol <code>system</code></td></tr><tr><td>Llamada</td><td>bloque <code>llamada</code></td><td>bloque <code>tool_use</code>, argumentos como objeto</td><td><code>tool_calls</code>, argumentos como texto JSON</td></tr><tr><td>Resultado</td><td>bloque <code>resultado</code></td><td>bloque <code>tool_result</code> en un mensaje <code>user</code></td><td>mensaje con rol <code>tool</code></td></tr><tr><td>Error de herramienta</td><td><code>esError</code></td><td><code>is_error</code></td><td>no hay campo: va en el texto</td></tr><tr><td>Motivo de parada</td><td><code>uso_de_herramienta</code></td><td><code>tool_use</code></td><td><code>tool_calls</code></td></tr><tr><td>Uso</td><td><code>Uso</code></td><td><code>usage</code> con tokens de caché aparte</td><td><code>usage</code> con tokens en caché como detalle</td></tr></tbody></table></div><p>Hay diferencias más finas: un proveedor exige que los mensajes alternen de rol, otro acepta varios seguidos; uno devuelve los argumentos ya como objeto y otro como texto que hay que analizar (y que puede venir mal formado). El adaptador absorbe todo eso. Si un proveedor no soporta algo que el arnés pide, el adaptador lo dice con un error claro en vez de ignorarlo en silencio.</p><p>Para que dos adaptadores se comporten igual, se prueban con <b>las mismas pruebas de contrato</b> (<i>contract tests</i>): una conversación con una llamada, una con dos llamadas en paralelo, un resultado con error, una respuesta cortada. Cada adaptador debe producir exactamente los mismos bloques y el mismo motivo de parada. Esas pruebas corren contra respuestas grabadas, sin gastar en llamadas reales.</p></div><div class="ml"><b>En la práctica</b><p>No hace falta escribir todos los adaptadores desde cero. Hay bibliotecas y servicios que los traen hechos, y sirven como ejemplos del mercado: <a href="https://docs.litellm.ai/docs/proxy/reliability" target="_blank" rel="noopener">LiteLLM</a>, una biblioteca y un proxy de código abierto que habla con más de cien proveedores con una sola interfaz; <a href="https://openrouter.ai/docs/features/model-routing" target="_blank" rel="noopener">OpenRouter</a>, un servicio que enruta a muchos modelos con una sola clave; el AI SDK de Vercel o Pydantic AI, como bibliotecas dentro del programa. Aun usando uno, el arnés conserva sus propios tipos: la biblioteca es el adaptador, no el contrato.</p></div></section>
+<section><h2>Contar tokens y costo en cada llamada</h2><div class="prose"><p>Los proveedores cobran por <b>tokens</b>, y con precios distintos para lo que entra y lo que sale. Lo que sale suele costar varias veces más que lo que entra. Si hay caché, se suman dos precios más: leer de la caché, mucho más barato, y escribir en ella, a veces algo más caro que la entrada normal. El costo de una llamada es la suma de cuatro productos:</p><p><b>costo = entrada × precio de entrada + caché leída × precio de lectura + caché escrita × precio de escritura + salida × precio de salida</b></p><p>Los números de tokens <b>no se estiman</b>: se leen del campo de uso (<i>usage</i>) que trae cada respuesta. Cada modelo parte el texto en tokens a su manera, así que el mismo texto da cuentas distintas en dos modelos. El arnés puede estimar antes de llamar, para saber si la solicitud cabe en el presupuesto, pero la cuenta que se registra es la del proveedor.</p><p>Cada llamada deja un <b>registro de uso</b> (<i>usage record</i>): agente, ejecución, persona que lo pidió, modelo, proveedor, los cuatro conteos, el costo, la latencia y los intentos. Con eso se responden las preguntas que siempre llegan: cuánto gastó este agente este mes, cuánto cuesta resolver un caso, qué persona o qué equipo consume más. Y con eso funciona el presupuesto en dinero del capítulo 2: el bucle suma el <code>costoUSD</code> que le devuelve la puerta.</p></div><div class="caso"><b>Un caso real</b><p>Un caso frecuente cuando un agente pasa de la prueba a producción: nadie miraba el costo por ejecución, porque en las pruebas eran centavos. En producción, un pequeño porcentaje de ejecuciones entra en bucles largos con mucha historia y concentra buena parte del gasto. Sin registro de uso por ejecución, eso se descubre en la factura del mes. Con registro, aparece en un tablero el primer día, y la solución es la del capítulo 2: un presupuesto por ejecución.</p></div></section>
+<section><h2>Caché de prompts</h2><div class="prose"><p>Recuerda lo que viste en el capítulo 2: el bucle reenvía toda la historia en cada turno. Las instrucciones, las definiciones de herramientas y los primeros mensajes viajan una y otra vez, idénticos. La <b>caché de prompts</b> (<i>prompt caching</i>) es la forma en que los proveedores evitan reprocesarlos: guardan el estado del modelo para el <b>principio</b> de un prompt, y si la siguiente solicitud empieza exactamente igual, lo reutilizan y lo cobran mucho más barato.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en una fotocopiadora que recuerda las últimas páginas que copió. Si traes el mismo expediente con dos hojas nuevas al final, solo copia las dos nuevas y te cobra una tarifa mínima por las demás. Pero si le cambias una coma a la primera página, todo el expediente cuenta como nuevo: la fotocopiadora compara desde el principio y se detiene en la primera diferencia.</p></div><div class="prose"><p>De esa comparación desde el principio salen las reglas para aprovecharla:</p><ul><li><b>Lo estable va primero.</b> El orden es: definiciones de herramientas, instrucciones de sistema, documentos fijos y, al final, la historia y el mensaje nuevo. Lo que cambia en cada turno, al final.</li><li><b>Nada variable al principio.</b> Poner la fecha y la hora en la primera línea de las instrucciones, o reordenar las herramientas en cada llamada, invalida la caché en todos los turnos.</li><li><b>La caché vence.</b> Dura unos minutos desde el último uso; algunos proveedores ofrecen una duración más larga, por ejemplo una hora, a un precio de escritura mayor. Un agente que espera a una persona durante diez minutos puede volver con la caché vencida.</li><li><b>Hay un mínimo.</b> Los prompts muy cortos no se guardan en caché; el mínimo depende del proveedor y del modelo, y suele rondar el millar de tokens.</li></ul><p>Los proveedores lo implementan distinto. En algunos la caché es automática; en otros, el que llama marca hasta dónde guardar con un <b>punto de corte</b> (<i>cache breakpoint</i>). En un proveedor, por ejemplo, leer de la caché cuesta una décima parte del precio normal de entrada y escribir en ella cuesta un 25 % más. Esos detalles los resuelve el adaptador; la regla de «lo estable primero» la cumple el motor de contexto, y la puerta mide cuánto se aprovechó en cada llamada.</p></div><figure class="fig fig-esquema" id="04-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 330" style="min-width:680px" role="img" aria-label="Dos versiones de la solicitud del turno 5: bien armada, con herramientas, instrucciones, documentos fijos e historia leídos de la caché y solo el mensaje nuevo escrito; con la fecha al principio, la primera diferencia está en la primera línea y todo se escribe de nuevo; abajo, el precio relativo de leer, escribir y la entrada normal">
+  
+  <text x="20" y="28" class="t t-xs t-b k-enl">TURNO 5, BIEN ARMADO</text>
+  <g class="t t-s">
+    <rect x="20" y="40" width="150" height="44" rx="6" class="c-enl"/><text x="95" y="67" text-anchor="middle" class="t-b">herramientas</text>
+    <rect x="172" y="40" width="150" height="44" rx="6" class="c-enl"/><text x="247" y="67" text-anchor="middle" class="t-b">instrucciones</text>
+    <rect x="324" y="40" width="130" height="44" rx="6" class="c-enl"/><text x="389" y="67" text-anchor="middle" class="t-b">documentos fijos</text>
+    <rect x="456" y="40" width="250" height="44" rx="6" class="c-enl"/><text x="581" y="67" text-anchor="middle" class="t-b">historia de los turnos 1 a 4</text>
+    <rect x="708" y="40" width="132" height="44" rx="6" class="c-fis"/><text x="774" y="67" text-anchor="middle" class="t-b">mensaje nuevo</text>
+  </g>
+  <line x1="707" y1="30" x2="707" y2="96" class="ln" style="stroke-width:3;stroke:var(--ink)"/>
+  <g class="t t-s t-m">
+    <path d="M20 96 v6 h434 v-6" class="ln"/><text x="237" y="118" text-anchor="middle">estable: igual en todos los turnos</text>
+    <path d="M456 96 v6 h250 v-6" class="ln"/><text x="581" y="118" text-anchor="middle">crece turno a turno</text>
+    <text x="774" y="118" text-anchor="middle">cambia siempre</text>
+  </g>
+  <text x="700" y="136" class="t t-s t-b" text-anchor="end">hasta aquí coincide con el turno 4: se lee de la caché</text>
+
+  
+  <text x="20" y="178" class="t t-xs t-b k-sis">TURNO 5, CON LA FECHA Y LA HORA AL PRINCIPIO</text>
+  <g class="t t-s">
+    <rect x="20" y="190" width="90" height="44" rx="6" class="d-sis"/><text x="65" y="210" text-anchor="middle" class="t-b">fecha</text><text x="65" y="226" text-anchor="middle">y hora</text>
+    <rect x="112" y="190" width="160" height="44" rx="6" class="c-fis"/><text x="192" y="217" text-anchor="middle" class="t-b">herramientas</text>
+    <rect x="274" y="190" width="150" height="44" rx="6" class="c-fis"/><text x="349" y="217" text-anchor="middle" class="t-b">instrucciones</text>
+    <rect x="426" y="190" width="120" height="44" rx="6" class="c-fis"/><text x="486" y="217" text-anchor="middle" class="t-b">documentos</text>
+    <rect x="548" y="190" width="158" height="44" rx="6" class="c-fis"/><text x="627" y="217" text-anchor="middle" class="t-b">historia 1 a 4</text>
+    <rect x="708" y="190" width="132" height="44" rx="6" class="c-fis"/><text x="774" y="217" text-anchor="middle" class="t-b">mensaje nuevo</text>
+  </g>
+  <line x1="19" y1="180" x2="19" y2="246" class="ln" style="stroke-width:3;stroke:var(--ink)"/>
+  <text x="20" y="262" class="t t-s t-b">la primera diferencia está en la primera línea: nada coincide y todo se escribe de nuevo</text>
+
+  
+  <g class="t t-s">
+    <rect x="20" y="290" width="16" height="16" rx="3" class="c-enl"/><text x="42" y="303">leído de la caché: ≈ 0,1 × la entrada</text>
+    <rect x="290" y="290" width="16" height="16" rx="3" class="c-fis"/><text x="312" y="303">escrito en la caché: ≈ 1,25 × la entrada</text>
+    <text x="840" y="303" text-anchor="end" class="t-m">precios relativos de un proveedor de ejemplo</text>
+  </g>
+</svg></div><figcaption><b>Cómo se arma un prompt para que la caché funcione.</b> Arriba, la solicitud del turno 5 de izquierda a derecha: primero lo estable (herramientas, instrucciones, documentos fijos), después la historia que crece y al final el mensaje nuevo. La línea vertical gruesa marca hasta dónde coincide con la solicitud del turno anterior: todo lo verde se lee de la caché y solo lo naranja se escribe. Abajo, el mismo turno con la fecha y la hora al principio: la primera diferencia está en la primera línea y todo se procesa, y se cobra, de nuevo. Al pie, el precio relativo de cada parte en un proveedor de ejemplo.</figcaption></figure><div class="prose"><p>Mira cuánto cambia el costo de una ejecución larga con y sin caché, y qué la rompe.</p></div><div class="lab" id="04-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El medidor de costo con y sin caché de prompts</h3></div><p class="hint">Mueve el tamaño de lo estable, lo que crece por turno y el número de turnos, y compara las dos curvas de costo. Después alarga los minutos entre turnos más allá de la duración de la caché, y por último pon la fecha al principio de las instrucciones. Mira cuándo la caché sale más cara que no usarla.</p><style>
+[id="04-lab-1"] .c4l1-lienzo{overflow-x:auto;border-radius:8px}
+[id="04-lab-1"] .c4l1-svg{min-width:540px}
+[id="04-lab-1"] .c4l1-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="04-lab-1"] .c4l1-svg text{font:500 11px var(--f-display);fill:var(--muted)}
+[id="04-lab-1"] .c4l1-svg text.b{font-weight:700;fill:var(--ink)}
+[id="04-lab-1"] .c4l1-chk{display:flex;flex-wrap:wrap;gap:8px 20px;font:600 .86rem var(--f-display);align-items:center}
+[id="04-lab-1"] .c4l1-chk label{display:flex;align-items:center;gap:6px}
+</style>
+<div class="ctls">
+  <label class="ctl">Lo estable: herramientas e instrucciones <output id="c4l1-ve"></output><input type="range" id="c4l1-e" min="2000" max="40000" step="1000" value="12000"></label>
+  <label class="ctl">Lo que crece la historia en cada turno <output id="c4l1-vh"></output><input type="range" id="c4l1-h" min="300" max="5000" step="100" value="1500"></label>
+  <label class="ctl">Turnos <output id="c4l1-vn"></output><input type="range" id="c4l1-n" min="1" max="40" step="1" value="20"></label>
+  <label class="ctl">Minutos entre turnos <output id="c4l1-vm"></output><input type="range" id="c4l1-m" min="0" max="15" step="1" value="1"></label>
+</div>
+<div class="c4l1-chk">
+  <label>La caché dura
+    <select id="c4l1-ttl"><option value="5">5 minutos</option><option value="60">1 hora (escritura más cara)</option></select></label>
+  <label><input type="checkbox" id="c4l1-fecha"> Fecha y hora al principio de las instrucciones</label>
+</div>
+<div class="c4l1-lienzo"><svg class="c4l1-svg" id="c4l1-svg" viewBox="0 0 620 240" role="img" aria-label="Costo acumulado por turno: una curva sin caché y otra con caché de prompts"></svg></div>
+<div class="legend"><span><i style="background:var(--warm)"></i>sin caché</span><span><i style="background:var(--accent)"></i>con caché</span></div>
+<div class="readout texto" id="c4l1-out" aria-live="polite"></div></div></section>
+<section><h2>Reintentos, límites de tasa y respaldo a otro modelo</h2><div class="prose"><p>Los proveedores fallan, y no de una sola forma. La puerta tiene que distinguir qué errores vale la pena reintentar y cuáles no, porque reintentar un error que no se va a arreglar solo es gastar tiempo.</p><div class="tbl"><table><thead><tr><th>Error</th><th>Ejemplo</th><th>¿Reintentar?</th></tr></thead><tbody><tr><td>Límite de tasa (<i>rate limit</i>)</td><td>HTTP 429: pasaste las solicitudes o los tokens por minuto permitidos</td><td>Sí, después de esperar lo que diga el encabezado <code>Retry-After</code></td></tr><tr><td>Proveedor sobrecargado o caído</td><td>HTTP 500, 503, o 529 en algunos proveedores</td><td>Sí, con espera creciente; si persiste, respaldo</td></tr><tr><td>Tiempo agotado o conexión cortada</td><td>La respuesta no llegó a tiempo</td><td>Sí, con cuidado si ya llegaba por transmisión</td></tr><tr><td>Solicitud inválida</td><td>HTTP 400: un campo mal formado, el prompt no cabe en la ventana</td><td>No: hay que corregir la solicitud</td></tr><tr><td>Autenticación o permiso</td><td>HTTP 401 o 403: la clave es inválida o no tiene acceso</td><td>No: hay que avisar a operación</td></tr></tbody></table></div><p>Los <b>límites de tasa</b> (<i>rate limits</i>) los pone cada proveedor por cuenta y por modelo: cuántas solicitudes por minuto y cuántos tokens por minuto. La puerta puede adelantarse llevando su propia cuenta, y repartir el cupo entre agentes para que uno no deje sin servicio a los demás.</p><p>Para reintentar se usa una <b>espera exponencial</b> (<i>exponential backoff</i>): esperar 1 segundo, después 2, después 4, hasta un máximo de intentos. Y se le agrega <b>variación aleatoria</b> (<i>jitter</i>): en vez de esperar exactamente 4 segundos, esperar un tiempo al azar entre 0 y 4.</p></div><div class="analogia"><b>Imagínalo así</b><p>Si llamas a una línea ocupada, no marcas cada segundo: esperas cada vez un poco más. Pero si toda la oficina recibió el tono de ocupado a la misma hora y todos esperan exactamente un minuto, a la misma hora vuelven a chocar. Que cada uno espere un tiempo distinto es lo que deshace el atasco.</p></div><div class="lab" id="04-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Treinta clientes reintentan a la vez: con y sin variación aleatoria</h3></div><p class="hint">Treinta agentes reciben un 429 al mismo tiempo. Elige cómo reintentan y mira las barras: cuántas solicitudes llegan en cada momento frente a la capacidad del proveedor. Compara cuánto tardan todos en ser atendidos y cuántos intentos se gastaron.</p><style>
+[id="04-lab-2"] .c4l2-lienzo{overflow-x:auto;border-radius:8px}
+[id="04-lab-2"] .c4l2-svg{min-width:540px}
+[id="04-lab-2"] .opciones{grid-template-columns:minmax(0,1fr)}
+[id="04-lab-2"] .c4l2-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="04-lab-2"] .c4l2-svg text{font:500 11px var(--f-display);fill:var(--muted)}
+[id="04-lab-2"] .c4l2-svg text.b{font-weight:700;fill:var(--ink)}
+</style>
+<div class="opciones">
+  <label>Cómo reintentan los clientes
+    <select id="c4l2-pol">
+      <option value="ya">De inmediato, sin esperar</option>
+      <option value="exp">Espera exponencial, sin variación</option>
+      <option value="jit" selected>Espera exponencial con variación aleatoria (jitter)</option>
+    </select></label>
+</div>
+<div class="ctls">
+  <label class="ctl">Clientes que fallan a la vez <output id="c4l2-vc"></output><input type="range" id="c4l2-c" min="10" max="60" step="1" value="30"></label>
+  <label class="ctl">Capacidad del proveedor (por medio segundo) <output id="c4l2-vk"></output><input type="range" id="c4l2-k" min="2" max="15" step="1" value="5"></label>
+</div>
+<div class="btns"><button type="button" id="c4l2-otra">Otra vez, con otro azar</button></div>
+<div class="c4l2-lienzo"><svg class="c4l2-svg" id="c4l2-svg" viewBox="0 0 620 230" role="img" aria-label="Barras de solicitudes por cada medio segundo frente a la línea de capacidad del proveedor; la parte atendida en verde y la rechazada en rojo"></svg></div>
+<div class="legend"><span><i style="background:var(--good)"></i>atendidas</span><span><i style="background:var(--warm)"></i>rechazadas con 429</span><span><i style="background:var(--ink)"></i>capacidad</span></div>
+<div class="readout texto" id="c4l2-out" aria-live="polite"></div></div><div class="prose"><p>Cuando los reintentos se agotan, la puerta puede pasar al <b>respaldo</b> (<i>fallback</i>): otro modelo, del mismo proveedor o de otro, que está en la configuración como alternativa. Para no insistir con un proveedor caído en cada llamada, la puerta usa un <b>cortacircuitos</b> (<i>circuit breaker</i>): después de varias fallas seguidas, deja de intentar con ese proveedor durante un rato y va directo al respaldo; pasado ese rato, prueba de nuevo con una sola llamada.</p><p>El respaldo no es gratis, y el arnés tiene que saberlo:</p><ul><li><b>Otro modelo se comporta distinto.</b> Puede usar las herramientas de otra manera o seguir peor las instrucciones. El respaldo tiene que estar evaluado con las mismas tareas, no solo configurado (el capítulo 15 trata la evaluación).</li><li><b>La caché se pierde.</b> La caché es de cada proveedor: la primera llamada al respaldo paga todo el prompt.</li><li><b>Puede costar más</b> o tener otra ventana de contexto. Si la conversación no cabe en el respaldo, el respaldo no sirve.</li><li><b>Los datos pueden no poder ir ahí.</b> Si una regla dice que ciertos datos no salen de una región o de un proveedor aprobado, el respaldo tiene que cumplirla también.</li></ul><p>Y una advertencia que conecta con las herramientas: reintentar una llamada <b>al modelo</b> es seguro, porque no tiene efectos en el mundo. Reintentar una <b>herramienta</b> que escribe no lo es. Eso lo resuelve la guardia de idempotencia del capítulo 10.</p></div><figure class="fig fig-flujo" id="04-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 570" style="min-width:680px" role="img" aria-label="Diagrama de secuencia de una llamada con reintentos y respaldo: el bucle manda la solicitud a la puerta; la puerta llama al proveedor A, que responde 429; espera 2 segundos y reintenta; recibe 529, espera unos 4 segundos y reintenta; recibe 503 y abre el cortacircuitos; pasa al proveedor B con su adaptador; B responde y la puerta devuelve al bucle la respuesta traducida con uso, costo, modelo e intentos">
+  <defs>
+    <marker id="d43-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d43-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d43-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d43-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+  </defs>
+  <rect x="20" y="14" width="110" height="46" rx="10" class="c-red"/><text x="75" y="42" class="t t-b k-red" text-anchor="middle">Bucle</text>
+  <rect x="235" y="14" width="130" height="46" rx="10" class="d-sis"/><text x="300" y="42" class="t t-b k-sis" text-anchor="middle">Puerta</text>
+  <rect x="460" y="14" width="120" height="46" rx="10" class="c-tra"/><text x="520" y="42" class="t t-b k-tra" text-anchor="middle">Proveedor A</text>
+  <rect x="640" y="14" width="120" height="46" rx="10" class="c-enl"/><text x="700" y="42" class="t t-b k-enl" text-anchor="middle">Proveedor B</text>
+  <g class="vida"><line x1="75" y1="60" x2="75" y2="556"/><line x1="300" y1="60" x2="300" y2="556"/><line x1="520" y1="60" x2="520" y2="556"/><line x1="700" y1="60" x2="700" y2="556"/></g>
+
+  <g class="t t-s">
+    <line x1="75" y1="100" x2="298" y2="100" class="ln" style="stroke-width:2" marker-end="url(#d43-m)"/><text x="82" y="92">① Solicitud (agente: finanzas)</text>
+    <line x1="300" y1="140" x2="518" y2="140" class="ln s-tra" style="stroke-width:2" marker-end="url(#d43-t)"/><text x="308" y="132">② adaptador A: formato de A</text>
+    <line x1="520" y1="175" x2="302" y2="175" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d43-s)"/><text x="330" y="168" class="k-sis">③ <tspan class="t-mono">429 · retry-after: 2</tspan></text>
+    <rect x="308" y="188" width="150" height="26" rx="6" class="d-sis"/><text x="318" y="205">④ espera 2 s</text>
+    <line x1="300" y1="240" x2="518" y2="240" class="ln s-tra" style="stroke-width:2" marker-end="url(#d43-t)"/><text x="308" y="232">⑤ reintento</text>
+    <line x1="520" y1="275" x2="302" y2="275" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d43-s)"/><text x="330" y="268" class="k-sis">⑥ <tspan class="t-mono">529 · sobrecargado</tspan></text>
+    <rect x="308" y="288" width="150" height="26" rx="6" class="d-sis"/><text x="318" y="305">⑦ espera ≈ 4 s, al azar</text>
+    <line x1="300" y1="340" x2="518" y2="340" class="ln s-tra" style="stroke-width:2" marker-end="url(#d43-t)"/><text x="308" y="332">⑧ reintento</text>
+    <line x1="520" y1="375" x2="302" y2="375" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d43-s)"/><text x="330" y="368" class="k-sis">⑨ <tspan class="t-mono">503</tspan></text>
+    <rect x="308" y="388" width="200" height="40" rx="6" class="d-sis"/><text x="318" y="404" class="t-b">⑩ cortacircuitos abierto:</text><text x="318" y="420">pasa al respaldo</text>
+    <line x1="300" y1="455" x2="698" y2="455" class="ln s-enl" style="stroke-width:2" marker-end="url(#d43-e)"/><text x="520" y="447">⑪ adaptador B: formato de B</text>
+    <line x1="700" y1="490" x2="302" y2="490" class="ln s-enl" style="stroke-width:2" marker-end="url(#d43-e)"/><text x="520" y="482">⑫ respuesta de B</text>
+    <line x1="300" y1="530" x2="77" y2="530" class="ln" style="stroke-width:2" marker-end="url(#d43-m)"/><text x="82" y="505">⑬ Respuesta traducida: bloques,</text><text x="82" y="520" class="t-m">uso, costo, modelo B, 4 intentos</text>
+  </g>
+
+  <g class="t t-xs t-b">
+    <path d="M775 90v95" class="ln s-tra" style="stroke-width:3"/><text x="783" y="130" class="k-tra">PRIMER</text><text x="783" y="144" class="k-tra">INTENTO</text>
+    <path d="M775 195v190" class="ln" style="stroke-width:3;stroke:var(--d-sis)"/><text x="783" y="280" class="k-sis">REINTENTOS</text><text x="783" y="294" class="t-m">≈ 6 s de</text><text x="783" y="308" class="t-m">espera</text>
+    <path d="M775 395v140" class="ln s-enl" style="stroke-width:3"/><text x="783" y="460" class="k-enl">RESPALDO</text><text x="783" y="474" class="t-m">sin caché,</text><text x="783" y="488" class="t-m">otro precio</text>
+  </g>
+</svg></div><figcaption><b>Una llamada que reintenta y pasa al respaldo.</b> Cuatro participantes arriba y el tiempo hacia abajo. La puerta traduce la solicitud y llama al proveedor A, que responde 429; espera lo que pide y reintenta; recibe un 529 y espera más; al tercer error abre el cortacircuitos y pasa al proveedor B, con su propio adaptador. La respuesta vuelve al bucle traducida, con el uso, el costo y la marca de que la sirvió el respaldo. A la derecha, el tiempo que se fue en cada fase.</figcaption></figure><div class="lab" id="04-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Apaga un proveedor en plena tarea y mira cómo la puerta pasa al respaldo</h3></div><p class="hint">Pulsa «Reproducir» y, mientras corre la tarea de 12 llamadas, cambia el estado del proveedor principal: lento, con límite de tasa o caído. Mira los intentos de cada llamada, cuándo se abre el cortacircuitos y qué llamadas sirve el respaldo. Prueba sin respaldo y con cero reintentos.</p><style>
+[id="04-lab-3"] .c4l3-chk{display:flex;flex-wrap:wrap;gap:8px 20px;font:600 .86rem var(--f-display)}
+[id="04-lab-3"] .c4l3-chk label{display:flex;align-items:center;gap:6px}
+[id="04-lab-3"] .c4l3-circ{font:700 .8rem var(--f-display);padding:6px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper)}
+[id="04-lab-3"] .c4l3-circ.abierto{border-color:var(--warm);color:var(--warm);background:var(--warm-soft)}
+[id="04-lab-3"] .c4l3-circ.semi{border-color:var(--c-fis);color:var(--c-fis);background:var(--c-fis-s)}
+[id="04-lab-3"] .c4l3-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,128px),1fr));gap:6px}
+[id="04-lab-3"] .c4l3-c{border:1.5px dashed var(--line);border-radius:8px;padding:6px 8px;min-height:74px;display:grid;gap:3px;align-content:start;font:500 .76rem/1.35 var(--f-display);color:var(--muted)}
+[id="04-lab-3"] .c4l3-c b{color:var(--ink);font-size:.8rem}
+[id="04-lab-3"] .c4l3-c.A{border-style:solid;border-color:var(--c-tra);background:var(--c-tra-s)}
+[id="04-lab-3"] .c4l3-c.B{border-style:solid;border-color:var(--c-enl);background:var(--c-enl-s)}
+[id="04-lab-3"] .c4l3-c.X{border-style:solid;border-color:var(--warm);background:var(--warm-soft)}
+[id="04-lab-3"] .c4l3-c.ahora{box-shadow:0 0 0 3px var(--accent)}
+[id="04-lab-3"] .c4l3-int{font-family:var(--f-mono);letter-spacing:.08em}
+</style>
+<div class="opciones">
+  <label>Proveedor A (principal)
+    <select id="c4l3-a"><option value="ok">funciona</option><option value="lento">lento</option><option value="429">límite de tasa (429)</option><option value="caido">caído (503)</option></select></label>
+  <label>Proveedor B (respaldo)
+    <select id="c4l3-b"><option value="ok">funciona</option><option value="caido">caído (503)</option></select></label>
+</div>
+<div class="ctls">
+  <label class="ctl">Reintentos por llamada <output id="c4l3-vr"></output><input type="range" id="c4l3-r" min="0" max="4" step="1" value="2"></label>
+  <label class="ctl">Espera base <output id="c4l3-ve"></output><input type="range" id="c4l3-e" min="0.5" max="4" step="0.5" value="1"></label>
+</div>
+<div class="c4l3-chk"><label><input type="checkbox" id="c4l3-resp" checked> Respaldo activado</label></div>
+<div class="btns">
+  <button type="button" id="c4l3-play" class="primary" aria-pressed="false">▶ Reproducir</button>
+  <button type="button" id="c4l3-paso">Una llamada ▶</button>
+  <button type="button" id="c4l3-reini">Reiniciar</button>
+</div>
+<div class="c4l3-circ" id="c4l3-circ" aria-live="polite"></div>
+<div class="c4l3-grid" id="c4l3-grid" aria-label="Las 12 llamadas al modelo de la tarea"></div>
+<div class="readout texto" id="c4l3-out" aria-live="polite"></div></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Encuentra las señales de los límites de tasa en una API real</h3></div><p>Vas a leer documentación pública, sin crear cuentas. Abre la <a href="https://docs.claude.com/en/api/rate-limits" target="_blank" rel="noopener">página de límites de tasa de Anthropic</a> y la de <a href="https://docs.claude.com/en/api/errors" target="_blank" rel="noopener">errores</a>.</p><ol class="steps"><li><span>En la de límites, anota qué se limita: ¿solicitudes, tokens de entrada, tokens de salida? ¿Por minuto?</span></li><li><span>Busca los encabezados de respuesta que informan cuánto cupo queda y cuándo se renueva. ¿Cuál dice cuántos segundos esperar?</span></li><li><span>En la de errores, busca qué código se usa cuando el servicio está sobrecargado y cuál para el límite de tasa.</span></li><li><span>Con eso, completa la tabla de esta sección: ¿qué errores reintentarías y cuáles no?</span></li></ol><p><b>Qué observar:</b> el proveedor le dice al cliente cuánto esperar. Una puerta bien hecha usa ese dato en vez de su propio reloj, y lleva la cuenta del cupo para no chocar con el límite. Los nombres de los encabezados y los códigos son de este proveedor; otros usan nombres distintos para la misma idea.</p></div></section>
+<section><h2>El modelo como dato de configuración y no como código</h2><div class="prose"><p>Si el nombre de un modelo aparece escrito en el código del bucle, cambiar de modelo es un cambio de código: hay que programar, revisar y desplegar. Los modelos cambian seguido: salen versiones nuevas, bajan los precios y los viejos se retiran con fecha. Por eso el arnés trata al modelo como <b>un dato de configuración</b>: un <b>catálogo de modelos</b> (<i>model catalog</i>) describe cada uno, y cada agente apunta a un nombre lógico.</p><div class="code-copia"><pre><code>modelos:
+  rapido:
+    proveedor: proveedor-a
+    id: modelo-a-chico-2026-05
+    ventana: 200000
+    salida_max: 16000
+    usd_por_millon: { entrada: 0.80, cache_lectura: 0.08, cache_escritura: 1.00, salida: 4.00 }
+    capacidades: [herramientas, cache, transmision]
+    retiro: 2027-03-31
+    respaldo: [rapido-b]
+  razonador:
+    proveedor: proveedor-b
+    id: modelo-b-grande-2026-09
+    # …
+agentes:
+  atencion: { modelo: rapido, max_usd_por_ejecucion: 0.20 }
+  finanzas: { modelo: razonador, max_usd_por_ejecucion: 1.50 }</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Con el catálogo, la puerta sabe todo lo que necesita sin tocar código: a qué proveedor llamar, cuánto cuesta cada token para calcular el <code>costoUSD</code>, si el modelo soporta herramientas, cuánto cabe en su ventana y cuál es su respaldo. Cambiar el modelo de un agente es cambiar una línea de configuración, revisada y con historia, que además se puede probar antes en el banco de evaluación del capítulo 15. Y la fecha de retiro permite que el arnés avise antes de que un modelo deje de existir.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Mira un catálogo de modelos real como dato</h3></div><p>Vas a descargar el catálogo público de precios y capacidades que mantiene el proyecto de código abierto LiteLLM: un archivo JSON de unos 5 MB con miles de modelos. Solo se lee; al final puedes borrarlo.</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><p class="cmd-nota">Windows (PowerShell)</p><div class="cmd-l"><code>curl.exe -s -o precios.json https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>Select-String -Path precios.json -Pattern '"gpt-4o-mini": \{' -Context 0,14</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>(Select-String -Path precios.json -Pattern '"cache_read_input_token_cost"').Count</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>(Select-String -Path precios.json -Pattern '"supports_parallel_function_calling": true').Count</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>curl -s -o precios.json https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>grep -A 14 '"gpt-4o-mini": {' precios.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>grep -c '"cache_read_input_token_cost"' precios.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>grep -c '"supports_parallel_function_calling": true' precios.json</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la entrada del modelo, ubica <code>input_cost_per_token</code>, <code>output_cost_per_token</code> y <code>cache_read_input_token_cost</code>. Están en dólares por token: multiplícalos por un millón para compararlos con los precios por millón de las páginas de los proveedores.</span></li><li><span>Calcula cuántas veces más barata es la lectura de caché que la entrada normal.</span></li><li><span>Busca <code>max_input_tokens</code> y <code>deprecation_date</code>: la ventana y la fecha de retiro, como en el catálogo del curso.</span></li><li><span>Mira los dos conteos: cuántos modelos tienen precio de lectura de caché y cuántos declaran llamadas a herramientas en paralelo.</span></li><li><span>Si quieres, busca otro modelo cambiando el nombre entre comillas.</span></li></ol><p><b>Qué observar:</b> un catálogo de modelos es un archivo de datos, no código, y una puerta lo usa para calcular costos y decidir qué puede pedirle a cada modelo. Los nombres y los precios cambian seguido, y el modelo del ejemplo puede tener ya una fecha de retiro: si no aparece, prueba con otro nombre del archivo.</p></div></section>
+<section><h2>Elegir y enrutar modelos es una decisión de producto</h2><div class="prose"><p>La puerta sabe <b>cómo</b> llamar a cualquier modelo del catálogo. <b>Cuál</b> conviene para cada tarea (uno grande para razonar, uno chico y barato para clasificar, uno local para datos que no pueden salir) es una decisión de producto, con su propia evaluación de calidad, costo y latencia. Se trata en el curso Aplicaciones con IA: https://aaramirez.github.io/aplicaciones-con-ia/temario.html. Lo que le toca al arnés es que esa decisión se tome en la configuración y que la puerta la cumpla.</p><p>Con la puerta, el arnés ya habla con cualquier modelo sin saber cuál es, sabe cuánto gasta en cada llamada y sigue trabajando cuando un proveedor falla.</p><p><b>Un solo punto de entrada a los modelos.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Por qué el bucle no debería llamar al SDK de un proveedor directamente?</summary><p>Porque quedaría atado a sus formatos, sus motivos de parada y sus errores: no podría cambiar de modelo, usar un respaldo ni medir el costo de forma pareja. Con la puerta, el modelo es reemplazable.</p></details><details><summary>¿Qué hace un adaptador?</summary><p>Traduce la solicitud del arnés al formato de un proveedor y la respuesta del proveedor al formato del arnés: roles, bloques, argumentos, motivos de parada y uso.</p></details><details><summary>¿De dónde salen los tokens con que se calcula el costo de una llamada?</summary><p>Del campo de uso de la respuesta del proveedor. El arnés puede estimar antes de llamar, pero registra la cuenta del proveedor, porque cada modelo cuenta los tokens a su manera.</p></details><details><summary>¿Por qué poner la fecha y la hora al principio de las instrucciones arruina la caché de prompts?</summary><p>Porque la caché compara el prompt desde el principio y se detiene en la primera diferencia: si la primera línea cambia en cada turno, nada coincide y todo se cobra de nuevo, a veces con el recargo de escritura.</p></details><details><summary>¿Qué errores de un proveedor vale la pena reintentar?</summary><p>Los transitorios: límite de tasa (429), sobrecarga o caída (500, 503, 529) y tiempos agotados. No los de solicitud inválida (400) ni los de autenticación (401, 403).</p></details><details><summary>¿Para qué sirve la variación aleatoria (<i>jitter</i>) en la espera entre reintentos?</summary><p>Para que muchos clientes que fallaron a la vez no reintenten todos en el mismo instante y vuelvan a chocar con el límite.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es un tokenizador por pares de bytes (<i>BPE</i>) y por qué el mismo texto da distinta cantidad de tokens en dos modelos?<small>Pista: busca «byte pair encoding tokenizer».</small></li><li>¿Qué es el algoritmo del cubo de fichas (<i>token bucket</i>) y cómo lo usan los servicios para sus límites de tasa?</li><li>¿Cómo funcionan las API por lotes (<i>batch</i>) de los proveedores de modelos y por qué cuestan menos que las llamadas normales?</li><li>¿Qué es la latencia hasta el primer token (<i>TTFT</i>, <i>time to first token</i>) y por qué se mide aparte del tiempo total de una respuesta?</li><li>¿Qué es la residencia de datos (<i>data residency</i>) y qué obligaciones crea para una empresa que usa modelos en la nube?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://docs.claude.com/en/docs/build-with-claude/prompt-caching" target="_blank" rel="noopener">Prompt caching <small>documentación, en inglés</small></a><a class="vid" href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" target="_blank" rel="noopener">Timeouts, retries and backoff with jitter <small>lectura, en inglés</small></a><a class="vid" href="https://docs.litellm.ai/docs/proxy/reliability" target="_blank" rel="noopener">LiteLLM: reliability, retries and fallbacks <small>documentación, en inglés</small></a><a class="vid" href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener">OpenTelemetry: semantic conventions for generative AI <small>especificación, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const PE=3/1e6,PS=15/1e6,SAL=400;
+  const miles=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const usd=x=>'$ '+x.toFixed(x<1?3:2).replace('.',',');
+  function pintar(){
+    const E=+$('#c4l1-e').value,H=+$('#c4l1-h').value,N=+$('#c4l1-n').value,M=+$('#c4l1-m').value,ttl=+$('#c4l1-ttl').value,fecha=$('#c4l1-fecha').checked;
+    $('#c4l1-ve').textContent=miles(E)+' tk';$('#c4l1-vh').textContent=miles(H)+' tk';$('#c4l1-vn').textContent=N;$('#c4l1-vm').textContent=M+' min';
+    const PW=PE*(ttl===60?2:1.25),PR=PE*0.1;
+    let sin=0,con=0,leidos=0,total=0,prev=0;const cs=[],cc=[];
+    for(let k=1;k<=N;k++){
+      const I=E+H*k;total+=I;
+      sin+=I*PE+SAL*PS;
+      const viva=k>1&&M<=ttl&&!fecha;
+      const r=viva?prev:0,w=I-r;leidos+=r;
+      con+=r*PR+w*PW+SAL*PS;
+      prev=I;cs.push(sin);cc.push(con);
+    }
+    const X0=52,Y0=200,W=550,Hh=170,mx=Math.max(sin,con)*1.05;
+    const X=k=>X0+(N===1?W/2:(k-1)/(N-1)*W),Y=v=>Y0-v/mx*Hh;
+    let s=`<text x="${X0}" y="16" class="b">Costo acumulado de la ejecución (USD)</text>`;
+    for(let i=0;i<=4;i++){const v=mx*i/4,y=Y(v);s+=`<line x1="${X0}" y1="${y}" x2="${X0+W}" y2="${y}" style="stroke:var(--grid)"/><text x="${X0-5}" y="${y+4}" text-anchor="end">${v.toFixed(v<1?2:1).replace('.',',')}</text>`;}
+    const linea=(arr,c)=>`<polyline points="${arr.map((v,i)=>X(i+1)+','+Y(v)).join(' ')}" style="fill:none;stroke:var(${c});stroke-width:2.5"/>`+arr.map((v,i)=>N<=20?`<circle cx="${X(i+1)}" cy="${Y(v)}" r="2.8" style="fill:var(${c})"/>`:'').join('');
+    s+=linea(cs,'--warm')+linea(cc,'--accent');
+    const paso=N>20?5:(N>10?2:1);
+    for(let k=1;k<=N;k++)if(k===1||k%paso===0)s+=`<text x="${X(k)}" y="${Y0+16}" text-anchor="middle">${k}</text>`;
+    s+=`<text x="${X0+W}" y="${Y0+32}" text-anchor="end">turno</text>`;
+    $('#c4l1-svg').innerHTML=s;
+    const ah=(sin-con)/sin*100;
+    let txt=`<span class="big">Sin caché ${usd(sin)} · con caché ${usd(con)}</span>`;
+    if(ah>0.5)txt+=`<span class="ok">La caché ahorra ${ah.toFixed(0)} %: se leyó de caché el ${(leidos/total*100).toFixed(0)} % de los ${miles(total)} tokens de entrada.</span>`;
+    else txt+=`<span class="warn">La caché sale ${(-ah).toFixed(0)} % más cara que no usarla: se escribe todo en cada turno y casi nada se lee.</span>`;
+    if(fecha)txt+='<span>Con la fecha al principio, cada solicitud difiere desde la primera línea: la caché nunca coincide y cada turno paga el recargo de escritura.</span>';
+    else if(M>ttl)txt+=`<span>Entre turno y turno pasan ${M} minutos y la caché dura ${ttl}: vence antes de cada turno. Prueba la duración de 1 hora.</span>`;
+    else if(N===1)txt+='<span>Con un solo turno no hay nada que reutilizar: la caché solo cobra la escritura.</span>';
+    txt+=`<span>Precios de ejemplo por millón de tokens: entrada 3, lectura de caché 0,30, escritura ${ttl===60?'6':'3,75'}, salida 15. ${SAL} tokens de salida por turno.</span>`;
+    $('#c4l1-out').innerHTML=txt;
+  }
+  ['e','h','n','m'].forEach(k=>$('#c4l1-'+k).addEventListener('input',pintar));
+  ['ttl','fecha'].forEach(k=>$('#c4l1-'+k).addEventListener('change',pintar));
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  let semilla=7;
+  function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  const SL=0.5,NS=40,MAXI=8;
+  function simular(C,K,pol){
+    const r=rng(semilla);const cola=Array.from({length:NS+200},()=>[]);
+    for(let i=0;i<C;i++)cola[0].push({i,int:0});
+    const at=[],re=[];let intentos=0,servidos=0,abandon=0,fin=null;
+    for(let s=0;s<cola.length;s++){
+      const llegan=cola[s];if(!llegan.length){if(s<NS){at.push(0);re.push(0);}continue;}
+      for(let j=llegan.length-1;j>0;j--){const q=Math.floor(r()*(j+1));[llegan[j],llegan[q]]=[llegan[q],llegan[j]];}
+      intentos+=llegan.length;
+      const ok=llegan.slice(0,K),no=llegan.slice(K);servidos+=ok.length;
+      if(s<NS){at.push(ok.length);re.push(no.length);}
+      if(servidos===C&&fin===null)fin=(s+1)*SL;
+      no.forEach(c=>{c.int++;if(c.int>=MAXI){abandon++;return;}
+        let esp;const tope=SL*Math.pow(2,c.int-1);
+        if(pol==='ya')esp=SL;else if(pol==='exp')esp=tope;else esp=r()*tope;
+        const d=Math.max(1,Math.round(esp/SL));cola[s+d].push(c);});
+    }
+    return {at,re,intentos,servidos,abandon,fin};
+  }
+  function pintar(){
+    const C=+$('#c4l2-c').value,K=+$('#c4l2-k').value,pol=$('#c4l2-pol').value;
+    $('#c4l2-vc').textContent=C;$('#c4l2-vk').textContent=K;
+    const R=simular(C,K,pol);
+    const X0=40,Y0=190,BW=13.6,mx=Math.max(C,10),Hh=160,Y=v=>Y0-v/mx*Hh;
+    let s=`<text x="${X0}" y="16" class="b">Solicitudes que llegan en cada medio segundo</text>`;
+    [0,Math.round(mx/2),mx].forEach(v=>{s+=`<line x1="${X0}" y1="${Y(v)}" x2="${X0+NS*BW}" y2="${Y(v)}" style="stroke:var(--grid)"/><text x="${X0-5}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;});
+    for(let i=0;i<NS;i++){const x=X0+i*BW+1,a=R.at[i]||0,b=R.re[i]||0;
+      if(a)s+=`<rect x="${x}" y="${Y(a)}" width="${BW-2}" height="${Y0-Y(a)}" style="fill:var(--good)"/>`;
+      if(b)s+=`<rect x="${x}" y="${Y(a+b)}" width="${BW-2}" height="${Y(a)-Y(a+b)}" style="fill:var(--warm)"/>`;}
+    s+=`<line x1="${X0}" y1="${Y(K)}" x2="${X0+NS*BW}" y2="${Y(K)}" style="stroke:var(--ink);stroke-width:2;stroke-dasharray:6 4"/>`;
+    for(let t=0;t<=20;t+=4)s+=`<text x="${X0+t/SL*BW}" y="${Y0+16}" text-anchor="middle">${t} s</text>`;
+    $('#c4l2-svg').innerHTML=s;
+    const f=v=>v.toFixed(1).replace('.',',');
+    const ideal=Math.ceil(C/K)*SL;
+    let t=`<span class="big">${R.fin!==null?'Todos atendidos a los '+f(R.fin)+' s':'Quedaron '+(C-R.servidos)+' sin atender'}</span>`;
+    t+=`<span>${R.intentos} intentos para ${C} clientes (${f(R.intentos/C)} por cliente). Lo mínimo posible, con la capacidad repartida perfecta, era ${f(ideal)} s.</span>`;
+    if(R.abandon)t+=`<span class="warn">${R.abandon} clientes agotaron sus ${MAXI} intentos y se rindieron.</span>`;
+    const exp={ya:'Sin esperar, todos los rechazados vuelven juntos al medio segundo siguiente: el proveedor ve siempre la misma ola, y cada intento perdido cuenta contra el límite.',
+      exp:'Con espera exponencial pero igual para todos, los rechazados vuelven en olas sincronizadas: picos rojos separados por silencios en los que el proveedor está ocioso.',
+      jit:'Con variación aleatoria, cada cliente vuelve en un momento distinto: las olas se deshacen, el proveedor trabaja cerca de su capacidad y se pierden menos intentos.'}[pol];
+    t+=`<span>${exp}</span>`;
+    $('#c4l2-out').innerHTML=t;
+  }
+  ['c','k'].forEach(k=>$('#c4l2-'+k).addEventListener('input',pintar));
+  $('#c4l2-pol').addEventListener('change',pintar);
+  $('#c4l2-otra').addEventListener('click',()=>{semilla++;pintar();});
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const NC=12;
+  const f=v=>v.toFixed(1).replace('.',',');
+  let st,timer=null;
+  function nuevo(){st={k:0,celdas:[],fa:0,abierto:0,semi:false,ultimo:null,cacheA:false,cacheB:false,t:0,costo:0,reint:0,fallo:false,nA:0,nB:0};}
+  function intentoA(estado){
+    if(estado==='ok')return {ok:true,dur:2};
+    if(estado==='lento')return {ok:true,dur:7};
+    if(estado==='429')return {ok:false,dur:0.2,ra:2,cod:'429'};
+    return {ok:false,dur:0.3,cod:'503'};
+  }
+  function llamar(){
+    if(st.k>=NC||st.fallo)return false;
+    const eA=$('#c4l3-a').value,eB=$('#c4l3-b').value,R=+$('#c4l3-r').value,base=+$('#c4l3-e').value,resp=$('#c4l3-resp').checked;
+    const c={n:st.k+1,marcas:'',t:0,por:null,nota:''};
+    let servida=false;
+    const usarA=st.abierto===0;
+    if(usarA){
+      const max=st.semi?1:1+R;
+      for(let i=0;i<max;i++){
+        const a=intentoA(eA);c.t+=a.dur;
+        if(a.ok){c.marcas+='●';servida=true;c.por='A';st.fa=0;
+          if(st.semi){st.semi=false;c.nota='prueba superada: circuito cerrado';}
+          if(eA==='lento')c.nota=c.nota||'lenta, pero respondió';
+          st.costo+=st.cacheA?0.010:0.030;if(!st.cacheA)c.nota=c.nota||'sin caché todavía';st.cacheA=true;st.nA++;break;}
+        c.marcas+='✕';st.fa++;
+        if(st.semi){st.semi=false;st.abierto=4;c.nota='la prueba falló: se vuelve a abrir';break;}
+        if(st.fa>=3){st.abierto=4;c.nota='3 fallas seguidas: se abre el circuito';break;}
+        if(i<max-1){const esp=Math.max(base*Math.pow(2,i),a.ra||0);c.t+=esp;st.reint++;}
+      }
+    }else{c.marcas+='⏭';c.nota='circuito abierto: ni se intenta con A';st.abierto--;if(st.abierto===0)st.semi=true;}
+    if(!servida){
+      if(resp&&eB==='ok'){c.t+=2.4;servida=true;c.por='B';c.marcas+='●';
+        st.costo+=st.cacheB?0.016:0.048;if(!st.cacheB)c.nota+=(c.nota?'; ':'')+'B empieza sin caché';st.cacheB=true;st.nB++;}
+      else{c.por='X';st.fallo=true;c.nota=resp?'el respaldo también está caído':'sin respaldo: la llamada falla';}
+    }
+    if(st.abierto===0&&!st.semi&&usarA===false)st.semi=true;
+    st.t+=c.t;st.celdas.push(c);st.k++;
+    return true;
+  }
+  function pintar(){
+    $('#c4l3-vr').textContent=$('#c4l3-r').value;$('#c4l3-ve').textContent=f(+$('#c4l3-e').value)+' s';
+    let html='';
+    for(let i=0;i<NC;i++){const c=st.celdas[i];
+      if(c)html+=`<div class="c4l3-c ${c.por}${i===st.k-1?' ahora':''}"><b>Llamada ${c.n} · ${c.por==='X'?'falló':'sirvió '+c.por}</b><span class="c4l3-int">${c.marcas}</span><span>${f(c.t)} s</span>${c.nota?`<span>${c.nota}</span>`:''}</div>`;
+      else html+=`<div class="c4l3-c"><b>Llamada ${i+1}</b><span>pendiente</span></div>`;}
+    $('#c4l3-grid').innerHTML=html;
+    const ci=$('#c4l3-circ');
+    ci.className='c4l3-circ'+(st.abierto?' abierto':(st.semi?' semi':''));
+    ci.textContent=st.abierto?`Cortacircuitos de A: abierto (las próximas ${st.abierto} llamadas van directo al respaldo)`:(st.semi?'Cortacircuitos de A: semiabierto (la próxima llamada prueba A una sola vez)':`Cortacircuitos de A: cerrado (fallas seguidas: ${st.fa})`);
+    let t=`<span>● respuesta · ✕ intento fallido · ⏭ A ni se intenta</span>`;
+    t+=`<span class="big">${st.k} de ${NC} llamadas · ${f(st.t)} s · $ ${st.costo.toFixed(3).replace('.',',')}</span>`;
+    t+=`<span>Sirvió A: ${st.nA} · sirvió B: ${st.nB} · reintentos: ${st.reint}</span>`;
+    if(st.fallo)t+='<span class="warn">✖ La tarea se detiene: la puerta no consiguió respuesta y la ejecución termina como fallida.</span>';
+    else if(st.k===NC)t+=`<span class="ok">✔ Tarea completa.${st.nB?' El respaldo cuesta más por llamada y pagó su primera llamada sin caché.':''}</span>`;
+    else if(st.k===0)t+='<span>Pulsa «Reproducir» y cambia el estado de A mientras corre.</span>';
+    $('#c4l3-out').innerHTML=t;
+  }
+  function parar(){if(timer){clearInterval(timer);timer=null;}const b=$('#c4l3-play');b.setAttribute('aria-pressed','false');b.textContent='▶ Reproducir';}
+  $('#c4l3-play').addEventListener('click',()=>{
+    if(timer){parar();return;}
+    if(st.k>=NC||st.fallo){nuevo();}
+    const b=$('#c4l3-play');b.setAttribute('aria-pressed','true');b.textContent='⏸ Pausa';
+    llamar();pintar();
+    timer=setInterval(()=>{if(!llamar()){parar();}pintar();if(st.k>=NC||st.fallo)parar();},1100);
+  });
+  $('#c4l3-paso').addEventListener('click',()=>{parar();if(st.k>=NC||st.fallo)nuevo();llamar();pintar();});
+  $('#c4l3-reini').addEventListener('click',()=>{parar();nuevo();pintar();});
+  ['r','e'].forEach(k=>$('#c4l3-'+k).addEventListener('input',pintar));
+  nuevo();pintar();
+})();
+</script>
+</body>
+</html>

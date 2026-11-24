@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planificador y ejecutor · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="planificador-y-ejecutor">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 12 DE 16</span><h1>Planificador y ejecutor</h1><p class="lede">Un bucle que decide paso a paso sirve para tareas cortas. Cuando la tarea tiene diez pasos, dependencias y un correo al final, conviene separar dos trabajos: escribir el plan y seguirlo. Este capítulo convierte el plan en un dato que el arnés puede validar, ejecutar, revisar y corregir.</p></header>
+<section><h2>Percibir, decidir y actuar: el patrón base</h2><div class="prose"><p>El bucle del capítulo 2 ya es un patrón de agente. En cada turno, el modelo <b>percibe</b> (lee la historia y el último resultado), <b>decide</b> (elige una herramienta o responde) y el arnés <b>actúa</b> (ejecuta y devuelve la observación). A esa forma de trabajar se le suele llamar <b>ReAct</b> (<i>Reason + Act</i>, razonar y actuar), por el artículo que la popularizó: el modelo alterna un pensamiento corto con una acción, y la siguiente decisión depende de lo que acaba de observar.</p><p>Para pedidos de dos o tres pasos es la mejor opción: es simple, se adapta a cada sorpresa y no gasta nada en planificar. «Busca la factura de la cliente 4512 y dime si está pagada» se resuelve en dos turnos.</p><p>El problema aparece cuando la tarea crece. Pide «concilia los pagos de octubre con las facturas abiertas, marca las vencidas y envíale el informe de mora a finanzas» y mira lo que suele pasar con un bucle puramente reactivo:</p><ul><li><b>Miopía</b> (<i>myopia</i>): el modelo elige la acción que parece mejor ahora, sin mirar las que siguen. Lee facturas antes de saber qué pagos hay, y después tiene que volver a leerlas.</li><li><b>Deriva</b> (<i>drift</i>): después de quince turnos, la historia está llena de resultados intermedios y el objetivo original quedó lejos en el contexto. El agente termina puliendo una tabla que nadie pidió.</li><li><b>Trabajo repetido</b>: sin una lista de lo hecho, el modelo vuelve a consultar lo que ya consultó, o se salta un paso creyendo que ya lo hizo.</li><li><b>Nada que revisar antes</b>: la primera vez que alguien ve qué piensa hacer el agente es cuando ya lo hizo. Si el paso 6 era mandar un correo a un destinatario equivocado, nadie pudo verlo antes.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Una persona que arma un mueble sin leer el instructivo avanza rápido al principio: atornilla lo que tiene a mano. En el paso 9 descubre que la tabla del fondo debía ir antes de los laterales y tiene que desarmar la mitad. El instructivo no la hace más lenta; le dice el orden, qué piezas usa cada paso y cómo se ve el mueble cuando el paso está bien hecho.</p></div><div class="prose"><p>La respuesta es separar dos trabajos que el bucle reactivo mezcla: <b>planificar</b> (<i>planning</i>), decidir qué pasos hacen falta y en qué orden, y <b>ejecutar</b> (<i>execution</i>), hacer cada paso. Es el patrón <b>planificador y ejecutor</b> (<i>planner-executor</i>, también llamado <i>plan-and-execute</i>).</p></div><figure class="fig fig-comparacion" id="12-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 420" style="min-width:720px" role="img" aria-label="Comparación entre el bucle reactivo, que percibe, decide y actúa un paso a la vez, y el patrón planificador y ejecutor, donde el modelo escribe un plan, el arnés lo valida, el ejecutor lo sigue con un punto de control por paso y, si algo falla, vuelve al planificador. Abajo, cuándo conviene cada uno.">
+  <defs>
+    <marker id="d121-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d121-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+  </defs>
+  <text x="200" y="26" text-anchor="middle" class="t t-xs t-b t-m">BUCLE REACTIVO (PERCIBIR, DECIDIR, ACTUAR)</text>
+  <text x="630" y="26" text-anchor="middle" class="t t-xs t-b t-m">PLANIFICADOR Y EJECUTOR</text>
+  <line x1="410" y1="16" x2="410" y2="300" class="ln ln-d"/>
+  
+  <g class="t">
+    <rect x="140" y="48" width="120" height="44" rx="10" class="c-fis"/><text x="200" y="68" text-anchor="middle" class="t-b k-fis">Percibir</text><text x="200" y="84" text-anchor="middle" class="t-s">lee la historia</text>
+    <rect x="270" y="150" width="120" height="44" rx="10" class="c-tra"/><text x="330" y="170" text-anchor="middle" class="t-b k-tra">Decidir</text><text x="330" y="186" text-anchor="middle" class="t-s">el modelo elige</text>
+    <rect x="10" y="150" width="120" height="44" rx="10" class="c-enl"/><text x="70" y="170" text-anchor="middle" class="t-b k-enl">Actuar</text><text x="70" y="186" text-anchor="middle" class="t-s">el arnés ejecuta</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <path d="M262 80Q320 100 328 146" marker-end="url(#d121-m)"/>
+    <path d="M268 182H134" marker-end="url(#d121-m)"/>
+    <path d="M72 146Q80 100 138 80" marker-end="url(#d121-m)"/>
+  </g>
+  <text x="200" y="128" text-anchor="middle" class="t t-s t-m">un paso a la vez</text>
+  <g class="t t-s">
+    <text x="20" y="226">✔ simple, se adapta a cada sorpresa</text>
+    <text x="20" y="246">✖ no ve los pasos que vienen (miopía)</text>
+    <text x="20" y="266">✖ el objetivo se aleja en el contexto (deriva)</text>
+    <text x="20" y="286">✖ nadie ve el plan antes de los efectos</text>
+  </g>
+  
+  <g class="t">
+    <rect x="430" y="48" width="130" height="44" rx="10" class="c-tra"/><text x="495" y="68" text-anchor="middle" class="t-b k-tra">Planificador</text><text x="495" y="84" text-anchor="middle" class="t-s">el modelo escribe</text>
+    <rect x="590" y="40" width="120" height="104" rx="8" class="caja"/>
+    <text x="602" y="58" class="t-xs t-b t-m">PLAN v1 (DATO)</text>
+    <text x="602" y="78" class="t-s t-mono">p1 ✔  p2 ✔</text>
+    <text x="602" y="96" class="t-s t-mono">p3 ▶</text>
+    <text x="602" y="114" class="t-s t-mono">p4 · p5 · p6</text>
+    <text x="602" y="134" class="t-s t-m">pasos y dependencias</text>
+    <rect x="740" y="48" width="110" height="44" rx="10" class="d-sis"/><text x="795" y="68" text-anchor="middle" class="t-b k-sis">Arnés valida</text><text x="795" y="84" text-anchor="middle" class="t-s">esquema, reglas</text>
+    <rect x="590" y="190" width="120" height="44" rx="10" class="c-red"/><text x="650" y="210" text-anchor="middle" class="t-b k-red">Ejecutor</text><text x="650" y="226" text-anchor="middle" class="t-s">sigue el plan</text>
+    <rect x="740" y="190" width="110" height="44" rx="10" class="c-enl"/><text x="795" y="210" text-anchor="middle" class="t-b k-enl">Herramientas</text><text x="795" y="226" text-anchor="middle" class="t-s">las de cada paso</text>
+    <rect x="430" y="190" width="130" height="44" rx="10" class="d-inet"/><text x="495" y="210" text-anchor="middle" class="t-b k-inet">Punto de control</text><text x="495" y="226" text-anchor="middle" class="t-s">uno por paso</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <path d="M562 70H586" marker-end="url(#d121-m)"/>
+    <path d="M712 70H736" marker-end="url(#d121-m)"/>
+    <path d="M795 94V120Q795 160 714 205" marker-end="url(#d121-m)"/>
+    <path d="M712 212H736" marker-end="url(#d121-m)"/>
+    <path d="M588 212H564" marker-end="url(#d121-m)"/>
+  </g>
+  <path d="M470 236V262H430Q418 262 418 250V100Q418 92 430 92H440" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d121-w)"/>
+  <text x="482" y="278" class="t t-s k-sis">si un paso falla: replanificar (v2)</text>
+  
+  <rect x="10" y="318" width="390" height="88" rx="10" class="caja"/>
+  <text x="24" y="340" class="t t-xs t-b t-m">CONVIENE CUANDO</text>
+  <text x="24" y="362" class="t t-s">la tarea tiene de 1 a 4 pasos, el camino</text>
+  <text x="24" y="380" class="t t-s">depende de cada resultado y equivocarse</text>
+  <text x="24" y="398" class="t t-s">cuesta poco</text>
+  <rect x="430" y="318" width="420" height="88" rx="10" class="caja"/>
+  <text x="444" y="340" class="t t-xs t-b t-m">CONVIENE CUANDO</text>
+  <text x="444" y="362" class="t t-s">la tarea es larga, con dependencias, efectos de</text>
+  <text x="444" y="380" class="t t-s">riesgo o alguien tiene que aprobar lo que se hará;</text>
+  <text x="444" y="398" class="t t-s">dentro de cada paso sigue corriendo un bucle chico</text>
+</svg></div><figcaption><b>El bucle reactivo frente a planificar y ejecutar.</b> A la izquierda, el ciclo de siempre: percibir, decidir y actuar, un paso a la vez, sin nada escrito sobre lo que viene. A la derecha, el planificador escribe el plan completo, el arnés lo valida, el ejecutor lo sigue paso a paso con un punto de control en cada uno, y si algo falla la tarea vuelve al planificador con lo que ya se hizo. Abajo, cuándo conviene cada uno.</figcaption></figure><div class="prose"><p>No es una cosa o la otra. Dentro de cada paso del plan sigue corriendo un bucle reactivo pequeño; lo que cambia es que ese bucle tiene un objetivo acotado, pocas herramientas y un criterio de terminado.</p></div></section>
+<section><h2>Planificar primero: el plan como dato</h2><div class="prose"><p>La idea clave de este capítulo cabe en una frase: <b>el plan es un dato, no un párrafo</b>. Si el modelo escribe «primero voy a revisar los pagos y luego veré las facturas», el arnés no puede hacer nada con eso. Si escribe un objeto con forma fija, el arnés puede validarlo, mostrarlo, aprobarlo, guardarlo, ejecutarlo y compararlo con la versión siguiente.</p><div class="code-copia"><pre><code>type EstadoPaso = "pendiente" | "en_curso" | "hecho" | "fallido" | "omitido";
+
+interface Paso {
+  id: string;                    // "p3"
+  objetivo: string;              // "Cruzar cada pago con su factura"
+  herramientas: string[];        // solo las que este paso puede usar
+  dependeDe: string[];           // ["p1", "p2"]
+  terminado: string;             // criterio verificable: "toda factura queda pagada, parcial o abierta"
+  riesgo: "bajo" | "medio" | "alto";
+  estado: EstadoPaso;
+  resultado?: string;            // lo que produjo, para los pasos que dependen de él
+}
+
+interface Plan {
+  tarea: string;
+  version: number;               // v1, v2… cada replanificación crea una nueva
+  pasos: Paso[];
+  costoEstimadoUSD: number;
+  creadoPor: "modelo" | "persona" | "plantilla";
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en tres campos. <code>herramientas</code> reduce lo que el modelo puede hacer en cada paso: el paso que redacta el informe no puede enviar correos. <code>dependeDe</code> convierte la lista en un <b>grafo acíclico dirigido</b> (<i>DAG</i>, <i>directed acyclic graph</i>): pasos que no dependen entre sí pueden correr a la vez. Y <code>terminado</code> es lo que permite saber, sin preguntarle al modelo, si el paso cumplió.</p><p>Para el pedido de la conciliación, el plan v1 que propone el modelo tiene seis pasos: leer los pagos de octubre (p1), leer las facturas abiertas (p2), cruzarlos (p3, depende de p1 y p2), marcar las vencidas (p4), redactar el informe (p5) y enviarlo a finanzas (p6, riesgo alto).</p><p>Antes de ejecutar nada, el arnés revisa el plan completo. Es la misma lógica de los capítulos 7 y 8, aplicada una vez al principio y no solo acción por acción:</p><ol class="steps"><li><span><b>Esquema</b>: el plan tiene la forma de <code>Plan</code>, cada <code>dependeDe</code> apunta a un paso que existe y no hay ciclos.</span></li><li><span><b>Capacidades</b>: cada herramienta nombrada está en el registro de este agente (capítulo 3). Un plan que pide <code>borrar_facturas</code> se rechaza antes de empezar.</span></li><li><span><b>Políticas por paso</b>: el motor de políticas clasifica cada paso. Si alguno queda en «denegar», el plan entero vuelve al planificador con el motivo.</span></li><li><span><b>Presupuesto</b>: el costo estimado cabe en lo que le queda a la tarea.</span></li><li><span><b>Aprobación del plan</b> (opcional): si algún paso es de riesgo alto, una persona puede aprobar el plan completo de una vez, en lugar de recibir una pregunta suelta a mitad de camino (capítulo 9).</span></li></ol></div><div class="analogia"><b>Imagínalo así</b><p>Es el plan de vuelo. Antes de despegar, el piloto lo presenta y control de tránsito aéreo lo revisa: ruta, combustible, aeropuertos alternos. Nadie le pregunta al piloto en pleno vuelo si pensó en el combustible. Y el plan aprobado no impide desviarse por una tormenta: obliga a avisar y a presentar uno nuevo.</p></div><div class="prose"><p>Aprobar el plan no aprueba los efectos a ciegas. Si en la ejecución el paso 6 resulta tener otro destinatario que el aprobado, la política vuelve a decidir sobre la acción real. El plan dice qué se piensa hacer; las reglas siguen mirando lo que se hace.</p></div></section>
+<section><h2>El ejecutor que sigue el plan paso a paso</h2><div class="prose"><p>El <b>ejecutor</b> (<i>executor</i>) es una pieza del arnés, no un modelo. Su trabajo es mecánico: elige el siguiente paso cuyas dependencias están en «hecho», lo marca «en curso», corre para él un bucle pequeño y lo cierra según su criterio de terminado.</p><p>Ese bucle pequeño es el del capítulo 2 con tres diferencias. Su contexto lleva el objetivo del paso, los resultados de los pasos de los que depende y un resumen del plan, no toda la historia de la tarea. Su registro de herramientas es solo el que declara el paso. Y su presupuesto es una porción del de la tarea, con pocos turnos.</p></div><figure class="fig fig-flujo" id="12-diagrama-2"><div class="lienzo"><svg viewBox="0 0 900 690" style="min-width:760px" role="img" aria-label="Diagrama de secuencia del planificador y el ejecutor: la persona pide, el ejecutor pide un plan al modelo, el arnés lo valida y lo presenta para aprobación porque el último paso es de riesgo alto, el ejecutor corre los pasos 1 y 2 en paralelo y guarda puntos de control; el paso 3 falla por datos y la tarea vuelve al planificador, que entrega un plan v2 validado de nuevo.">
+<defs>
+<marker id="d122-per" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+<marker id="d122-pla" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+<marker id="d122-val" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+<marker id="d122-eje" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+<marker id="d122-her" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+<marker id="d122-dia" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+</defs><g class="t">
+<rect x="8" y="12" width="124" height="46" rx="10" class="d-casa"/>
+<text x="70" y="40" text-anchor="middle" class="t-b k-casa">Persona</text>
+<rect x="153" y="12" width="124" height="46" rx="10" class="c-tra"/>
+<text x="215" y="31" text-anchor="middle" class="t-b k-tra">Planificador</text><text x="215" y="48" text-anchor="middle" class="t-s">(modelo)</text>
+<rect x="298" y="12" width="124" height="46" rx="10" class="d-sis"/>
+<text x="360" y="31" text-anchor="middle" class="t-b k-sis">Arnés:</text><text x="360" y="48" text-anchor="middle" class="t-s">validador</text>
+<rect x="443" y="12" width="124" height="46" rx="10" class="c-red"/>
+<text x="505" y="31" text-anchor="middle" class="t-b k-red">Ejecutor</text><text x="505" y="48" text-anchor="middle" class="t-s">(arnés)</text>
+<rect x="588" y="12" width="124" height="46" rx="10" class="c-enl"/>
+<text x="650" y="40" text-anchor="middle" class="t-b k-enl">Herramientas</text>
+<rect x="728" y="12" width="124" height="46" rx="10" class="d-inet"/>
+<text x="790" y="31" text-anchor="middle" class="t-b k-inet">Diario</text><text x="790" y="48" text-anchor="middle" class="t-s">puntos de control</text>
+</g><g>
+<line x1="70" y1="58" x2="70" y2="680" class="vida"/>
+<line x1="215" y1="58" x2="215" y2="680" class="vida"/>
+<line x1="360" y1="58" x2="360" y2="680" class="vida"/>
+<line x1="505" y1="58" x2="505" y2="680" class="vida"/>
+<line x1="650" y1="58" x2="650" y2="680" class="vida"/>
+<line x1="790" y1="58" x2="790" y2="680" class="vida"/>
+</g><g class="t t-s">
+<line x1="70" y1="108" x2="502" y2="108" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d122-per)"/>
+<text x="78" y="101">① «concilia octubre y envía el informe»</text>
+<line x1="505" y1="142" x2="218" y2="142" class="ln" style="stroke-width:2;stroke:var(--c-red)" marker-end="url(#d122-eje)"/>
+<text x="223" y="135">② pide un plan: herramientas y presupuesto</text>
+<line x1="215" y1="176" x2="357" y2="176" class="ln" style="stroke-width:2;stroke:var(--c-tra)" marker-end="url(#d122-pla)"/>
+<text x="223" y="169">③ plan v1: 6 pasos (JSON)</text>
+<rect x="354" y="196" width="12" height="26" rx="3" class="d-sis"/>
+<text x="372" y="214">④ esquema · capacidades · políticas · costo</text>
+<line x1="360" y1="246" x2="73" y2="246" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d122-val)"/>
+<text x="78" y="239">⑤ p6 es de riesgo alto: ¿apruebas el plan?</text>
+<line x1="70" y1="280" x2="357" y2="280" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d122-per)"/>
+<text x="78" y="273">⑥ aprobado</text>
+<line x1="360" y1="314" x2="502" y2="314" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d122-val)"/>
+<text x="368" y="307">⑦ plan v1 listo para ejecutar</text>
+<line x1="505" y1="378" x2="647" y2="378" class="ln" style="stroke-width:2;stroke:var(--c-red)" marker-end="url(#d122-eje)"/>
+<text x="513" y="371">⑧ p1 y p2 en paralelo</text>
+<line x1="650" y1="412" x2="508" y2="412" class="ln" style="stroke-width:2;stroke:var(--c-enl)" marker-end="url(#d122-her)"/>
+<text x="513" y="405">⑨ pagos · facturas</text>
+<line x1="505" y1="446" x2="787" y2="446" class="ln" style="stroke-width:2;stroke:var(--c-red)" marker-end="url(#d122-eje)"/>
+<text x="513" y="439">⑩ p1 y p2 «hecho» + resultados</text>
+<line x1="505" y1="480" x2="647" y2="480" class="ln" style="stroke-width:2;stroke:var(--c-red)" marker-end="url(#d122-eje)"/>
+<text x="513" y="473">⑪ p3: cruzar pagos y facturas</text>
+<line x1="650" y1="514" x2="508" y2="514" class="ln" style="stroke-width:2;stroke:var(--c-enl)" marker-end="url(#d122-her)"/>
+<text x="513" y="507">⑫ error de datos: dos monedas</text>
+<line x1="505" y1="578" x2="218" y2="578" class="ln" style="stroke-width:2;stroke:var(--c-red)" marker-end="url(#d122-eje)"/>
+<text x="223" y="571">⑬ plan, pasos hechos y error</text>
+<line x1="215" y1="612" x2="357" y2="612" class="ln" style="stroke-width:2;stroke:var(--c-tra)" marker-end="url(#d122-pla)"/>
+<text x="223" y="605">⑭ plan v2: + p3a «convertir a USD»</text>
+<line x1="360" y1="646" x2="502" y2="646" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d122-val)"/>
+<text x="368" y="639">⑮ v2 validado: sigue en p3a</text>
+</g>
+<line x1="4" y1="78" x2="840" y2="78" class="ln ln-d"/>
+<text x="8" y="90" class="t t-xs t-b t-m">PLANIFICAR</text>
+<rect x="858" y="82" width="30" height="256" rx="6" class="c-tra"/>
+<text transform="translate(877 210.0) rotate(-90)" text-anchor="middle" class="t t-xs t-b k-tra">PLANIFICAR</text>
+<line x1="4" y1="348" x2="840" y2="348" class="ln ln-d"/>
+<text x="8" y="360" class="t t-xs t-b t-m">EJECUTAR</text>
+<rect x="858" y="352" width="30" height="186" rx="6" class="c-red"/>
+<text transform="translate(877 445.0) rotate(-90)" text-anchor="middle" class="t t-xs t-b k-red">EJECUTAR</text>
+<line x1="4" y1="548" x2="840" y2="548" class="ln ln-d"/>
+<text x="8" y="560" class="t t-xs t-b t-m">REPLANIFICAR</text>
+<rect x="858" y="552" width="30" height="112" rx="6" class="d-sis"/>
+<text transform="translate(877 608.0) rotate(-90)" text-anchor="middle" class="t t-xs t-b k-sis">REPLANIFICAR</text>
+</svg></div><figcaption><b>El flujo del planificador y el ejecutor.</b> Seis participantes y el tiempo hacia abajo. La persona pide; el arnés le pide un plan al modelo, lo valida y, como el último paso es de riesgo alto, lo presenta para aprobación. Después el ejecutor corre p1 y p2 en paralelo, guarda un punto de control por paso en el diario y sigue con p3. Cuando p3 falla, el ejecutor no improvisa: devuelve la tarea al planificador con lo hecho y el error, y recibe el plan v2. A la derecha, las tres fases.</figcaption></figure><div class="prose"><p>Cada paso cerrado queda en el diario de la ejecución como un <b>punto de control</b> (<i>checkpoint</i>), igual que en el capítulo 6. Si el proceso se cae en p4, al reanudar el ejecutor lee el plan y los estados, ve que p1 a p3 están «hecho» con sus resultados guardados, y sigue en p4. El plan es también la mejor interfaz posible para una persona: una lista con casillas que se van marcando, en vez de una conversación de cuarenta mensajes.</p><p>Hay dos decisiones de diseño que conviene tomar temprano:</p><ul><li><b>Quién cierra el paso.</b> Lo ideal es un criterio que el arnés pueda comprobar: «el archivo existe y tiene 312 filas», «toda factura quedó en uno de tres estados». Cuando el criterio solo lo puede juzgar un modelo, entra el revisor de la sección siguiente.</li><li><b>Qué pasa entre pasos.</b> El ejecutor puede volver al planificador después de cada paso (más caro, más adaptable) o solo cuando algo falla (más barato, más rígido). La mayoría de los arneses hacen lo segundo y agregan puntos de revisión en los hitos.</li></ul></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Ejecuta un plan como dato y míralo replanificar</h3></div><p>Vas a correr, sin red y sin modelo, un ejecutor que sigue un plan de seis pasos con dependencias. El paso 3 falla porque aparecen pagos en dos monedas, y un planificador de reglas fijas produce el plan v2. Necesitas Python 3. Crea un archivo <code>plan.py</code> con este contenido:</p><div class="code-copia"><pre><code># plan.py: planificador y ejecutor con el plan como dato (simulado, sin red)
+import copy
+
+PLAN_V1 = {"version": 1, "pasos": [
+    {"id": "p1", "objetivo": "leer pagos de octubre",   "depende": [],           "riesgo": "bajo"},
+    {"id": "p2", "objetivo": "leer facturas abiertas",  "depende": [],           "riesgo": "bajo"},
+    {"id": "p3", "objetivo": "cruzar pagos y facturas", "depende": ["p1", "p2"], "riesgo": "bajo"},
+    {"id": "p4", "objetivo": "marcar facturas vencidas","depende": ["p3"],       "riesgo": "bajo"},
+    {"id": "p5", "objetivo": "redactar informe de mora","depende": ["p4"],       "riesgo": "medio"},
+    {"id": "p6", "objetivo": "enviar informe a finanzas","depende": ["p5"],      "riesgo": "alto"},
+]}
+
+def validar(plan):
+    ids = {p["id"] for p in plan["pasos"]}
+    for p in plan["pasos"]:
+        for d in p["depende"]:
+            if d not in ids:
+                raise ValueError(f"{p['id']} depende de {d}, que no existe")
+    return True
+
+def herramienta(paso, estado):
+    """Simula el mundo: los pagos traen dos monedas y el cruce directo falla."""
+    if paso["id"] == "p1":
+        estado["pagos"] = [("4512", 25.0, "USD"), ("4513", 30.0, "EUR"), ("4514", 40.0, "USD")]
+    if paso["id"] == "p3" and any(m != "USD" for _, _, m in estado["pagos"]):
+        raise RuntimeError("hay pagos en otra moneda: el cruce directo no sirve")
+    if paso["id"] == "p3a":
+        estado["pagos"] = [(c, round(v * 1.08, 2) if m == "EUR" else v, "USD") for c, v, m in estado["pagos"]]
+    return f"ok ({paso['objetivo']})"
+
+def replanificar(plan, fallido, error):
+    """Un planificador de reglas fijas. En un arnés real, aquí se llama al modelo."""
+    nuevo = copy.deepcopy(plan)
+    nuevo["version"] += 1
+    if "moneda" in error:
+        i = next(k for k, p in enumerate(nuevo["pasos"]) if p["id"] == fallido)
+        nuevo["pasos"].insert(i, {"id": "p3a", "objetivo": "convertir pagos a USD",
+                                  "depende": ["p1"], "riesgo": "bajo"})
+        nuevo["pasos"][i + 1]["depende"] = ["p3a", "p2"]
+    for p in nuevo["pasos"]:
+        if p.get("estado") == "fallido":
+            p["estado"] = "pendiente"
+    return nuevo
+
+def ejecutar(plan, max_replanes=1):
+    estado, replanes = {}, 0
+    validar(plan)
+    while True:
+        listos = [p for p in plan["pasos"] if p.get("estado", "pendiente") == "pendiente"
+                  and all(q.get("estado") == "hecho" for q in plan["pasos"] if q["id"] in p["depende"])]
+        if not listos:
+            break
+        for p in listos:                       # los listos podrían correr en paralelo
+            try:
+                p["resultado"] = herramienta(p, estado)
+                p["estado"] = "hecho"
+                print(f"  v{plan['version']} {p['id']} hecho      {p['objetivo']}")
+            except RuntimeError as e:
+                p["estado"] = "fallido"
+                print(f"  v{plan['version']} {p['id']} FALLIDO    {e}")
+                if replanes &gt;= max_replanes:
+                    print("  sin replanificaciones disponibles: se escala a una persona")
+                    return plan
+                replanes += 1
+                plan = replanificar(plan, p["id"], str(e))
+                validar(plan)
+                print(f"  -&gt; plan v{plan['version']}: " + ", ".join(q["id"] for q in plan["pasos"]))
+                break
+    return plan
+
+final = ejecutar(copy.deepcopy(PLAN_V1))
+print("Estados finales:", {p["id"]: p.get("estado", "pendiente") for p in final["pasos"]})</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python plan.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 plan.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Sigue la salida: p1 y p2 quedan «hecho» en la versión 1 y no se vuelven a ejecutar en la versión 2.</span></li><li><span>Mira el plan v2: el paso nuevo <code>p3a</code> se insertó antes de p3, y p3 ahora depende de él.</span></li><li><span>Cambia <code>max_replanes=1</code> por <code>max_replanes=0</code> en la definición de <code>ejecutar</code> y vuelve a correrlo: ¿qué hace el arnés cuando no puede replanificar?</span></li><li><span>En <code>PLAN_V1</code>, cambia <code>"depende": ["p4"]</code> de p5 por <code>"depende": ["p9"]</code> y córrelo: el plan se rechaza antes de ejecutar un solo paso.</span></li></ol><p><b>Qué observar:</b> el plan es una estructura que el arnés valida, recorre y versiona, y el ejecutor no necesita entender las tareas para seguirlo. Lo ya hecho se conserva entre versiones: replanificar es cambiar lo que falta, no empezar de cero. La simulación no usa la red, así que la salida es la misma en cualquier sistema.</p></div></section>
+<section><h2>Replanificar cuando algo falla</h2><div class="prose"><p>Ningún plan sobrevive intacto al contacto con los datos. Un plan bien hecho no es el que nunca cambia, sino el que cambia de forma controlada. Hay tres razones típicas para que un paso no termine:</p><ul><li><b>Falla transitoria</b>: la API no respondió, se agotó el tiempo. El paso estaba bien pensado; el mundo estaba ocupado.</li><li><b>El dato contradice el plan</b>: el plan suponía que todos los pagos estaban en dólares y hay dos monedas. El paso no puede cumplir su criterio de terminado tal como fue escrito.</li><li><b>Falta permiso o algo es imposible</b>: la política deniega leer las facturas de otra filial. Ningún reintento lo cambia.</li></ul><p>Para cada una, el arnés tiene cuatro respuestas posibles, de la más barata a la más cara:</p><ol class="steps"><li><span><b>Reintentar</b> (<i>retry</i>) el mismo paso, con espera creciente. Sirve para lo transitorio; para lo demás, solo gasta.</span></li><li><span><b>Rodear</b> (<i>fallback</i>): hacer el mismo paso con otra herramienta declarada como alternativa. Sirve si la alternativa resuelve el mismo problema, y nunca para esquivar una denegación.</span></li><li><span><b>Replanificar</b> (<i>replan</i>): devolverle al planificador el plan, los pasos hechos con sus resultados y el error, para que escriba la versión siguiente. Los pasos en «hecho» son inmutables: el planificador puede agregar, cambiar o quitar pasos pendientes, pero no deshacer ni reescribir lo que ya ocurrió.</span></li><li><span><b>Escalar</b> (<i>escalate</i>): traspasar la decisión a una persona, como en el capítulo 9.</span></li></ol><p>Cada versión nueva del plan pasa por la misma validación que la primera. Si el plan v2 agrega un paso de riesgo alto, o cambia el destinatario del correo, la aprobación que se dio al v1 ya no alcanza. Y las replanificaciones tienen un límite propio, por ejemplo dos por tarea: un agente que replanifica sin fin es un bucle reactivo caro con pasos extra.</p></div><div class="lab" id="12-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Un plan de 6 pasos: falla el paso 3 y mira cómo replanifica</h3></div><p class="hint">Elige por qué falla el paso 3 y qué estrategia aplica el arnés. Compara el plan v1 con el que resulta, mira qué pasos se conservan, cuántas llamadas al modelo se gastan y si la tarea termina bien. Prueba las cuatro estrategias con cada tipo de falla.</p><style>
+[id="12-lab-1"] .c12l1-planes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+[id="12-lab-1"] .c12l1-plan{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--card);display:grid;gap:5px;align-content:start}
+[id="12-lab-1"] .c12l1-plan h4{margin:0 0 2px;font:700 .72rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+[id="12-lab-1"] .c12l1-p{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:6px;align-items:center;font:500 .8rem/1.25 var(--f-display);padding:5px 7px;border-radius:7px;border:1px solid var(--line);background:var(--paper)}
+[id="12-lab-1"] .c12l1-p .id{font:700 .75rem var(--f-mono);color:var(--muted)}
+[id="12-lab-1"] .c12l1-p .e{font:700 .66rem var(--f-display);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:5px;white-space:nowrap}
+[id="12-lab-1"] .c12l1-p.hecho{border-color:var(--good);background:var(--good-soft)}
+[id="12-lab-1"] .c12l1-p.hecho .e{color:var(--good)}
+[id="12-lab-1"] .c12l1-p.fallido{border-color:var(--warm);background:var(--warm-soft)}
+[id="12-lab-1"] .c12l1-p.fallido .e{color:var(--warm)}
+[id="12-lab-1"] .c12l1-p.nuevo{border-color:var(--accent);background:var(--accent-soft)}
+[id="12-lab-1"] .c12l1-p.nuevo .e{color:var(--accent)}
+[id="12-lab-1"] .c12l1-p.pend .e,[id="12-lab-1"] .c12l1-p.omit .e{color:var(--muted)}
+[id="12-lab-1"] .c12l1-p.omit{opacity:.55;text-decoration:line-through}
+[id="12-lab-1"] .c12l1-p.persona{border-color:var(--d-casa);border-style:dashed}
+[id="12-lab-1"] .c12l1-p.persona .e{color:var(--d-casa)}
+[id="12-lab-1"] .c12l1-plan.vacio{color:var(--muted);font:500 .82rem var(--f-display);place-content:center;text-align:center;min-height:120px}
+@media (max-width:560px){[id="12-lab-1"] .c12l1-planes{grid-template-columns:minmax(0,1fr)}}
+</style>
+<div class="opciones" style="grid-template-columns:minmax(0,1fr)">
+  <label>Por qué falla el paso 3 (cruzar pagos y facturas)
+    <select id="c12l1-f">
+      <option value="trans">Falla transitoria: la API de conciliación no responde</option>
+      <option value="dato" selected>El dato contradice el plan: hay pagos en dos monedas</option>
+      <option value="perm">Denegado: la política no deja leer facturas de otra filial</option>
+    </select></label>
+</div>
+<div class="btns" role="group" aria-label="Estrategia del arnés">
+  <button type="button" data-e="reintentar" aria-pressed="false">Reintentar</button>
+  <button type="button" data-e="rodear" aria-pressed="false">Rodear</button>
+  <button type="button" data-e="replan" aria-pressed="true">Replanificar</button>
+  <button type="button" data-e="escalar" aria-pressed="false">Escalar a una persona</button>
+</div>
+<div class="c12l1-planes">
+  <div class="c12l1-plan" id="c12l1-v1" aria-label="Plan versión 1"></div>
+  <div class="c12l1-plan" id="c12l1-v2" aria-label="Plan resultante"></div>
+</div>
+<div class="readout texto" id="c12l1-out" aria-live="polite"></div></div><div class="prose"><p>El laboratorio deja una regla práctica que muchos arneses escriben como política: la estrategia depende del <b>tipo de error</b>, no del humor del modelo. Las fallas transitorias se reintentan; los datos inesperados se replanifican; las denegaciones y los imposibles se escalan. Por eso conviene que las herramientas devuelvan errores con una categoría (<code>transitorio</code>, <code>datos</code>, <code>denegado</code>), no solo un mensaje.</p></div></section>
+<section><h2>El revisor y la reflexión</h2><div class="prose"><p>Un paso puede terminar sin error y aun así estar mal. El informe de mora se redactó, tiene el formato pedido y no cita ninguna factura que no exista, pero suma mal los montos o deja afuera a las clientes con pagos parciales. Para eso existe el <b>revisor</b> (<i>reviewer</i> o <i>critic</i>): una pieza que examina el resultado de un paso, o el final, contra una <b>rúbrica</b> (<i>rubric</i>), una lista de criterios explícitos.</p><p>El revisor tiene dos capas, en este orden:</p><ul><li><b>Comprobaciones deterministas</b>: las del capítulo 8. ¿Suman los totales? ¿Toda factura citada existe? ¿El informe tiene las secciones obligatorias? Son baratas, exactas y no se dejan convencer.</li><li><b>Un modelo revisor</b>: para lo que solo se juzga leyendo. ¿El informe explica bien por qué cada cliente está en mora? ¿Responde lo que pidió finanzas? Recibe la rúbrica, el objetivo del paso y el resultado, y devuelve un veredicto con forma fija: aprobado, o devuelto con observaciones concretas.</li></ul><p>Cuando el revisor devuelve un resultado, sus observaciones vuelven al ejecutor como contexto del siguiente intento. Esa nota escrita sobre lo que salió mal se llama <b>reflexión</b> (<i>reflection</i>): «el total no incluye los pagos parciales; recalcula sumando la columna de abonos». La reflexión es lo que hace que el segundo intento sea distinto del primero, y no una repetición con otra temperatura.</p></div><figure class="fig fig-esquema" id="12-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 380" style="min-width:720px" role="img" aria-label="El ciclo del revisor: el ejecutor entrega el resultado de un paso, pasan primero las comprobaciones deterministas y luego el modelo revisor con una rúbrica; si aprueba, el paso queda hecho; si devuelve, la observación se agrega como reflexión al siguiente intento; tras dos devoluciones, el paso se escala a una persona. A la derecha, el costo de cada vuelta.">
+  <defs>
+    <marker id="d123-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d123-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d123-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+  </defs>
+  <g class="t">
+    <rect x="12" y="40" width="130" height="58" rx="10" class="c-red"/><text x="77" y="64" text-anchor="middle" class="t-b k-red">Ejecutor</text><text x="77" y="82" text-anchor="middle" class="t-s">resultado del paso</text>
+    <rect x="182" y="40" width="150" height="58" rx="10" class="d-sis"/><text x="257" y="60" text-anchor="middle" class="t-b k-sis">① Comprobaciones</text><text x="257" y="76" text-anchor="middle" class="t-b k-sis">deterministas</text><text x="257" y="91" text-anchor="middle" class="t-s">totales, citas, formato</text>
+    <rect x="372" y="40" width="150" height="58" rx="10" class="c-tra"/><text x="447" y="60" text-anchor="middle" class="t-b k-tra">② Modelo revisor</text><text x="447" y="76" text-anchor="middle" class="t-s">con la rúbrica</text><text x="447" y="91" text-anchor="middle" class="t-s">y el objetivo del paso</text>
+    <rect x="562" y="40" width="110" height="58" rx="10" class="c-enl"/><text x="617" y="64" text-anchor="middle" class="t-b k-enl">Aprobado</text><text x="617" y="82" text-anchor="middle" class="t-s">paso «hecho»</text>
+    <rect x="182" y="190" width="340" height="62" rx="10" class="c-fis"/><text x="352" y="212" text-anchor="middle" class="t-b k-fis">③ Reflexión al contexto del siguiente intento</text>
+    <text x="352" y="232" text-anchor="middle" class="t-s t-mono">«el total no incluye los pagos parciales;</text>
+    <text x="352" y="246" text-anchor="middle" class="t-s t-mono">recalcula sumando la columna de abonos»</text>
+    <rect x="12" y="300" width="160" height="58" rx="10" class="d-casa"/><text x="92" y="324" text-anchor="middle" class="t-b k-casa">④ Escalar</text><text x="92" y="342" text-anchor="middle" class="t-s">tras 2 devoluciones</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <path d="M144 69H178" marker-end="url(#d123-m)"/>
+    <path d="M334 69H368" style="stroke:var(--c-enl)" marker-end="url(#d123-g)"/>
+    <path d="M524 69H558" style="stroke:var(--c-enl)" marker-end="url(#d123-g)"/>
+    <path d="M257 100V186" style="stroke:var(--d-sis)" marker-end="url(#d123-w)"/>
+    <path d="M447 100V186" style="stroke:var(--d-sis)" marker-end="url(#d123-w)"/>
+    <path d="M180 221H77V102" marker-end="url(#d123-m)"/>
+    <path d="M77 230V296" class="ln-d" marker-end="url(#d123-m)"/>
+  </g>
+  <g class="t t-s">
+    <text x="338" y="62" class="k-enl">pasa</text><text x="528" y="62" class="k-enl">sí</text>
+    <text x="263" y="150" class="k-sis">falla: error exacto</text>
+    <text x="453" y="150" class="k-sis">devuelve con</text><text x="453" y="164" class="k-sis">observaciones</text>
+    <text x="84" y="160" class="t-m">nuevo intento</text>
+    <text x="84" y="272" class="t-m">límite de vueltas</text>
+  </g>
+  <rect x="700" y="40" width="148" height="318" rx="10" class="caja"/>
+  <g class="t">
+    <text x="714" y="62" class="t-xs t-b t-m">QUÉ CUESTA</text>
+    <text x="714" y="88" class="t-s t-b k-sis">① deterministas</text>
+    <text x="714" y="104" class="t-s">casi nada; exactas</text>
+    <text x="714" y="134" class="t-s t-b k-tra">② modelo revisor</text>
+    <text x="714" y="150" class="t-s">1 llamada por revisión</text>
+    <text x="714" y="180" class="t-s t-b k-fis">③ cada devolución</text>
+    <text x="714" y="196" class="t-s">rehacer el paso</text>
+    <text x="714" y="212" class="t-s">y revisar otra vez</text>
+    <text x="714" y="242" class="t-s t-b k-casa">④ escalar</text>
+    <text x="714" y="258" class="t-s">tiempo de una persona</text>
+    <text x="714" y="292" class="t-s t-m">se revisa donde un</text>
+    <text x="714" y="308" class="t-s t-m">error cuesta, no en</text>
+    <text x="714" y="324" class="t-s t-m">cada lectura</text>
+  </g>
+</svg></div><figcaption><b>El ciclo del revisor.</b> El ejecutor entrega el resultado de un paso. Primero pasan las comprobaciones deterministas; si fallan, el paso vuelve con el error exacto. Si pasan, el modelo revisor lo juzga con la rúbrica. Si lo aprueba, el paso queda en «hecho»; si lo devuelve, su observación se agrega como reflexión al siguiente intento. Después de dos devoluciones, el paso se escala. A la derecha, qué cuesta cada vuelta.</figcaption></figure><div class="analogia"><b>Imagínalo así</b><p>Es la diferencia entre un corrector ortográfico y una editora. El corrector encuentra todas las tildes que faltan, siempre, y no opina sobre el argumento. La editora lee el capítulo y dice «el ejemplo del tercer párrafo contradice al primero». Un buen libro pasa por los dos, en ese orden, y la editora no pierde tiempo marcando tildes.</p></div><div class="prose"><p>Tres advertencias que el diseño tiene que asumir:</p><ul><li><b>Puntos ciegos compartidos</b>: un modelo que revisa lo que escribió él mismo, con el mismo prompt, tiende a no ver los errores que lo llevaron a escribirlo. Un revisor más útil usa otro prompt, otra rúbrica y a veces otro modelo.</li><li><b>Costo</b>: cada revisión es una llamada más al modelo, y cada devolución, un intento más del paso. Revisar todos los pasos de todas las tareas puede duplicar el gasto. Se revisa donde un error cuesta: el informe que sale de la empresa, no la lectura de un archivo.</li><li><b>El revisor no autoriza</b>: aprobar la calidad de un resultado no es permiso para ejecutar un efecto. El correo del paso 6 sigue pasando por la política y, si corresponde, por una persona.</li></ul></div><div class="lab" id="12-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Con revisor y sin revisor: compara los errores que llegan al final</h3></div><p class="hint">Cada cuadrito es una tarea de un lote de 200. Mueve la probabilidad de error por paso y el número de pasos, y elige el revisor. Mira cuántas tareas llegan al final con un error, cuántas corrigió el revisor y cuánto costó el lote.</p><style>
+[id="12-lab-2"] .c12l2-grid{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px;max-width:520px}
+[id="12-lab-2"] .c12l2-grid i{display:block;aspect-ratio:1;border-radius:3px;background:var(--good-soft);border:1px solid var(--good)}
+[id="12-lab-2"] .c12l2-grid i.fix{background:var(--accent-soft);border-color:var(--accent)}
+[id="12-lab-2"] .c12l2-grid i.esc{background:var(--card);border-color:var(--d-casa);border-style:dashed}
+[id="12-lab-2"] .c12l2-grid i.err{background:var(--warm);border-color:var(--warm)}
+[id="12-lab-2"] .c12l2-ley{display:flex;flex-wrap:wrap;gap:6px 14px;font:500 .8rem var(--f-display);color:var(--muted)}
+[id="12-lab-2"] .c12l2-ley span{display:inline-flex;align-items:center;gap:6px}
+[id="12-lab-2"] .c12l2-ley i{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid}
+</style>
+<div class="opciones" style="grid-template-columns:minmax(0,1fr)">
+  <label>Revisor
+    <select id="c12l2-r">
+      <option value="0">Sin revisor</option>
+      <option value="1">El mismo modelo, con el mismo prompt</option>
+      <option value="2">Otro prompt con rúbrica</option>
+      <option value="3" selected>Comprobaciones deterministas + modelo con rúbrica</option>
+    </select></label>
+</div>
+<div class="ctls">
+  <label class="ctl">Probabilidad de error por paso <output id="c12l2-eo">4 %</output><input type="range" id="c12l2-e" min="1" max="15" step="1" value="4"></label>
+  <label class="ctl">Pasos por tarea <output id="c12l2-no">8</output><input type="range" id="c12l2-n" min="3" max="20" step="1" value="8"></label>
+</div>
+<div class="c12l2-grid" id="c12l2-g" role="img" aria-label="Lote de 200 tareas coloreadas según su resultado"></div>
+<div class="c12l2-ley">
+  <span><i style="background:var(--good-soft);border-color:var(--good)"></i>bien al primer intento</span>
+  <span><i style="background:var(--accent-soft);border-color:var(--accent)"></i>el revisor la devolvió y se corrigió</span>
+  <span><i style="border-color:var(--d-casa);border-style:dashed"></i>escalada a una persona</span>
+  <span><i style="background:var(--warm);border-color:var(--warm)"></i>llega al final con un error</span>
+</div>
+<div class="readout texto" id="c12l2-out" aria-live="polite"></div></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Encuentra el planificador, el ejecutor y el revisor en una guía pública</h3></div><p>Vas a leer <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a>, una guía pública sobre patrones de agentes, y la página <a href="https://langchain-ai.github.io/langgraph/tutorials/plan-and-execute/plan-and-execute/" target="_blank" rel="noopener">Plan-and-Execute</a> de la documentación de LangGraph.</p><ol class="steps"><li><span>En la guía, busca el patrón <i>prompt chaining</i>: ¿qué tiene en común con un plan fijo de pasos y qué le falta para ser un planificador y ejecutor?</span></li><li><span>Busca el patrón <i>evaluator-optimizer</i>: anota quién genera, quién evalúa y qué condición termina el ciclo.</span></li><li><span>En la página de LangGraph, encuentra cómo se representa el plan (la lista de pasos) y en qué nodo se decide replanificar.</span></li><li><span>Compara las dos fuentes con el contrato <code>Plan</code> de este capítulo: ¿alguna tiene <code>dependeDe</code>, un criterio de terminado o un nivel de riesgo por paso?</span></li></ol><p><b>Qué observar:</b> el planificador, el ejecutor y el revisor aparecen con otros nombres, pero con las mismas responsabilidades. Fíjate en lo que las guías suelen dejar al criterio de quien construye el arnés: la validación del plan antes de empezar, el límite de replanificaciones y las políticas por paso. Las páginas cambian con cada versión; si una sección cambió de nombre, busca por la idea.</p></div></section>
+<section><h2>Horizontes cortos y puntos de control</h2><div class="prose"><p>Hay un motivo matemático para no confiar en planes largos sin revisión. Si cada paso sale bien con probabilidad <i>p</i> y los errores no se corrigen, la tarea completa sale bien con probabilidad <i>p</i> elevado al número de pasos. Con 95 % por paso, una tarea de 5 pasos sale bien el 77 % de las veces; una de 20, el 36 %; una de 50, menos del 8 %. Los errores se <b>componen</b> (<i>compound</i>): uno chico en el paso 3 contamina todo lo que depende de él.</p><p>Dos técnicas atacan ese número.</p><p>La primera es el <b>horizonte corto</b> (<i>short horizon</i>). En vez de planificar los 20 pasos con detalle desde el principio, el planificador detalla solo los próximos tres o cuatro y deja el resto como hitos gruesos («luego, el informe»). Al terminar el tramo, vuelve a planificar el siguiente con lo que ya sabe. Es la idea del <b>horizonte que retrocede</b> (<i>receding horizon</i>): el plan detallado siempre mira un poco adelante, nunca hasta el final.</p></div><figure class="fig fig-esquema" id="12-diagrama-4"><div class="lienzo"><svg viewBox="0 0 860 350" style="min-width:720px" role="img" aria-label="Un horizonte que retrocede: tres momentos de la misma tarea. En cada uno, los pasos hechos quedan a la izquierda, el tramo detallado de tres pasos en el centro y el resto como hitos gruesos; los rombos marcan los puntos de control donde se revisa y se detalla el tramo siguiente.">
+  <g class="t t-xs t-b t-m">
+    <text x="12" y="58">AL EMPEZAR</text>
+    <text x="12" y="158">EN EL HITO 1</text>
+    <text x="12" y="258">EN EL HITO 2</text>
+  </g>
+  <g class="t t-s t-m">
+    <text x="12" y="74">detalla 1-3</text>
+    <text x="12" y="174">detalla 4-6</text>
+    <text x="12" y="274">detalla 7-9</text>
+  </g>
+  
+  <g class="t">
+    <rect x="120" y="40" width="58" height="40" rx="8" class="c-red"/><text x="149" y="65" text-anchor="middle" class="t-s t-b k-red">1</text>
+    <rect x="184" y="40" width="58" height="40" rx="8" class="c-red"/><text x="213" y="65" text-anchor="middle" class="t-s t-b k-red">2</text>
+    <rect x="248" y="40" width="58" height="40" rx="8" class="c-red"/><text x="277" y="65" text-anchor="middle" class="t-s t-b k-red">3</text>
+    <rect x="336" y="40" width="200" height="40" rx="8" class="caja" style="stroke-dasharray:5 4"/><text x="436" y="65" text-anchor="middle" class="t-s t-m">hito: informe listo</text>
+    <rect x="566" y="40" width="200" height="40" rx="8" class="caja" style="stroke-dasharray:5 4"/><text x="666" y="65" text-anchor="middle" class="t-s t-m">hito: enviado y archivado</text>
+  </g>
+  
+  <g class="t">
+    <rect x="120" y="140" width="58" height="40" rx="8" class="c-enl"/><text x="149" y="165" text-anchor="middle" class="t-s t-b k-enl">1 ✔</text>
+    <rect x="184" y="140" width="58" height="40" rx="8" class="c-enl"/><text x="213" y="165" text-anchor="middle" class="t-s t-b k-enl">2 ✔</text>
+    <rect x="248" y="140" width="58" height="40" rx="8" class="c-enl"/><text x="277" y="165" text-anchor="middle" class="t-s t-b k-enl">3 ✔</text>
+    <rect x="336" y="140" width="58" height="40" rx="8" class="c-red"/><text x="365" y="165" text-anchor="middle" class="t-s t-b k-red">4</text>
+    <rect x="400" y="140" width="58" height="40" rx="8" class="c-red"/><text x="429" y="165" text-anchor="middle" class="t-s t-b k-red">5</text>
+    <rect x="464" y="140" width="58" height="40" rx="8" class="c-red"/><text x="493" y="165" text-anchor="middle" class="t-s t-b k-red">6</text>
+    <rect x="566" y="140" width="200" height="40" rx="8" class="caja" style="stroke-dasharray:5 4"/><text x="666" y="165" text-anchor="middle" class="t-s t-m">hito: enviado y archivado</text>
+  </g>
+  
+  <g class="t">
+    <rect x="120" y="240" width="186" height="40" rx="8" class="c-enl"/><text x="213" y="265" text-anchor="middle" class="t-s t-b k-enl">1 a 3 ✔</text>
+    <rect x="336" y="240" width="186" height="40" rx="8" class="c-enl"/><text x="429" y="265" text-anchor="middle" class="t-s t-b k-enl">4 a 6 ✔</text>
+    <rect x="566" y="240" width="58" height="40" rx="8" class="c-red"/><text x="595" y="265" text-anchor="middle" class="t-s t-b k-red">7</text>
+    <rect x="630" y="240" width="58" height="40" rx="8" class="c-red"/><text x="659" y="265" text-anchor="middle" class="t-s t-b k-red">8</text>
+    <rect x="694" y="240" width="58" height="40" rx="8" class="c-red"/><text x="723" y="265" text-anchor="middle" class="t-s t-b k-red">9</text>
+  </g>
+  
+  <g class="d-casa">
+    <rect x="315" y="53" width="14" height="14" transform="rotate(45 322 60)"/>
+    <rect x="315" y="153" width="14" height="14" transform="rotate(45 322 160)"/>
+    <rect x="315" y="253" width="14" height="14" transform="rotate(45 322 260)"/>
+    <rect x="537" y="53" width="14" height="14" transform="rotate(45 544 60)"/>
+    <rect x="537" y="153" width="14" height="14" transform="rotate(45 544 160)"/>
+    <rect x="537" y="253" width="14" height="14" transform="rotate(45 544 260)"/>
+  </g>
+  <g class="t t-s">
+    <text x="322" y="108" text-anchor="middle" class="k-casa">punto de control:</text>
+    <text x="322" y="123" text-anchor="middle" class="k-casa">revisar y detallar</text>
+    <text x="780" y="165" class="t-m">aún grueso</text>
+    <text x="780" y="265" class="k-red">tramo</text>
+    <text x="780" y="280" class="k-red">final</text>
+  </g>
+  <g class="t t-s">
+    <rect x="120" y="306" width="14" height="14" rx="3" class="c-enl"/><text x="140" y="318">hecho</text>
+    <rect x="210" y="306" width="14" height="14" rx="3" class="c-red"/><text x="230" y="318">tramo detallado</text>
+    <rect x="350" y="306" width="14" height="14" rx="3" class="caja" style="stroke-dasharray:3 3"/><text x="370" y="318">hito grueso</text>
+    <rect x="470" y="306" width="12" height="12" class="d-casa" transform="rotate(45 476 312)"/><text x="492" y="318">punto de control con revisión</text>
+  </g>
+</svg></div><figcaption><b>Un horizonte que retrocede.</b> Tres momentos de la misma tarea, de arriba hacia abajo. En cada uno, los pasos ya hechos quedan a la izquierda, el tramo detallado (tres pasos) está en el centro y el resto son hitos gruesos. Los rombos son los puntos de control: al llegar a cada uno, se revisa lo hecho y se detalla el tramo siguiente.</figcaption></figure><div class="prose"><p>La segunda son los <b>puntos de control con revisión</b> en los hitos: al cerrar cada tramo, el revisor, o una persona si el hito lo pide, comprueba el resultado acumulado antes de seguir. Un error detectado ahí se corrige rehaciendo un tramo, no la tarea entera. Es la versión de este capítulo de la ejecución durable del capítulo 6: el punto de control no solo permite reanudar, también permite <b>detenerse a mirar</b>.</p></div><div class="lab" id="12-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El error que se compone: la tarea larga con y sin puntos de control</h3></div><p class="hint">Mueve la probabilidad de éxito por paso, la longitud de la tarea y cada cuántos pasos hay un punto de control. Compara las dos curvas: sin revisión, la probabilidad de terminar bien cae con cada paso; con puntos de control que detectan y rehacen tramos, cae mucho más despacio. La lectura dice cuántas revisiones cuesta.</p><style>
+[id="12-lab-3"] .c12l3-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:10px}
+[id="12-lab-3"] .c12l3-svg text{font:500 11px var(--f-display);fill:var(--muted)}
+[id="12-lab-3"] .c12l3-svg .eje{stroke:var(--line);stroke-width:1}
+[id="12-lab-3"] .c12l3-svg .rej{stroke:var(--grid);stroke-width:1}
+[id="12-lab-3"] .c12l3-svg .sin{fill:none;stroke:var(--warm);stroke-width:2.5}
+[id="12-lab-3"] .c12l3-svg .con{fill:none;stroke:var(--good);stroke-width:2.5}
+[id="12-lab-3"] .c12l3-svg .mark{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:4 3}
+[id="12-lab-3"] .c12l3-svg .cp{fill:var(--d-casa)}
+</style>
+<div class="ctls">
+  <label class="ctl">Éxito de cada paso <output id="c12l3-po">95 %</output><input type="range" id="c12l3-p" min="850" max="995" step="5" value="950"></label>
+  <label class="ctl">Pasos de la tarea <output id="c12l3-no">20</output><input type="range" id="c12l3-n" min="2" max="50" step="1" value="20"></label>
+  <label class="ctl">Punto de control cada <output id="c12l3-ko">5 pasos</output><input type="range" id="c12l3-k" min="2" max="12" step="1" value="5"></label>
+</div>
+<svg class="c12l3-svg" id="c12l3-svg" viewBox="0 0 520 260" role="img" aria-label="Probabilidad de terminar bien según el número de pasos, sin revisión y con puntos de control"></svg>
+<div class="legend"><span><i style="background:var(--warm)"></i>sin revisión</span><span><i style="background:var(--good)"></i>con puntos de control</span><span><i style="background:var(--d-casa)"></i>punto de control</span></div>
+<div class="readout texto" id="c12l3-out" aria-live="polite"></div></div><div class="caso"><b>Un caso real</b><p>Un equipo que construía un agente para preparar cierres contables empezó con un bucle reactivo y una lista de instrucciones larga. En tareas de veinte pasos el agente terminaba casi siempre, pero una de cada tres veces el resultado tenía un error que se había colado temprano y nadie veía hasta el final. Pasaron a un plan como dato con criterio de terminado por paso y tres hitos con revisión, uno de ellos humano antes de publicar. Las tareas se hicieron un poco más lentas y bastante más baratas de corregir: los errores aparecían en el hito siguiente al paso que los causaba, con el plan a la vista para saber qué rehacer.</p></div><div class="prose"><p>La idea que se lleva este capítulo: cuando una tarea es larga, el plan deja de estar en la cabeza del modelo y pasa a ser un dato del arnés, con pasos, dependencias, criterios de terminado y versiones. El modelo lo propone y lo corrige; el arnés lo valida, lo sigue, lo revisa y decide cuándo hace falta una persona. Cuando una sola línea de pasos no alcanza y el trabajo se reparte entre varios agentes, entra el capítulo 13, <a href="13-orquestador-y-subagentes.html">orquestador y subagentes</a>.</p><p><b>Planificador y ejecutor.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Por qué un bucle puramente reactivo se pierde en tareas largas?</summary><p>Porque decide un paso a la vez sin ver los siguientes (miopía), el objetivo queda lejos en el contexto (deriva), no lleva cuenta de lo hecho (trabajo repetido) y nadie puede revisar lo que piensa hacer antes de que lo haga.</p></details><details><summary>¿Qué gana el arnés cuando el plan es un dato y no un párrafo?</summary><p>Puede validarlo (esquema, dependencias, capacidades, políticas y presupuesto) antes de empezar, mostrarlo para aprobación, ejecutarlo paso a paso con puntos de control, reanudarlo y comparar versiones.</p></details><details><summary>¿Qué puede cambiar el planificador al replanificar y qué no?</summary><p>Puede agregar, cambiar o quitar pasos pendientes. No puede deshacer ni reescribir los pasos en «hecho», y la nueva versión pasa por la misma validación que la primera.</p></details><details><summary>Si la política deniega leer las facturas de otra filial, ¿conviene reintentar o rodear?</summary><p>Ninguna de las dos: reintentar no cambia una denegación, y rodear con otra herramienta sería intentar esquivar una regla. Se escala a una persona o se replanifica con un alcance que la persona confirme.</p></details><details><summary>¿Por qué el revisor empieza por comprobaciones deterministas?</summary><p>Porque son baratas, exactas y no se dejan convencer. El modelo revisor queda para lo que solo se juzga leyendo, y no gasta llamadas en errores que una regla detecta sola.</p></details><details><summary>Con 95 % de éxito por paso y sin corrección, ¿cómo le va a una tarea de 20 pasos?</summary><p>Termina bien alrededor del 36 % de las veces, porque los errores se componen: 0,95 elevado a 20.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es un orden topológico y qué algoritmos lo calculan sobre un grafo de dependencias?<small>Pista: busca «topological sort Kahn algorithm».</small></li><li>¿De dónde viene la idea del horizonte que retrocede en el control de procesos industriales?<small>Pista: busca «model predictive control receding horizon».</small></li><li>¿Qué es la planificación con redes jerárquicas de tareas (HTN) de la inteligencia artificial clásica y en qué se parece a un plan con hitos gruesos?</li><li>¿Qué propone el método <i>Tree of Thoughts</i> frente a escribir un solo plan?<small>Pista: busca el artículo «Tree of Thoughts: Deliberate Problem Solving with Large Language Models».</small></li><li>¿Qué dicen los estudios sobre el sesgo de los modelos que evalúan textos escritos por ellos mismos?<small>Pista: busca «LLM self-preference bias evaluation».</small></li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener">ReAct: Synergizing Reasoning and Acting in Language Models <small>artículo, en inglés</small></a><a class="vid" href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener">Plan-and-Solve Prompting <small>artículo, en inglés</small></a><a class="vid" href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener">Reflexion: Language Agents with Verbal Reinforcement Learning <small>artículo, en inglés</small></a><a class="vid" href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents <small>lectura, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const root=document.getElementById('12-lab-1')||document;
+  const $=s=>root.querySelector(s);
+  const PASOS=[['p1','Leer pagos de octubre'],['p2','Leer facturas abiertas'],['p3','Cruzar pagos y facturas'],['p4','Marcar facturas vencidas'],['p5','Redactar informe de mora'],['p6','Enviar informe a finanzas']];
+  let est='replan';
+  // resultado por falla y estrategia
+  const R={
+    trans:{
+      reintentar:{fin:'ok',ver:1,llam:6,extra:'p3 se reintenta con espera creciente y responde al segundo intento.',v2:null,p3:'hecho',nota:'Es la respuesta correcta para una falla transitoria: el paso estaba bien pensado y el mundo solo estaba ocupado.'},
+      rodear:{fin:'ok',ver:1,llam:7,extra:'p3 usa la herramienta alternativa (cruce por hoja de cálculo), más lenta pero equivalente.',v2:null,p3:'hecho',nota:'Funciona porque la alternativa resuelve el mismo problema. Para un error transitorio, reintentar era más barato.'},
+      replan:{fin:'ok',ver:2,llam:8,extra:'El planificador escribe un plan v2 casi idéntico al v1.',v2:'igual',nota:'Funciona, pero gasta una llamada al planificador y una versión nueva del plan para algo que un reintento resolvía.',warn:true},
+      escalar:{fin:'ok',ver:1,llam:6,extra:'Una persona recibe el caso, espera y pide reintentar.',v2:'persona',nota:'Funciona, pero interrumpe a una persona por un tiempo de espera agotado. El costo de las aprobaciones (capítulo 9) sube sin razón.',warn:true}
+    },
+    dato:{
+      reintentar:{fin:'mal',ver:1,llam:8,extra:'p3 falla tres veces con el mismo error y se agotan los reintentos.',v2:null,p3:'fallido',nota:'Reintentar no cambia el dato: los pagos siguen en dos monedas. Se gastaron llamadas y la tarea termina con error.'},
+      rodear:{fin:'mal',ver:1,llam:7,extra:'La herramienta alternativa tampoco sabe convertir monedas.',v2:null,p3:'fallido',nota:'Rodear sirve solo si la alternativa resuelve el problema real. Aquí el problema es el plan, no la herramienta.'},
+      replan:{fin:'ok',ver:2,llam:8,extra:'El plan v2 inserta «convertir pagos a USD» antes de p3. p1 y p2 se conservan.',v2:'moneda',nota:'Es la respuesta correcta: el dato contradijo una suposición del plan, y el planificador cambió solo lo que faltaba.'},
+      escalar:{fin:'ok',ver:1,llam:6,extra:'Una persona convierte los pagos a mano y devuelve el caso.',v2:'persona',nota:'Funciona, pero lo resolvía el planificador sin interrumpir a nadie. Escalar es más caro en tiempo.',warn:true}
+    },
+    perm:{
+      reintentar:{fin:'mal',ver:1,llam:8,extra:'La política deniega las tres veces.',v2:null,p3:'fallido',nota:'Una denegación no es transitoria: ningún reintento la cambia. Solo suma denegaciones en el registro.'},
+      rodear:{fin:'bloq',ver:1,llam:7,extra:'p3 intenta leer las mismas facturas con otra herramienta. La política la deniega igual y lo marca como intento de evasión.',v2:null,p3:'fallido',nota:'Rodear una denegación es intentar esquivar una regla. El arnés lo bloquea y la auditoría lo registra. Nunca es una estrategia válida aquí.'},
+      replan:{fin:'medio',ver:2,llam:8,extra:'El plan v2 reduce el alcance a las facturas de la filial propia y avisa en el informe.',v2:'alcance',nota:'Termina, pero cambió el objetivo de la tarea: ahora el informe es parcial. Un plan que cambia el alcance necesita que una persona lo confirme.',warn:true},
+      escalar:{fin:'ok',ver:1,llam:6,extra:'Una persona con permiso sobre la otra filial decide: autoriza el acceso o acota el informe.',v2:'persona',nota:'Es la respuesta correcta: la decisión es de alguien con autoridad, no del agente.'}
+    }
+  };
+  function fila(id,txt,cls,et){return `<div class="c12l1-p ${cls}"><span class="id">${id}</span><span>${txt}</span><span class="e">${et}</span></div>`;}
+  function pintar(){
+    root.querySelectorAll('[data-e]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.e===est));
+    const f=$('#c12l1-f').value, r=R[f][est];
+    // plan v1
+    let h='<h4>Plan v1 (aprobado)</h4>';
+    PASOS.forEach(([id,t],i)=>{
+      let c='pend',e='pendiente';
+      if(i<2){c='hecho';e='hecho';}
+      else if(i===2){ if(r.v2&&r.v2!=='persona'){c='fallido';e='fallido';} else if(r.p3==='hecho'||(r.v2==='persona'&&r.fin==='ok')){c='hecho';e=r.v2==='persona'?'hecho por persona':'hecho';} else {c='fallido';e='fallido';} }
+      else if(!r.v2||r.v2==='persona'){ if(r.fin==='ok'){c='hecho';e='hecho';} else {c='omit';e='no se ejecuta';} }
+      else {c='omit';e='reemplazado';}
+      h+=fila(id,t,c,e);
+    });
+    $('#c12l1-v1').innerHTML=h;
+    // plan v2
+    const v2=$('#c12l1-v2');
+    if(!r.v2||r.v2==='persona'){
+      v2.className='c12l1-plan vacio';
+      v2.innerHTML=r.v2==='persona'?'<span>Sin plan nuevo: <b>una persona</b> resolvió el paso 3 y la tarea siguió con el plan v1.</span>':'<span>Sin plan nuevo: la estrategia no cambia el plan.</span>';
+    }else{
+      v2.className='c12l1-plan';
+      let g='<h4>Plan v2 (validado de nuevo)</h4>';
+      g+=fila('p1',PASOS[0][1],'hecho','se conserva')+fila('p2',PASOS[1][1],'hecho','se conserva');
+      if(r.v2==='moneda')g+=fila('p3a','Convertir pagos a USD','nuevo','nuevo · hecho');
+      if(r.v2==='alcance')g+=fila('p3','Cruzar solo facturas de la filial propia','nuevo persona','cambia el alcance');
+      else g+=fila('p3',PASOS[2][1]+(r.v2==='moneda'?' (en USD)':''),'hecho','hecho');
+      g+=fila('p4',PASOS[3][1],'hecho','hecho');
+      g+=fila('p5',r.v2==='alcance'?'Redactar informe parcial (avisa el alcance)':PASOS[4][1],r.v2==='alcance'?'nuevo':'hecho',r.v2==='alcance'?'cambiado · hecho':'hecho');
+      g+=fila('p6',PASOS[5][1],r.v2==='alcance'?'persona':'hecho',r.v2==='alcance'?'espera aprobación':'hecho');
+      v2.innerHTML=g;
+    }
+    // lectura
+    const fin={ok:['ok','La tarea termina bien.'],mal:['warn','La tarea termina con error.'],bloq:['warn','La acción se bloquea y queda registrada.'],medio:['warn','La tarea termina con un objetivo distinto: hace falta confirmación.']}[r.fin];
+    let o=`<span class="big">Versiones del plan: ${r.ver} · llamadas al modelo: ${r.llam}</span>`;
+    o+=`<span>${r.extra}</span>`;
+    o+=`<span class="${r.fin==='ok'&&!r.warn?'ok':'warn'}">${fin[1]} ${r.nota}</span>`;
+    o+=`<span class="hint">Pasos hechos que se repiten: 0. Lo ya hecho es inmutable en cualquier estrategia.</span>`;
+    $('#c12l1-out').innerHTML=o;
+  }
+  root.querySelectorAll('[data-e]').forEach(b=>b.addEventListener('click',()=>{est=b.dataset.e;pintar();}));
+  $('#c12l1-f').addEventListener('change',pintar);
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const root=document.getElementById('12-lab-2')||document;
+  const $=s=>root.querySelector(s);
+  // detección del revisor y llamadas que cuesta cada revisión
+  const REV=[{d:0,c:0,n:'sin revisor'},{d:.45,c:1,n:'el mismo modelo'},{d:.72,c:1,n:'otro prompt con rúbrica'},{d:.88,c:1.1,n:'deterministas + modelo'}];
+  const PRECIO=0.02, ARREGLA=.8, TOTAL=200;
+  function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function pintar(){
+    const e=+$('#c12l2-e').value/100, n=+$('#c12l2-n').value, rv=REV[+$('#c12l2-r').value];
+    $('#c12l2-eo').textContent=$('#c12l2-e').value+' %';$('#c12l2-no').textContent=n;
+    const r=rng(12);
+    let bien=0,fix=0,esc=0,err=0,llam=0,html='';
+    for(let k=0;k<TOTAL;k++){
+      let mal=false;
+      for(let s=0;s<n;s++) if(r()<e) mal=true;
+      llam+=n;
+      let cls='';
+      if(!mal){ if(rv.c) llam+=rv.c; bien++; }
+      else if(!rv.c){ err++; cls='err'; }
+      else{
+        // hasta dos devoluciones con reflexión; después, se escala
+        let vueltas=0, estado='err';
+        while(true){
+          llam+=rv.c;
+          if(r()>=rv.d){ estado='err'; break; }          // no lo detecta
+          if(vueltas===2){ estado='esc'; break; }        // ya devolvió dos veces
+          vueltas++; llam+=Math.ceil(n/2);               // rehace los pasos afectados
+          if(r()<ARREGLA){ llam+=rv.c; estado='fix'; break; }
+        }
+        if(estado==='fix'){fix++;cls='fix';} else if(estado==='esc'){esc++;cls='esc';} else {err++;cls='err';}
+      }
+      html+=`<i class="${cls}"></i>`;
+    }
+    $('#c12l2-g').innerHTML=html;
+    const conErr=TOTAL-bien, pct=x=>(100*x/TOTAL).toFixed(1).replace('.',',')+' %';
+    const costo=(llam*PRECIO).toFixed(2).replace('.',',');
+    const base=(TOTAL*n*PRECIO).toFixed(2).replace('.',',');
+    let o=`<span class="big">${err} de ${TOTAL} tareas llegan al final con un error (${pct(err)})</span>`;
+    o+=`<span>Tareas que tuvieron algún error en el camino: ${conErr} (${pct(conErr)}). Corregidas por el revisor: ${fix}. Escaladas a una persona: ${esc}.</span>`;
+    o+=`<span>Costo del lote: US$ ${costo} (sin revisor serían US$ ${base}), con US$ ${PRECIO.toFixed(2).replace('.',',')} por llamada.</span>`;
+    if(!rv.c) o+=`<span class="warn">Sin revisor, todo error en cualquier paso llega al final: con ${n} pasos y ${$('#c12l2-e').value} % por paso, ${pct(conErr)} de las tareas salen mal.</span>`;
+    else if(rv.d<.5) o+=`<span class="warn">El mismo modelo con el mismo prompt deja pasar más de la mitad de los errores: comparte los puntos ciegos que los causaron. Paga casi lo mismo que un revisor mejor.</span>`;
+    else o+=`<span class="ok">El revisor (${rv.n}) atrapa la mayoría de los errores; cada devolución trae una reflexión para el siguiente intento.</span>`;
+    if(rv.c&&n>=14&&e>=.08) o+=`<span class="hint">Con tareas largas y pasos poco fiables, casi todas las tareas pasan por devoluciones: conviene acortar el horizonte o revisar en los hitos, no solo al final.</span>`;
+    $('#c12l2-out').innerHTML=o;
+  }
+  $('#c12l2-r').addEventListener('change',pintar);
+  $('#c12l2-e').addEventListener('input',pintar);
+  $('#c12l2-n').addEventListener('input',pintar);
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const root=document.getElementById('12-lab-3')||document;
+  const $=s=>root.querySelector(s);
+  const D=.9; // probabilidad de que la revisión detecte un tramo con error
+  const X0=44,X1=505,Y0=225,Y1=18,NMAX=50;
+  const sx=n=>X0+(n-1)/(NMAX-1)*(X1-X0), sy=v=>Y0-v*(Y0-Y1);
+  function con(p,n,k){ // tramos de k pasos; un tramo con error detectado se rehace una vez
+    let v=1,r=n;
+    while(r>0){const m=Math.min(k,r);const s=Math.pow(p,m);v*=s+(1-s)*D*s;r-=m;}
+    return v;
+  }
+  const f=x=>(100*x).toFixed(1).replace('.',',')+' %';
+  function pintar(){
+    const p=+$('#c12l3-p').value/1000,n=+$('#c12l3-n').value,k=+$('#c12l3-k').value;
+    $('#c12l3-po').textContent=(p*100).toFixed(1).replace('.',',').replace(',0','')+' %';
+    $('#c12l3-no').textContent=n;$('#c12l3-ko').textContent=k+' pasos';
+    let g='';
+    for(let v=0;v<=1.001;v+=.25){g+=`<line class="rej" x1="${X0}" x2="${X1}" y1="${sy(v)}" y2="${sy(v)}"/><text x="${X0-6}" y="${sy(v)+4}" text-anchor="end">${Math.round(v*100)}%</text>`;}
+    for(const t of [1,10,20,30,40,50]) g+=`<text x="${sx(t)}" y="${Y0+16}" text-anchor="middle">${t}</text>`;
+    g+=`<text x="${(X0+X1)/2}" y="${Y0+31}" text-anchor="middle">pasos de la tarea</text>`;
+    g+=`<line class="eje" x1="${X0}" x2="${X1}" y1="${Y0}" y2="${Y0}"/><line class="eje" x1="${X0}" x2="${X0}" y1="${Y0}" y2="${Y1}"/>`;
+    let a='',b='';
+    for(let i=1;i<=NMAX;i++){a+=(i>1?'L':'M')+sx(i).toFixed(1)+' '+sy(Math.pow(p,i)).toFixed(1);b+=(i>1?'L':'M')+sx(i).toFixed(1)+' '+sy(con(p,i,k)).toFixed(1);}
+    g+=`<path class="sin" d="${a}"/><path class="con" d="${b}"/>`;
+    for(let c=k;c<=n;c+=k) g+=`<rect class="cp" x="${sx(c)-4}" y="${Y0-4}" width="8" height="8" transform="rotate(45 ${sx(c)} ${Y0})"/>`;
+    const vs=Math.pow(p,n),vc=con(p,n,k);
+    g+=`<line class="mark" x1="${sx(n)}" x2="${sx(n)}" y1="${Y1}" y2="${Y0}"/>`;
+    g+=`<circle cx="${sx(n)}" cy="${sy(vs)}" r="4.5" fill="var(--warm)"/><circle cx="${sx(n)}" cy="${sy(vc)}" r="4.5" fill="var(--good)"/>`;
+    $('#c12l3-svg').innerHTML=g;
+    const rev=Math.ceil(n/k);
+    let o=`<span class="big">Termina bien: ${f(vs)} sin revisión · ${f(vc)} con puntos de control</span>`;
+    o+=`<span>Revisiones en la tarea: ${rev} (una por tramo de hasta ${k} pasos). Cada revisión detecta el ${Math.round(D*100)} % de los tramos con error y los rehace una vez.</span>`;
+    if(vs<.5) o+=`<span class="warn">Sin revisión, más de la mitad de las tareas de ${n} pasos terminan mal: los errores se componen paso a paso.</span>`;
+    else o+=`<span class="ok">Con ${n} pasos al ${(p*100).toFixed(1).replace('.',',').replace(',0','')} % por paso, la tarea todavía sale bien la mayoría de las veces.</span>`;
+    if(k>=10&&n>=20) o+=`<span class="hint">Tramos largos dejan que el error se componga dentro del tramo. Acorta la distancia entre puntos de control y mira cómo sube la curva verde, a cambio de más revisiones.</span>`;
+    $('#c12l3-out').innerHTML=o;
+  }
+  ['#c12l3-p','#c12l3-n','#c12l3-k'].forEach(s=>$(s).addEventListener('input',pintar));
+  pintar();
+})();
+</script>
+</body>
+</html>

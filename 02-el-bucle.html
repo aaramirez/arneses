@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>El bucle del agente · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="el-bucle">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 02 DE 16</span><h1>El bucle del agente</h1><p class="lede">En el centro de todo agente hay un ciclo de pocas líneas: pedirle al modelo, leer su propuesta, ejecutar lo que pidió y devolverle el resultado. Este capítulo lo construye y le pone lo que lo hace seguro: condiciones de parada que no dependen del modelo.</p></header>
+<section><h2>El protocolo de mensajes: bloques de texto, de herramienta y de resultado</h2><div class="prose"><p>En el capítulo 1 viste que el modelo solo propone y que el arnés decide. Falta ver <b>cómo se hablan</b>. No hay magia: se mandan una lista de mensajes, siempre con la misma forma, y cada llamada al modelo manda la lista completa otra vez.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en un expediente que va y viene entre dos oficinas. Cada vez que el expediente sale, lleva todas las hojas anteriores: la solicitud, cada respuesta y cada comprobante. Una oficina (el modelo) escribe hojas de «pedido»; la otra (el arnés) adjunta los comprobantes, cada uno con el número del pedido al que responde. Nadie recuerda nada fuera del expediente: si una hoja no va adentro, para la otra oficina no existe.</p></div><div class="prose"><p>Ese expediente es la <b>conversación</b> (<i>conversation</i>), una lista de <b>mensajes</b> (<i>messages</i>). Cada mensaje tiene un <b>rol</b> (<i>role</i>): <code>usuario</code> para lo que entra al modelo (el pedido de una persona y también los resultados de las herramientas) y <code>asistente</code> para lo que produce el modelo. Aparte va el <b>prompt de sistema</b> (<i>system prompt</i>), las instrucciones fijas del agente, que el arnés pone al principio de cada llamada.</p><p>Cada mensaje no es un texto suelto: es una lista de <b>bloques</b> (<i>content blocks</i>). Hay tres tipos que importan aquí, y son los mismos que el arnés del curso definió en el capítulo 1:</p><ul><li><b>Bloque de texto</b> (<i>text block</i>): lo que el modelo le dice a la persona, o lo que la persona escribe.</li><li><b>Bloque de llamada</b> (<i>tool use</i> o <i>tool call</i>): un pedido de acción con un <code>id</code> único, el nombre de la herramienta y sus argumentos, casi siempre un objeto JSON (<i>JavaScript Object Notation</i>, el formato de datos en texto más usado en la web).</li><li><b>Bloque de resultado</b> (<i>tool result</i>): la respuesta del arnés a una llamada. Lleva el <b>mismo <code>id</code></b> de la llamada que responde, el contenido y una marca que dice si fue un error.</li></ul><p>El <code>id</code> es lo que mantiene ordenado el expediente. Un modelo puede pedir dos o tres herramientas en una sola respuesta; el arnés debe devolver <b>un resultado por cada llamada</b>, con su <code>id</code>, en el mensaje siguiente. Si falta uno, los proveedores rechazan la conversación con un error, porque el modelo quedaría esperando un comprobante que no llega.</p></div><figure class="fig fig-esquema" id="02-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 470" style="min-width:680px" role="img" aria-label="Una conversación de cuatro mensajes más el prompt de sistema: el usuario pide comparar ventas; el asistente responde con un texto y dos llamadas con id t1 y t2; el siguiente mensaje de usuario trae dos resultados con los mismos id, uno correcto y otro con error; el asistente cierra con un texto sin llamadas">
+  
+  <g class="t t-xs t-b t-m">
+    <text x="20" y="39">SISTEMA</text>
+    <text x="20" y="95">USUARIO</text>
+    <text x="20" y="188">ASISTENTE</text>
+    <text x="20" y="309">USUARIO</text>
+    <text x="20" y="393">ASISTENTE</text>
+  </g>
+  <g class="t t-s t-m">
+    <text x="20" y="108">mensaje 1</text>
+    <text x="20" y="201">mensaje 2</text>
+    <text x="20" y="322">mensaje 3</text>
+    <text x="20" y="406">mensaje 4</text>
+  </g>
+
+  
+  <rect x="140" y="18" width="420" height="36" rx="10" class="caja ln-d"/>
+  <text x="155" y="41" class="t t-s">Prompt de sistema: instrucciones fijas y definiciones de herramientas</text>
+
+  
+  <rect x="140" y="70" width="420" height="48" rx="10" class="caja"/>
+  <rect x="150" y="78" width="400" height="32" rx="6" class="d-inet"/>
+  <text x="162" y="99" class="t t-s"><tspan class="t-b">texto</tspan> · «Compara las ventas de septiembre y octubre»</text>
+
+  
+  <rect x="140" y="128" width="420" height="124" rx="10" class="caja"/>
+  <rect x="150" y="136" width="400" height="32" rx="6" class="d-inet"/>
+  <text x="162" y="157" class="t t-s"><tspan class="t-b">texto</tspan> · «Consulto los dos meses.»</text>
+  <rect x="150" y="174" width="400" height="32" rx="6" class="c-tra"/>
+  <text x="162" y="195" class="t t-s t-mono"><tspan class="t-b k-tra">llamada t1</tspan> consultar_ventas({"mes":"2026-09"})</text>
+  <rect x="150" y="212" width="400" height="32" rx="6" class="c-tra"/>
+  <text x="162" y="233" class="t t-s t-mono"><tspan class="t-b k-tra">llamada t2</tspan> consultar_ventas({"mes":"2026-10"})</text>
+
+  
+  <rect x="140" y="268" width="420" height="86" rx="10" class="caja"/>
+  <rect x="150" y="276" width="400" height="32" rx="6" class="c-enl"/>
+  <text x="162" y="297" class="t t-s t-mono"><tspan class="t-b k-enl">resultado t1</tspan> {"total": 45110}</text>
+  <rect x="150" y="314" width="400" height="32" rx="6" class="d-sis"/>
+  <text x="162" y="335" class="t t-s t-mono"><tspan class="t-b k-sis">resultado t2</tspan> esError · «base en mantenimiento»</text>
+
+  
+  <rect x="140" y="370" width="420" height="48" rx="10" class="caja"/>
+  <rect x="150" y="378" width="400" height="32" rx="6" class="d-inet"/>
+  <text x="162" y="399" class="t t-s"><tspan class="t-b">texto</tspan> · «Septiembre: 45.110. Octubre no está disponible ahora.»</text>
+
+  
+  <path d="M550 190 C 585 190 585 292 550 292" class="ln s-tra" style="stroke-width:2"/>
+  <path d="M550 228 C 612 228 612 330 550 330" class="ln s-tra" style="stroke-width:2"/>
+  <circle cx="550" cy="190" r="4" class="k-tra"/><circle cx="550" cy="292" r="4" class="k-tra"/>
+  <circle cx="550" cy="228" r="4" class="k-tra"/><circle cx="550" cy="330" r="4" class="k-tra"/>
+
+  
+  <g class="t t-s">
+    <text x="640" y="32">Va aparte, al principio de</text>
+    <text x="640" y="47">cada llamada al modelo</text>
+    <text x="640" y="180" class="t-b">① Cada llamada lleva un id</text>
+    <text x="640" y="195">único; puede haber varias</text>
+    <text x="640" y="210">en una misma respuesta</text>
+    <text x="640" y="278" class="t-b">② Un resultado por llamada,</text>
+    <text x="640" y="293">con el mismo id, todos en</text>
+    <text x="640" y="308">el mensaje siguiente</text>
+    <text x="640" y="333" class="t-b k-sis">③ Un error también es</text>
+    <text x="640" y="348" class="k-sis">un resultado: vuelve al modelo</text>
+    <text x="640" y="390" class="t-b">④ Texto sin llamadas:</text>
+    <text x="640" y="405">fin de turno</text>
+  </g>
+
+  
+  <g class="t t-s">
+    <rect x="140" y="440" width="14" height="14" rx="3" class="d-inet"/><text x="160" y="452">texto</text>
+    <rect x="215" y="440" width="14" height="14" rx="3" class="c-tra"/><text x="235" y="452">llamada (la propone el modelo)</text>
+    <rect x="430" y="440" width="14" height="14" rx="3" class="c-enl"/><text x="450" y="452">resultado</text>
+    <rect x="530" y="440" width="14" height="14" rx="3" class="d-sis"/><text x="550" y="452">resultado con error</text>
+  </g>
+</svg></div><figcaption><b>La conversación como una lista de mensajes.</b> Se lee de arriba hacia abajo, como la historia que el arnés reenvía en cada llamada. A la izquierda, el rol de cada mensaje; en el centro, sus bloques con el color de su tipo: texto (gris), llamada (violeta) y resultado (verde, o rojo si es un error). Las líneas unen cada llamada con su resultado por el <code>id</code>. A la derecha, las reglas que el arnés tiene que cumplir para que el proveedor acepte la conversación.</figcaption></figure><div class="prose"><p>Cada proveedor escribe este protocolo con nombres propios. En la API de Anthropic los bloques se llaman <code>text</code>, <code>tool_use</code> y <code>tool_result</code>, y los resultados viajan en un mensaje con rol <code>user</code>. En la de OpenAI, las llamadas van en un campo <code>tool_calls</code> del mensaje del asistente, los argumentos llegan como un texto con JSON adentro y cada resultado es un mensaje propio con rol <code>tool</code>. La idea es la misma; los detalles no. Por eso el arnés del curso usa <b>sus propios tipos</b> y deja la traducción a un adaptador, que es el tema del capítulo 4.</p></div></section>
+<section><h2>Un turno: pedir, recibir, ejecutar y devolver</h2><div class="prose"><p>Con el protocolo claro, el bucle se describe en una frase: <b>repite turnos hasta que algo diga basta</b>. Un <b>turno</b> (<i>turn</i>) es una llamada al modelo más la ejecución de lo que pidió en esa respuesta. Tiene cuatro tiempos:</p><ol class="steps"><li><span><b>Pedir.</b> El arnés arma el contexto (instrucciones, definiciones de herramientas e historia) y llama al modelo.</span></li><li><span><b>Recibir.</b> Llega la respuesta: bloques y un <b>motivo de parada</b> (<i>stop reason</i>), un campo que dice por qué el modelo dejó de escribir.</span></li><li><span><b>Ejecutar.</b> Si el motivo es «quiero usar herramientas», el arnés toma cada bloque de llamada, la valida, consulta las políticas y la ejecuta.</span></li><li><span><b>Devolver.</b> Los resultados se agregan a la historia como un nuevo mensaje, y empieza el turno siguiente.</span></li></ol></div><figure class="fig fig-flujo" id="02-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 470" style="min-width:680px" role="img" aria-label="Diagrama de secuencia de un turno: el bucle arma el contexto y llama al modelo; el modelo propone dos llamadas con motivo de parada uso de herramienta; el bucle consulta las políticas, que permiten ambas; las herramientas se ejecutan y devuelven dos resultados, uno con error; el bucle agrega un mensaje con los dos resultados y vuelve a empezar">
+  <defs>
+    <marker id="d22-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d22-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d22-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d22-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d22-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+  </defs>
+
+  
+  <rect x="20" y="14" width="110" height="46" rx="10" class="c-red"/><text x="75" y="42" class="t t-b k-red" text-anchor="middle">Bucle</text>
+  <rect x="260" y="14" width="110" height="46" rx="10" class="c-tra"/><text x="315" y="42" class="t t-b k-tra" text-anchor="middle">Modelo</text>
+  <rect x="465" y="14" width="110" height="46" rx="10" class="d-sis"/><text x="520" y="42" class="t t-b k-sis" text-anchor="middle">Políticas</text>
+  <rect x="630" y="14" width="120" height="46" rx="10" class="c-enl"/><text x="690" y="42" class="t t-b k-enl" text-anchor="middle">Herramientas</text>
+  <line x1="75" y1="60" x2="75" y2="450" class="vida"/>
+  <line x1="315" y1="60" x2="315" y2="450" class="vida"/>
+  <line x1="520" y1="60" x2="520" y2="450" class="vida"/>
+  <line x1="690" y1="60" x2="690" y2="450" class="vida"/>
+
+  
+  <rect x="83" y="78" width="160" height="30" rx="6" class="c-red"/>
+  <text x="92" y="97" class="t t-s">① arma el contexto</text>
+
+  
+  <line x1="75" y1="150" x2="313" y2="150" class="ln s-red" style="stroke-width:2" marker-end="url(#d22-r)"/>
+  <text x="84" y="128" class="t t-s t-b">② pide al modelo</text>
+  <text x="84" y="142" class="t t-s t-m">instrucciones, herramientas, historia</text>
+
+  
+  <line x1="315" y1="195" x2="77" y2="195" class="ln s-tra" style="stroke-width:2" marker-end="url(#d22-t)"/>
+  <text x="84" y="173" class="t t-s t-b">③ propone t1 y t2</text>
+  <text x="84" y="187" class="t t-s t-mono">parada: uso_de_herramienta</text>
+
+  
+  <line x1="75" y1="240" x2="518" y2="240" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d22-s)"/>
+  <text x="330" y="232" class="t t-s">④ ¿se permiten t1 y t2?</text>
+  <line x1="520" y1="275" x2="77" y2="275" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d22-s)"/>
+  <text x="330" y="267" class="t t-s">⑤ permitir las dos</text>
+
+  
+  <line x1="75" y1="315" x2="688" y2="315" class="ln s-enl" style="stroke-width:2" marker-end="url(#d22-e)"/>
+  <text x="535" y="307" class="t t-s">⑥ ejecuta t1 y t2</text>
+  <line x1="690" y1="355" x2="77" y2="355" class="ln s-enl" style="stroke-width:2" marker-end="url(#d22-e)"/>
+  <text x="440" y="347" class="t t-s">⑦ dos resultados (t2 con error)</text>
+
+  
+  <rect x="83" y="380" width="200" height="44" rx="6" class="c-red"/>
+  <text x="92" y="398" class="t t-s">⑧ agrega a la historia un</text>
+  <text x="92" y="413" class="t t-s">mensaje con los dos resultados</text>
+
+  
+  <path d="M75 440 H 14 V 93 H 70" class="ln s-red" style="stroke-width:2.2" marker-end="url(#d22-r)"/>
+  <text x="10" y="300" class="t t-xs t-b k-red" transform="rotate(-90 10 300)" text-anchor="middle">SIGUIENTE TURNO</text>
+
+  
+  <g class="t t-xs t-b">
+    <path d="M772 78v74" class="ln s-red" style="stroke-width:3"/><text x="782" y="108" class="k-red">PEDIR</text><text x="782" y="124" class="t-m">esperando</text><text x="782" y="138" class="t-m">al modelo</text>
+    <path d="M772 165v54" class="ln s-tra" style="stroke-width:3"/><text x="782" y="185" class="k-tra">RECIBIR</text><text x="782" y="200" class="t-m">motivo de</text><text x="782" y="214" class="t-m">parada</text>
+    <path d="M772 222v142" class="ln s-enl" style="stroke-width:3"/><text x="782" y="285" class="k-enl">EJECUTAR</text><text x="782" y="301" class="t-m">esperando</text><text x="782" y="315" class="t-m">herramientas</text>
+    <path d="M772 378v48" class="ln s-red" style="stroke-width:3"/><text x="782" y="400" class="k-red">DEVOLVER</text><text x="782" y="416" class="t-m">fin del turno</text>
+  </g>
+</svg></div><figcaption><b>Un turno del bucle, mensaje por mensaje.</b> Cuatro participantes arriba y el tiempo corriendo hacia abajo. Las flechas numeradas siguen los cuatro tiempos del turno: el bucle pide (①②), el modelo responde con dos llamadas y el motivo de parada (③), el arnés ejecuta las dos (④ a ⑦) y devuelve ambos resultados juntos (⑧). La flecha de la izquierda regresa al principio: eso es el bucle. A la derecha, la fase de cada tramo y el estado en que queda la ejecución.</figcaption></figure><div class="prose"><p>Fíjate en un detalle que sorprende al principio: <b>el modelo no recuerda nada entre turnos</b>. Cada llamada es independiente y el modelo ve solo lo que le manda el arnés. Por eso el bucle reenvía la historia completa cada vez, y por eso cada turno cuesta más que el anterior: lleva todo lo de antes más lo nuevo. Ese crecimiento es el problema que resuelven la caché de prompts (capítulo 4) y la compactación (capítulo 5).</p><p>Mira un bucle en cámara lenta. Cada paso muestra el mensaje que se agrega a la conversación, el estado del arnés y el motivo de parada que trae el modelo.</p></div><div class="lab" id="02-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El bucle en cámara lenta: cada mensaje, el motivo de parada y la herramienta pedida</h3></div><p class="hint">Elige un escenario y avanza con «Siguiente» o «Reproducir». Mira crecer la lista de mensajes y cómo cada resultado lleva el <code>id</code> de su llamada. Compara el escenario del error con el de las dos herramientas en paralelo, y mira qué hace el arnés cuando la respuesta se corta por <code>max_tokens</code>.</p><style>
+[id="02-lab-1"] .opciones{grid-template-columns:minmax(0,1fr)}
+[id="02-lab-1"] .c2l1-estados{display:flex;flex-wrap:wrap;gap:6px}
+[id="02-lab-1"] .c2l1-estados span{font:600 .76rem var(--f-display);padding:4px 9px;border-radius:999px;border:1.5px solid var(--line);color:var(--muted);background:var(--card);transition:all .2s}
+[id="02-lab-1"] .c2l1-estados span.on{color:var(--card);background:var(--c-red);border-color:var(--c-red)}
+[id="02-lab-1"] .c2l1-estados span.fin.on{background:var(--good);border-color:var(--good)}
+[id="02-lab-1"] .c2l1-estados span.mal.on{background:var(--warm);border-color:var(--warm)}
+[id="02-lab-1"] .c2l1-conv{list-style:none;margin:0;padding:10px;display:grid;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:8px;max-height:420px;overflow:auto}
+[id="02-lab-1"] .c2l1-msg{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:8px 10px;display:grid;gap:6px;transition:box-shadow .3s}
+[id="02-lab-1"] .c2l1-msg.nuevo{box-shadow:0 0 0 3px var(--accent)}
+[id="02-lab-1"] .c2l1-cab{font:700 .7rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+[id="02-lab-1"] .c2l1-b{font:500 .8rem/1.45 var(--f-mono);padding:6px 8px;border-radius:6px;border-left:4px solid var(--muted);background:var(--paper);overflow-wrap:anywhere}
+[id="02-lab-1"] .c2l1-b b{font-family:var(--f-display);font-size:.78rem;margin-right:6px}
+[id="02-lab-1"] .c2l1-b.llamada{border-color:var(--c-tra);background:var(--c-tra-s)}
+[id="02-lab-1"] .c2l1-b.resultado{border-color:var(--c-enl);background:var(--c-enl-s)}
+[id="02-lab-1"] .c2l1-b.error{border-color:var(--warm);background:var(--warm-soft)}
+[id="02-lab-1"] .c2l1-b.arnes{border-color:var(--c-red);background:var(--c-red-s)}
+[id="02-lab-1"] .c2l1-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:4px 14px}
+[id="02-lab-1"] .c2l1-datos span{color:var(--muted)}
+[id="02-lab-1"] .c2l1-datos b{color:var(--ink)}
+[id="02-lab-1"] .c2l1-exp{font-family:var(--f-body);font-size:.97rem;line-height:1.5}
+@media (prefers-reduced-motion: reduce){[id="02-lab-1"] .c2l1-msg,[id="02-lab-1"] .c2l1-estados span{transition:none}}
+</style>
+<div class="opciones">
+  <label>Escenario
+    <select id="c2l1-esc">
+      <option value="ventas">Una herramienta: ¿cuánto vendimos en octubre?</option>
+      <option value="error">Error como dato: el modelo pide mal el mes</option>
+      <option value="paralelo">Dos herramientas en un mismo turno</option>
+      <option value="cortada">Respuesta cortada por max_tokens</option>
+    </select></label>
+</div>
+<div class="btns">
+  <button type="button" id="c2l1-atras">◀ Atrás</button>
+  <button type="button" id="c2l1-sig" class="primary">Siguiente ▶</button>
+  <button type="button" id="c2l1-play" aria-pressed="false">▶ Reproducir</button>
+  <button type="button" id="c2l1-reini">Reiniciar</button>
+</div>
+<div class="c2l1-estados" id="c2l1-estados" aria-label="Estado de la ejecución"></div>
+<div class="readout texto" id="c2l1-out" aria-live="polite"></div>
+<ol class="c2l1-conv" id="c2l1-conv" aria-label="Conversación que el arnés reenvía al modelo"></ol></div></section>
+<section><h2>Por qué termina: fin de turno, máximo de pasos o presupuesto agotado</h2><div class="prose"><p>Un bucle que no sabe parar es un problema caro. Un modelo puede insistir en la misma búsqueda una y otra vez, o creer que «ya casi» encuentra algo. Por eso un bucle tiene <b>dos clases de salida</b>: las que propone el modelo y las que impone el arnés.</p></div><div class="analogia"><b>Imagínalo así</b><p>Un taxi termina el viaje cuando llegas a tu destino: esa es la salida normal, y la decides tú. Pero si le dijiste al chofer «no gastes más de 20 dólares», el taxímetro manda: a los 20 dólares el viaje se acaba aunque no hayas llegado. Tú propones el destino; el taxímetro, que no se deja convencer, pone el límite.</p></div><div class="prose"><p>Las del modelo llegan en el motivo de parada. Cada proveedor usa sus nombres, y el arnés los traduce a unos pocos propios:</p><div class="tbl"><table><thead><tr><th>El arnés lo llama</th><th>Qué significa</th><th>Anthropic (<code>stop_reason</code>)</th><th>OpenAI (<code>finish_reason</code>)</th></tr></thead><tbody><tr><td>fin de turno</td><td>El modelo terminó de responder</td><td><code>end_turn</code>, <code>stop_sequence</code></td><td><code>stop</code></td></tr><tr><td>uso de herramienta</td><td>Quiere que se ejecuten sus llamadas</td><td><code>tool_use</code></td><td><code>tool_calls</code></td></tr><tr><td>máximo de tokens</td><td>Se acabó el espacio de salida a mitad de frase</td><td><code>max_tokens</code></td><td><code>length</code></td></tr><tr><td>rechazo</td><td>El modelo o un filtro se negó a seguir</td><td><code>refusal</code></td><td><code>content_filter</code></td></tr></tbody></table></div><p>El máximo de tokens merece cuidado: <b>no es un fin</b>, es una respuesta cortada. Si el arnés la trata como respuesta final, entrega media frase; si el corte cayó dentro de una llamada, los argumentos quedaron incompletos y no se pueden ejecutar. Lo correcto es decidir con una regla: pedir que continúe, reintentar con más espacio o terminar con un estado de «incompleto».</p><p>Las salidas del arnés no se le preguntan al modelo. Se revisan <b>antes de cada turno</b> y antes de cada llamada a herramienta:</p><ul><li><b>Máximo de turnos</b> (<i>max turns</i>): cuántas veces se puede llamar al modelo en una ejecución.</li><li><b>Máximo de llamadas a herramientas</b>: un turno puede traer varias; este límite las cuenta todas.</li><li><b>Presupuesto de dinero o de tokens</b>: lo gastado hasta ahora, sumando cada llamada.</li><li><b>Tiempo máximo</b> (<i>timeout</i>): el reloj de pared desde que empezó la ejecución.</li><li><b>Cancelación</b> (<i>cancellation</i>): alguien, una persona o un sistema, pidió detenerla.</li></ul><p>Algunos arneses agregan un <b>detector de bucles atascados</b> (<i>loop detection</i>): si el modelo propone la misma llamada con los mismos argumentos tres veces seguidas, el arnés corta o le avisa al modelo que está dando vueltas. Es barato y ahorra mucho.</p><p>Todo esto se ordena en una <b>máquina de estados</b> (<i>state machine</i>): la ejecución está siempre en un estado con nombre, y solo el arnés la mueve de uno a otro.</p></div><figure class="fig fig-esquema" id="02-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 500" style="min-width:680px" role="img" aria-label="Máquina de estados de una ejecución: creada pasa a esperando al modelo; con uso de herramienta pasa a esperando herramientas, y con los resultados vuelve a esperar al modelo; una política puede llevarla a esperando a una persona; con fin de turno termina completada; desde cualquier estado de trabajo puede terminar fallida por límites o errores, o cancelada; si nadie responde a tiempo, termina vencida">
+  <defs>
+    <marker id="d23-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d23-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d23-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+
+  
+  <rect x="20" y="190" width="130" height="52" rx="26" class="caja"/>
+  <text x="85" y="221" class="t t-b" text-anchor="middle">Creada</text>
+
+  <rect x="260" y="70" width="210" height="52" rx="26" class="c-red"/>
+  <text x="365" y="93" class="t t-b k-red" text-anchor="middle">Esperando al modelo</text>
+  <text x="365" y="110" class="t t-s t-m" text-anchor="middle">el turno está en el proveedor</text>
+
+  <rect x="260" y="230" width="210" height="52" rx="26" class="c-red"/>
+  <text x="365" y="253" class="t t-b k-red" text-anchor="middle">Esperando herramientas</text>
+  <text x="365" y="270" class="t t-s t-m" text-anchor="middle">validar, autorizar, ejecutar</text>
+
+  <rect x="260" y="390" width="210" height="52" rx="26" class="d-casa"/>
+  <text x="365" y="413" class="t t-b k-casa" text-anchor="middle">Esperando a una persona</text>
+  <text x="365" y="430" class="t t-s t-m" text-anchor="middle">desde el capítulo 9</text>
+
+  
+  <g>
+    <rect x="640" y="40" width="200" height="52" rx="10" class="c-enl" style="stroke-width:3"/>
+    <text x="740" y="71" class="t t-b k-enl" text-anchor="middle">Completada</text>
+    <rect x="640" y="160" width="200" height="52" rx="10" class="d-sis" style="stroke-width:3"/>
+    <text x="740" y="191" class="t t-b k-sis" text-anchor="middle">Fallida</text>
+    <rect x="640" y="270" width="200" height="52" rx="10" class="d-inet" style="stroke-width:3"/>
+    <text x="740" y="301" class="t t-b k-inet" text-anchor="middle">Cancelada</text>
+    <rect x="640" y="390" width="200" height="52" rx="10" class="d-inet" style="stroke-width:3"/>
+    <text x="740" y="421" class="t t-b k-inet" text-anchor="middle">Vencida</text>
+  </g>
+  <text x="740" y="25" class="t t-xs t-b t-m" text-anchor="middle">ESTADOS FINALES</text>
+
+  
+  <path d="M150 216 H175 V96 H257" class="ln" style="stroke-width:2" marker-end="url(#d23-m)"/>
+  <text x="182" y="150" class="t t-s t-m">pedido</text>
+
+  <line x1="320" y1="122" x2="320" y2="227" class="ln s-tra" style="stroke-width:2" marker-end="url(#d23-t)"/>
+  <text x="314" y="172" class="t t-s t-mono k-tra" text-anchor="end">uso_de_</text>
+  <text x="314" y="186" class="t t-s t-mono k-tra" text-anchor="end">herramienta</text>
+
+  <line x1="410" y1="230" x2="410" y2="125" class="ln s-warm" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d23-s)"/>
+  <text x="418" y="172" class="t t-s k-sis">resultados:</text>
+  <text x="418" y="186" class="t t-s k-sis">nuevo turno</text>
+
+  <line x1="320" y1="282" x2="320" y2="387" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d23-s)"/>
+  <text x="314" y="332" class="t t-s k-sis" text-anchor="end">política: pedir</text>
+  <text x="314" y="346" class="t t-s k-sis" text-anchor="end">aprobación</text>
+
+  <line x1="410" y1="390" x2="410" y2="285" class="ln" style="stroke-width:2" marker-end="url(#d23-m)"/>
+  <text x="418" y="332" class="t t-s t-m">aprobada o</text>
+  <text x="418" y="346" class="t t-s t-m">rechazada</text>
+
+  <line x1="470" y1="88" x2="637" y2="66" class="ln s-tra" style="stroke-width:2" marker-end="url(#d23-t)"/>
+  <text x="530" y="66" class="t t-s t-mono k-tra">fin_de_turno</text>
+
+  
+  <line x1="515" y1="110" x2="515" y2="370" class="ln" style="stroke-width:3;stroke:var(--d-sis)"/>
+  <text x="522" y="132" class="t t-xs t-b k-sis">DESDE CUALQUIER</text>
+  <text x="522" y="146" class="t t-xs t-b k-sis">ESTADO DE TRABAJO</text>
+  <line x1="515" y1="186" x2="637" y2="186" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d23-s)"/>
+  <text x="522" y="208" class="t t-s k-sis">límite agotado,</text>
+  <text x="522" y="222" class="t t-s k-sis">incompleta o error</text>
+  <line x1="515" y1="296" x2="637" y2="296" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d23-s)"/>
+  <text x="522" y="288" class="t t-s k-sis">cancelación</text>
+
+  <path d="M365 442 V462 H740 V445" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d23-s)"/>
+  <text x="560" y="478" class="t t-s k-sis" text-anchor="middle">nadie respondió a tiempo</text>
+
+  
+  <g class="t t-s">
+    <line x1="20" y1="470" x2="44" y2="470" class="ln s-tra" style="stroke-width:2.5"/><text x="50" y="474">lo propone el modelo</text>
+    <line x1="20" y1="490" x2="44" y2="490" class="ln" style="stroke-width:2.5;stroke:var(--d-sis)"/><text x="50" y="494">lo decide el arnés</text>
+  </g>
+</svg></div><figcaption><b>Los estados de una ejecución.</b> A la izquierda, el arranque; en el centro, el ciclo de trabajo entre esperar al modelo y esperar a las herramientas, con una salida a esperar a una persona que se usa desde el capítulo 9. A la derecha, los cuatro estados finales: completada, fallida, cancelada y vencida. Las etiquetas de las flechas dicen qué causa cada paso: en violeta, lo que propone el modelo; en rojo ladrillo, lo que decide el arnés. De un estado final no se sale.</figcaption></figure><div class="prose"><p>Prueba los límites con una tarea que necesita nueve turnos. Cada barra es un turno; su altura, lo que costó. Mueve los límites y mira cuál corta primero.</p></div><div class="lab" id="02-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Cambia el máximo de pasos y el presupuesto y mira dónde se corta la tarea</h3></div><p class="hint">Mueve el máximo de turnos, el presupuesto y el tiempo. Mira qué límite corta primero y si la tarea alcanza a completarse. Después activa «el modelo se atasca» y compara qué pasa con y sin el detector de repeticiones.</p><style>
+[id="02-lab-2"] .c2l2-lienzo{overflow-x:auto;border-radius:8px}
+[id="02-lab-2"] .c2l2-svg{min-width:540px}
+[id="02-lab-2"] .c2l2-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="02-lab-2"] .c2l2-svg text{font:500 11px var(--f-display);fill:var(--muted)}
+[id="02-lab-2"] .c2l2-svg text.b{font-weight:700;fill:var(--ink)}
+[id="02-lab-2"] .c2l2-chk{display:flex;flex-wrap:wrap;gap:8px 20px;font:600 .86rem var(--f-display)}
+[id="02-lab-2"] .c2l2-chk label{display:flex;align-items:center;gap:6px}
+[id="02-lab-2"] .c2l2-med{display:grid;gap:8px}
+[id="02-lab-2"] .c2l2-fila{display:grid;grid-template-columns:minmax(78px,auto) 1fr minmax(110px,auto);gap:10px;align-items:center;font:600 .82rem var(--f-display)}
+[id="02-lab-2"] .c2l2-pista{height:12px;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+[id="02-lab-2"] .c2l2-pista i{display:block;height:100%;background:var(--accent);transition:width .3s}
+[id="02-lab-2"] .c2l2-fila.corta .c2l2-pista i{background:var(--warm)}
+[id="02-lab-2"] .c2l2-fila output{font-family:var(--f-mono);font-size:.8rem;text-align:right}
+@media (prefers-reduced-motion: reduce){[id="02-lab-2"] .c2l2-pista i{transition:none}}
+</style>
+<div class="ctls">
+  <label class="ctl">Máximo de turnos <output id="c2l2-vt"></output><input type="range" id="c2l2-t" min="1" max="20" step="1" value="12"></label>
+  <label class="ctl">Presupuesto (USD) <output id="c2l2-vp"></output><input type="range" id="c2l2-p" min="0.05" max="0.6" step="0.01" value="0.30"></label>
+  <label class="ctl">Tiempo máximo <output id="c2l2-vs"></output><input type="range" id="c2l2-s" min="10" max="120" step="5" value="90"></label>
+</div>
+<div class="c2l2-chk">
+  <label><input type="checkbox" id="c2l2-atasco"> El modelo se atasca desde el turno 5</label>
+  <label><input type="checkbox" id="c2l2-det"> Detector de repeticiones (3 llamadas iguales)</label>
+</div>
+<div class="c2l2-lienzo"><svg class="c2l2-svg" id="c2l2-svg" viewBox="0 0 620 230" role="img" aria-label="Barras de costo por turno: las barras llenas son turnos ejecutados y las punteadas, turnos que el arnés no llegó a ejecutar"></svg></div>
+<div class="c2l2-med" id="c2l2-med"></div>
+<div class="readout texto" id="c2l2-out" aria-live="polite"></div></div><div class="prose"><p>Fíjate en la forma de las barras: crecen. Cada turno reenvía toda la historia, así que el turno 9 cuesta más del triple que el primero. Un presupuesto en dinero corta antes de lo que haría pensar un conteo de turnos.</p></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Compara los motivos de parada de dos proveedores y los límites de un SDK</h3></div><p>Vas a leer documentación pública, sin crear cuentas. Abre la <a href="https://docs.claude.com/en/api/handling-stop-reasons" target="_blank" rel="noopener">guía de motivos de parada de Anthropic</a> y la <a href="https://openai.github.io/openai-agents-python/running_agents/" target="_blank" rel="noopener">página sobre cómo correr agentes del OpenAI Agents SDK</a>.</p><ol class="steps"><li><span>En la guía de Anthropic, anota todos los valores de <code>stop_reason</code> que aparecen. ¿Hay alguno que no esté en la tabla de esta sección? ¿Qué recomienda hacer con él?</span></li><li><span>Busca qué se recomienda cuando la respuesta termina en <code>max_tokens</code>.</span></li><li><span>En la página del SDK, busca <code>max_turns</code>. ¿Qué pasa cuando se alcanza: devuelve una respuesta parcial o lanza una excepción? Anota su nombre.</span></li><li><span>Ubica cada motivo que encontraste en la máquina de estados del diagrama anterior: ¿lleva a completada, a otro turno o a un final distinto?</span></li></ol><p><b>Qué observar:</b> los proveedores agregan motivos con el tiempo, y por eso el arnés no debe asumir que solo existen dos. Un motivo desconocido tiene que caer en un camino definido (por ejemplo, terminar como «incompleto» y registrarlo), nunca en un <code>else</code> que lo trate como fin normal. Los nombres pueden cambiar entre versiones de la documentación.</p></div></section>
+<section><h2>Errores como datos: el resultado fallido que vuelve al modelo</h2><div class="prose"><p>Cuando algo falla dentro de un agente, la reacción de un programador es lanzar una excepción y detener todo. En un arnés eso casi siempre es un error de diseño. La mayoría de las fallas son <b>información útil para el modelo</b>: la herramienta no encontró el archivo, la consulta pedía un formato de fecha distinto, el permiso fue denegado. Si el modelo lo sabe, puede corregir: pedir otro archivo, cambiar el formato, explicarle a la persona.</p></div><div class="analogia"><b>Imagínalo así</b><p>Si le pides a un asistente que te traiga un expediente y el archivo dice «ese número no existe; los números tienen 8 dígitos», el asistente no renuncia a su trabajo: vuelve a buscar con el número bien escrito. Un arnés que lanza una excepción es como un asistente que, ante el primer «no existe», se va a su casa.</p></div><div class="prose"><p>Por eso el bloque de resultado lleva la marca <code>esError</code>. Para ordenar las fallas conviene separarlas en tres familias, porque cada una se trata distinto:</p><div class="tbl"><table><thead><tr><th>Familia</th><th>Ejemplos</th><th>Qué hace el arnés</th></tr></thead><tbody><tr><td>Error de la herramienta</td><td>Archivo inexistente, argumentos inválidos, la API externa respondió 404</td><td>Lo devuelve al modelo como resultado con <code>esError: true</code>, y sigue el bucle</td></tr><tr><td>Decisión del arnés</td><td>Política denegada, persona que rechazó, herramienta que no existe</td><td>También vuelve al modelo como resultado, con un mensaje claro de por qué</td></tr><tr><td>Error del arnés o del proveedor</td><td>El proveedor no responde, se acabó el presupuesto, un fallo interno</td><td>No es del modelo: reintenta (capítulo 4) o termina la ejecución como fallida</td></tr></tbody></table></div><p>Dos reglas hacen que esto funcione. La primera: <b>el mensaje de error se escribe para el modelo</b>. «Error 500» no le sirve; «formato de mes inválido: usa AAAA-MM, por ejemplo 2026-10» sí. La segunda: <b>los errores también se cuentan</b>. Si una herramienta falla cinco veces seguidas, el arnés debe cortar, porque el modelo puede reintentar sin fin algo que nunca va a funcionar.</p></div><div class="ml"><b>En la práctica</b><p>Un patrón frecuente en los primeros agentes de una empresa: una herramienta de consulta lanza una excepción cuando el cliente no existe, el arnés la deja subir y la ejecución entera falla con un mensaje técnico en pantalla. El arreglo es de dos líneas: atrapar el error en el ejecutor de herramientas y devolverlo como resultado. Después de ese cambio, el agente responde cosas como «no encontré ese cliente; ¿puedes confirmar el número?», que es justo lo que haría una persona.</p></div></section>
+<section><h2><i>Streaming</i> y eventos para la interfaz</h2><div class="prose"><p>Una respuesta del modelo puede tardar varios segundos. Si la interfaz espera a que termine, la persona mira una pantalla quieta. Por eso los proveedores ofrecen <b>transmisión</b> (<i>streaming</i>): la respuesta llega a pedazos, mientras se genera. Casi todos lo hacen con <b>eventos enviados por el servidor</b> (<i>SSE</i>, <i>Server-Sent Events</i>), una conexión HTTP que queda abierta y por la que el servidor manda una línea por evento.</p><p>En la API de Anthropic, por ejemplo, una respuesta llega como una secuencia de eventos: <code>message_start</code>, luego por cada bloque un <code>content_block_start</code>, varios <code>content_block_delta</code> con pedacitos de texto (o de los argumentos JSON de una llamada) y un <code>content_block_stop</code>, y al final un <code>message_delta</code> con el motivo de parada y un <code>message_stop</code>. Otros proveedores usan otros nombres para lo mismo.</p><p>Dos consecuencias para el bucle:</p><ul><li><b>Una llamada no se ejecuta hasta que su bloque está completo.</b> Los argumentos llegan como fragmentos de texto; un JSON a medias no es un pedido válido.</li><li><b>La interfaz no debería escuchar al proveedor.</b> Si lo hace, queda atada a sus nombres de eventos, y además no se entera de lo que hace el arnés: las políticas, las herramientas, los límites. Lo correcto es que el arnés traduzca la transmisión a <b>sus propios eventos</b> y los publique.</li></ul></div><figure class="fig fig-flujo" id="02-diagrama-4"><div class="lienzo"><svg viewBox="0 0 860 486" style="min-width:680px" role="img" aria-label="Tres columnas con el tiempo hacia abajo: los eventos SSE del proveedor, los eventos propios que emite el arnés y lo que muestra la interfaz; los fragmentos de texto se reenvían como texto parcial, los fragmentos de argumentos se acumulan hasta que el bloque termina y solo entonces se propone la herramienta">
+  <defs>
+    <marker id="d24-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  <rect x="20" y="14" width="270" height="46" rx="10" class="c-tra"/><text x="155" y="35" class="t t-b k-tra" text-anchor="middle">Proveedor</text><text x="155" y="51" class="t t-s t-m" text-anchor="middle">eventos SSE, con sus nombres</text>
+  <rect x="320" y="14" width="280" height="46" rx="10" class="c-red"/><text x="460" y="35" class="t t-b k-red" text-anchor="middle">Arnés</text><text x="460" y="51" class="t t-s t-m" text-anchor="middle">eventos propios, nombres estables</text>
+  <rect x="630" y="14" width="210" height="46" rx="10" class="d-casa"/><text x="735" y="35" class="t t-b k-casa" text-anchor="middle">Interfaz</text><text x="735" y="51" class="t t-s t-m" text-anchor="middle">solo escucha al arnés</text>
+  <rect x="20" y="78" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="96" class="t t-s t-mono">message_start</text>
+  <line x1="290" y1="92" x2="318" y2="92" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="78" width="280" height="28" rx="6" class="c-red"/><text x="330" y="96" class="t t-s t-mono">turno_iniciado</text>
+  <line x1="600" y1="92" x2="628" y2="92" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="630" y="78" width="210" height="28" rx="6" class="d-casa"/><text x="640" y="96" class="t t-s">muestra «pensando…»</text>
+  <rect x="20" y="116" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="134" class="t t-s t-mono">content_block_delta · «Consulto»</text>
+  <line x1="290" y1="130" x2="318" y2="130" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="116" width="280" height="28" rx="6" class="c-red"/><text x="330" y="134" class="t t-s t-mono">texto_parcial</text>
+  <line x1="600" y1="130" x2="628" y2="130" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="630" y="116" width="210" height="28" rx="6" class="d-casa"/><text x="640" y="134" class="t t-s">escribe «Consulto»</text>
+  <rect x="20" y="154" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="172" class="t t-s t-mono">content_block_delta · «los meses.»</text>
+  <line x1="290" y1="168" x2="318" y2="168" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="154" width="280" height="28" rx="6" class="c-red"/><text x="330" y="172" class="t t-s t-mono">texto_parcial</text>
+  <line x1="600" y1="168" x2="628" y2="168" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="630" y="154" width="210" height="28" rx="6" class="d-casa"/><text x="640" y="172" class="t t-s">agrega «los meses.»</text>
+  <rect x="20" y="192" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="210" class="t t-s t-mono">content_block_start · tool_use t1</text>
+  <line x1="290" y1="206" x2="318" y2="206" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="192" width="280" height="28" rx="6" class="caja ln-d"/><text x="330" y="210" class="t t-s t-m">abre la llamada t1</text>
+  <rect x="20" y="230" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="248" class="t t-s t-mono">input_json_delta · {&quot;mes&quot;:</text>
+  <line x1="290" y1="244" x2="318" y2="244" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="230" width="280" height="28" rx="6" class="caja ln-d"/><text x="330" y="248" class="t t-s t-m">acumula: JSON incompleto</text>
+  <rect x="20" y="268" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="286" class="t t-s t-mono">input_json_delta · &quot;2026-10&quot;}</text>
+  <line x1="290" y1="282" x2="318" y2="282" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="268" width="280" height="28" rx="6" class="caja ln-d"/><text x="330" y="286" class="t t-s t-m">acumula: JSON incompleto</text>
+  <rect x="20" y="306" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="324" class="t t-s t-mono">content_block_stop</text>
+  <line x1="290" y1="320" x2="318" y2="320" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="306" width="280" height="28" rx="6" class="c-red"/><text x="330" y="324" class="t t-s t-mono">herramienta_propuesta t1</text>
+  <line x1="600" y1="320" x2="628" y2="320" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="630" y="306" width="210" height="28" rx="6" class="d-casa"/><text x="640" y="324" class="t t-s">tarjeta: consultar_ventas</text>
+  <rect x="20" y="344" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="362" class="t t-s t-mono">message_delta · tool_use</text>
+  <line x1="290" y1="358" x2="318" y2="358" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="344" width="280" height="28" rx="6" class="c-red"/><text x="330" y="362" class="t t-s t-mono">decision_de_politica</text>
+  <line x1="600" y1="358" x2="628" y2="358" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="630" y="344" width="210" height="28" rx="6" class="d-casa"/><text x="640" y="362" class="t t-s">«permitido»</text>
+  <rect x="20" y="382" width="270" height="28" rx="6" class="c-tra"/><text x="30" y="400" class="t t-s t-mono">message_stop</text>
+  <line x1="290" y1="396" x2="318" y2="396" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="320" y="382" width="280" height="28" rx="6" class="caja ln-d"/><text x="330" y="400" class="t t-s t-m">ejecuta t1 (no viene del proveedor)</text>
+  <rect x="320" y="420" width="280" height="28" rx="6" class="c-red"/><text x="330" y="438" class="t t-s t-mono">herramienta_terminada t1</text>
+  <line x1="600" y1="434" x2="628" y2="434" class="ln" style="stroke-width:1.6" marker-end="url(#d24-m)"/>
+  <rect x="630" y="420" width="210" height="28" rx="6" class="d-casa"/><text x="640" y="438" class="t t-s">muestra el resultado</text>
+  <g class="t t-s"><rect x="320" y="464" width="14" height="14" rx="3" class="c-red"/><text x="340" y="476">evento publicado</text><rect x="470" y="464" width="14" height="14" rx="3" class="caja ln-d"/><text x="490" y="476">trabajo interno, sin evento</text></g>
+</svg></div><figcaption><b>De la transmisión del proveedor a los eventos del arnés.</b> Tres columnas, con el tiempo corriendo hacia abajo. A la izquierda, los eventos que manda el proveedor por SSE. En el centro, el arnés: reenvía el texto, junta los fragmentos de argumentos (recuadros punteados, sin evento) y emite sus propios eventos con nombres estables. A la derecha, la interfaz, que solo escucha al arnés: muestra el texto a medida que llega, una tarjeta cuando se propone una herramienta y el resultado cuando termina. La última fila no viene del proveedor: es trabajo del arnés.</figcaption></figure><div class="prose"><p>Los eventos del arnés son pocos y con nombre propio: <code>turno_iniciado</code>, <code>texto_parcial</code>, <code>herramienta_propuesta</code>, <code>decision_de_politica</code>, <code>herramienta_terminada</code> y <code>ejecucion_terminada</code> con su motivo. Los mismos eventos sirven después para el registro y la auditoría; el capítulo 6 los convierte en un bus de eventos al que se suscribe quien los necesite.</p></div></section>
+<section><h2>Interrumpir y redirigir un bucle en marcha (<i>steering</i>)</h2><div class="prose"><p>Una ejecución puede durar minutos. A mitad de camino, la persona se da cuenta de que pidió mal («solo octubre, no todo el año») o quiere agregar algo («después, mándame un resumen»). Esperar a que termine es lento; matar el proceso deja las cosas a medias. El arnés ofrece tres entradas distintas:</p><ul><li><b>Cancelar</b> (<i>cancel</i>): detener la ejecución. El arnés aborta la llamada al modelo en curso y descarta su respuesta parcial. Una herramienta en marcha recibe una señal de cancelación; si ya produjo un efecto, ese efecto <b>no se deshace</b>.</li><li><b>Redirigir</b> (<i>steering</i>): un mensaje que cambia el rumbo de la tarea en curso. No se mete en medio de una llamada al modelo, porque no hay cómo: se guarda en una cola y entra en la <b>frontera del turno</b> siguiente, después de los resultados de las herramientas y antes de volver a llamar al modelo.</li><li><b>Seguimiento</b> (<i>follow-up</i>): un pedido nuevo que no cambia el actual. Espera a que la ejecución termine y entonces empieza otra, con la historia completa.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Vas en un taxi con la ruta ya marcada. «Mejor por la avenida» es redirigir: el chofer no da un volantazo en mitad de la cuadra, gira en la próxima esquina. «Cuando lleguemos, espérame cinco minutos» es seguimiento: se cumple después. «Pare aquí» es cancelar: el taxi se detiene, pero los kilómetros recorridos no se devuelven.</p></div><div class="prose"><p>El punto clave es dónde entra cada cosa. Si el arnés metiera la corrección en medio de un turno, quedaría una llamada sin resultado o un resultado sin llamada, y el protocolo de mensajes se rompería. Las fronteras de turno son los únicos lugares donde la conversación está completa.</p></div><div class="lab" id="02-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Redirige, agrega o cancela una ejecución en marcha</h3></div><p class="hint">Elige qué mandas y mueve el momento en que llega. Mira en la línea de tiempo dónde lo aplica el arnés, cuánto espera tu mensaje y qué trabajo se pierde. Prueba a cancelar justo durante la herramienta que escribe un archivo.</p><style>
+[id="02-lab-3"] .c2l3-lienzo{overflow-x:auto;border-radius:8px}
+[id="02-lab-3"] .c2l3-svg{min-width:540px}
+[id="02-lab-3"] .opciones{grid-template-columns:minmax(0,1fr)}
+[id="02-lab-3"] .c2l3-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="02-lab-3"] .c2l3-svg text{font:500 11px var(--f-display);fill:var(--muted)}
+[id="02-lab-3"] .c2l3-svg text.b{font-weight:700;fill:var(--ink)}
+</style>
+<div class="opciones">
+  <label>Qué mandas
+    <select id="c2l3-tipo">
+      <option value="redirigir">Redirigir: «solo octubre, no todo el año»</option>
+      <option value="seguir">Seguimiento: «después, mándame un resumen»</option>
+      <option value="cancelar">Cancelar la ejecución</option>
+    </select></label>
+</div>
+<div class="ctls">
+  <label class="ctl">Momento en que llega tu mensaje <output id="c2l3-vt"></output><input type="range" id="c2l3-t" min="0.2" max="16.3" step="0.1" value="4"></label>
+</div>
+<div class="c2l3-lienzo"><svg class="c2l3-svg" id="c2l3-svg" viewBox="0 0 620 190" role="img" aria-label="Línea de tiempo de una ejecución de cuatro turnos con las llamadas al modelo y las herramientas; un triángulo marca cuándo llega tu mensaje y un punto, dónde lo aplica el arnés"></svg></div>
+<div class="readout texto" id="c2l3-out" aria-live="polite"></div></div></section>
+<section><h2>Las primeras 50 líneas del arnés</h2><div class="prose"><p>Ya están todas las ideas. Este es el bucle del curso en TypeScript, con los tipos del capítulo 1 (<code>Mensaje</code>, <code>Bloque</code>, <code>Presupuesto</code>). El proveedor y las herramientas llegan como parámetros: cómo se construyen es el tema de los capítulos 3 y 4.</p><div class="code-copia"><pre><code>type Parada = "fin_de_turno" | "uso_de_herramienta" | "max_tokens" | "rechazo" | "otro";
+type Motivo = "completada" | "max_turnos" | "max_llamadas" | "presupuesto"
+            | "tiempo" | "cancelada" | "incompleta";
+
+// Definicion: nombre, descripción y esquema de una herramienta (capítulo 3)
+interface Proveedor {
+  completar(p: { mensajes: Mensaje[]; herramientas: Definicion[]; senal: AbortSignal }):
+    Promise&lt;{ bloques: Bloque[]; parada: Parada; costoUSD: number }&gt;;
+}
+interface Herramienta {
+  definicion: Definicion;
+  ejecutar(args: unknown, senal: AbortSignal): Promise&lt;string&gt;;
+}
+
+export async function correr(pedido: string, modelo: Proveedor,
+    hs: Map&lt;string, Herramienta&gt;, lim: Presupuesto, senal: AbortSignal,
+    emitir: (e: object) =&gt; void) {
+  const mensajes: Mensaje[] = [{ rol: "usuario", bloques: [{ tipo: "texto", texto: pedido }] }];
+  const inicio = Date.now();
+  let costo = 0, llamadas = 0;
+  const fin = (motivo: Motivo) =&gt; { emitir({ tipo: "ejecucion_terminada", motivo, costo });
+                                    return { motivo, mensajes, costo }; };
+
+  for (let turno = 1; ; turno++) {
+    if (senal.aborted) return fin("cancelada");                   // límites del arnés,
+    if (turno &gt; lim.maxTurnos) return fin("max_turnos");          // antes de cada turno
+    if (costo &gt;= lim.maxCostoUSD) return fin("presupuesto");
+    if (Date.now() - inicio &gt; lim.maxSegundos * 1000) return fin("tiempo");
+
+    emitir({ tipo: "turno_iniciado", turno });
+    const r = await modelo.completar({ mensajes, senal,
+      herramientas: [...hs.values()].map(h =&gt; h.definicion) });
+    costo += r.costoUSD;
+    mensajes.push({ rol: "asistente", bloques: r.bloques });
+
+    const pedidas = r.bloques.filter(b =&gt; b.tipo === "llamada");
+    if (r.parada === "fin_de_turno" &amp;&amp; pedidas.length === 0) return fin("completada");
+    if (r.parada !== "uso_de_herramienta") return fin("incompleta");  // cortada, rechazo u otro
+
+    const resultados: Bloque[] = [];
+    for (const ll of pedidas) {
+      if (++llamadas &gt; lim.maxLlamadas) return fin("max_llamadas");
+      emitir({ tipo: "herramienta_propuesta", id: ll.id, herramienta: ll.herramienta });
+      const h = hs.get(ll.herramienta);
+      let contenido: string, esError = false;
+      try {
+        if (!h) throw new Error(`No existe la herramienta «${ll.herramienta}».`);
+        contenido = await h.ejecutar(ll.argumentos, senal);
+      } catch (e) {
+        contenido = String(e); esError = true;                    // el error es un dato
+      }
+      resultados.push({ tipo: "resultado", id: ll.id, contenido, esError });
+      emitir({ tipo: "herramienta_terminada", id: ll.id, esError });
+    }
+    mensajes.push({ rol: "usuario", bloques: resultados });       // y vuelve a empezar
+  }
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Léelo de arriba hacia abajo y busca cada idea del capítulo. Los límites se revisan <b>antes</b> de llamar al modelo, no después. Un motivo de parada desconocido cae en «incompleta», nunca en «completada». Una herramienta que no existe o que falla produce un resultado con <code>esError</code>, no una excepción. Y cada paso emite un evento con nombre propio.</p><p>Este bucle todavía no tiene políticas (cualquier herramienta registrada se ejecuta), no valida argumentos y corre las herramientas de a una. Los capítulos siguientes le agregan esas piezas sin cambiar su forma.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Corre un bucle de agente con un modelo simulado</h3></div><p>Vas a correr una versión en Python del mismo bucle, con un «modelo» que sigue un guion fijo. No usa la red ni claves de ningún proveedor. Necesitas Python 3. Crea un archivo <code>bucle.py</code> con este contenido:</p><div class="code-copia"><pre><code># bucle.py: un bucle de agente con un modelo simulado (sin red y sin claves)
+import json
+
+# El guion hace de modelo: cada elemento es lo que «respondería» en un turno
+GUION = [
+    {"parada": "uso_de_herramienta", "bloques": [
+        {"tipo": "llamada", "id": "t1", "herramienta": "consultar_ventas", "argumentos": {"mes": "octubre"}}]},
+    {"parada": "uso_de_herramienta", "bloques": [
+        {"tipo": "llamada", "id": "t2", "herramienta": "consultar_ventas", "argumentos": {"mes": "2026-10"}}]},
+    {"parada": "fin_de_turno", "bloques": [
+        {"tipo": "texto", "texto": "En octubre vendieron 48.230."}]},
+]
+
+def consultar_ventas(args):
+    if args.get("mes") != "2026-10":
+        raise ValueError("formato de mes inválido: usa AAAA-MM, por ejemplo 2026-10")
+    return {"total": 48230}
+
+HERRAMIENTAS = {"consultar_ventas": consultar_ventas}
+
+def modelo(mensajes):
+    turno = sum(1 for m in mensajes if m["rol"] == "asistente")
+    return GUION[min(turno, len(GUION) - 1)]
+
+def ejecutar(llamada):
+    try:
+        salida = HERRAMIENTAS[llamada["herramienta"]](llamada["argumentos"])
+        return {"tipo": "resultado", "id": llamada["id"], "contenido": json.dumps(salida), "esError": False}
+    except Exception as e:  # el error no tumba al agente: vuelve como dato
+        return {"tipo": "resultado", "id": llamada["id"], "contenido": str(e), "esError": True}
+
+def correr(pedido, max_turnos):
+    mensajes = [{"rol": "usuario", "bloques": [{"tipo": "texto", "texto": pedido}]}]
+    for turno in range(1, max_turnos + 1):
+        resp = modelo(mensajes)
+        mensajes.append({"rol": "asistente", "bloques": resp["bloques"]})
+        llamadas = [b for b in resp["bloques"] if b["tipo"] == "llamada"]
+        print(f"turno {turno} · motivo de parada del modelo: {resp['parada']}")
+        if resp["parada"] != "uso_de_herramienta" or not llamadas:
+            texto = " ".join(b["texto"] for b in resp["bloques"] if b["tipo"] == "texto")
+            return f"FIN · {texto}"
+        resultados = [ejecutar(ll) for ll in llamadas]
+        for r in resultados:
+            print(f"   resultado {r['id']} · esError={r['esError']} · {r['contenido']}")
+        mensajes.append({"rol": "usuario", "bloques": resultados})
+    return f"CORTADO por el arnés · máximo de {max_turnos} turnos"
+
+print(correr("¿Cuánto vendimos en octubre?", max_turnos=5))
+print("---")
+print(correr("¿Cuánto vendimos en octubre?", max_turnos=2))</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Guárdalo y córrelo desde la carpeta donde lo creaste:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python bucle.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 bucle.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la primera ejecución, mira el turno 1: la herramienta falló y el resultado volvió con <code>esError=True</code>. El «modelo» corrigió el formato en el turno 2.</span></li><li><span>En la segunda, el arnés cortó en el turno 2 aunque el modelo quería seguir. Anota el motivo que imprime.</span></li><li><span>Cambia <code>"fin_de_turno"</code> por <code>"max_tokens"</code> en el último elemento del guion y vuelve a correrlo. ¿El bucle lo trata como fin? ¿Debería?</span></li><li><span>Agrega una segunda llamada al primer elemento del guion (con <code>"id": "t1b"</code>) y mira cómo vuelven los dos resultados en el mismo mensaje.</span></li></ol><p><b>Qué observar:</b> el bucle completo cabe en una pantalla y no tiene nada de inteligencia: la inteligencia está en el modelo; el bucle solo aplica reglas fijas. En el paso 3 descubrirás que este bucle trata <code>max_tokens</code> como si fuera un fin normal, el mismo error que la versión en TypeScript evita con su estado «incompleta».</p></div><div class="prose"><p>La idea que se lleva este capítulo es la pieza que se agregó al arnés.</p><p><b>El bucle del agente, con condiciones de parada explícitas.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Qué es un turno en el bucle de un agente?</summary><p>Una llamada al modelo más la ejecución de las herramientas que pidió en esa respuesta: pedir, recibir, ejecutar y devolver.</p></details><details><summary>¿Para qué sirve el <code>id</code> de un bloque de llamada?</summary><p>Para unir cada llamada con su resultado. El arnés debe devolver un resultado con el mismo <code>id</code> por cada llamada; si falta uno, el proveedor rechaza la conversación.</p></details><details><summary>¿Por qué cada turno cuesta más que el anterior?</summary><p>Porque el modelo no recuerda nada entre llamadas: el arnés le reenvía toda la historia en cada turno, y la historia crece.</p></details><details><summary>Si la respuesta llega con motivo de parada <code>max_tokens</code>, ¿se puede entregar como respuesta final?</summary><p>No. Es una respuesta cortada: puede tener media frase o argumentos incompletos. El arnés decide con una regla si continúa, reintenta o termina como incompleta.</p></details><details><summary>Una herramienta no encuentra el archivo pedido. ¿Qué debe hacer el arnés?</summary><p>Devolver el error al modelo como un resultado con <code>esError: true</code> y un mensaje útil, para que el modelo corrija. No debe detener la ejecución con una excepción.</p></details><details><summary>¿Dónde entra un mensaje de redirección (<i>steering</i>) que llega mientras el modelo está escribiendo?</summary><p>En la siguiente frontera de turno: después de los resultados de las herramientas y antes de la siguiente llamada al modelo, que es donde la conversación está completa.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es el problema de la parada (<i>halting problem</i>) y qué dice sobre saber de antemano si un programa va a terminar?<small>Pista: busca «Alan Turing halting problem».</small></li><li>¿En qué se diferencian los eventos enviados por el servidor (SSE) de los WebSockets, y por qué los proveedores de modelos prefieren los primeros?</li><li>¿Cómo funcionan <code>AbortController</code> y <code>AbortSignal</code> en JavaScript, y cuál es su equivalente en el <code>asyncio</code> de Python?</li><li>¿Por qué el límite de tokens de salida de un modelo suele ser mucho menor que su ventana de contexto?</li><li>¿Cómo hace un analizador de JSON incremental para leer argumentos que llegan a pedazos?<small>Pista: busca «partial JSON parser streaming».</small></li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://docs.claude.com/en/api/handling-stop-reasons" target="_blank" rel="noopener">Handling stop reasons <small>documentación, en inglés</small></a><a class="vid" href="https://docs.claude.com/en/docs/build-with-claude/streaming" target="_blank" rel="noopener">Streaming messages <small>documentación, en inglés</small></a><a class="vid" href="https://openai.github.io/openai-agents-python/running_agents/" target="_blank" rel="noopener">Running agents (OpenAI Agents SDK) <small>documentación, en inglés</small></a><a class="vid" href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents <small>lectura, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const EST=[['modelo','Esperando al modelo',''],['herr','Esperando herramientas',''],['completada','Completada','fin'],['incompleta','Incompleta','mal']];
+  $('#c2l1-estados').innerHTML=EST.map(([k,n,c])=>`<span data-k="${k}" class="${c}">${n}</span>`).join('');
+  const T=t=>({t:'texto',v:t}), L=(id,h,a)=>({t:'llamada',id,v:`${h}(${a})`}), R=(id,v)=>({t:'resultado',id,v}), E=(id,v)=>({t:'error',id,v}), A=v=>({t:'arnes',v});
+  const U=(...b)=>({rol:'usuario',b}), S=(...b)=>({rol:'asistente',b});
+  // paso: [mensajes visibles, estado, turno, parada, herramienta, explicación]
+  const ESC={
+    ventas:{m:[U(T('«¿Cuánto vendimos en octubre?»')),S(L('t1','consultar_ventas','{"mes":"2026-10"}')),U(R('t1','{"total": 48230}')),S(T('«En octubre vendieron 48.230.»'))],
+      p:[[1,'modelo',1,'—','—','La persona pide. El arnés arma la conversación con un solo mensaje de usuario, le suma las instrucciones y las definiciones de herramientas, y llama al modelo: turno 1.'],
+         [2,'herr',1,'uso_de_herramienta','consultar_ventas','El modelo responde con un bloque de llamada con id <code>t1</code> y motivo de parada <code>uso_de_herramienta</code>. Es una propuesta: todavía no se ejecutó nada.'],
+         [2,'herr',1,'uso_de_herramienta','consultar_ventas','El arnés valida los argumentos, consulta las políticas y ejecuta <code>t1</code>. La conversación no cambia mientras tanto.'],
+         [3,'modelo',2,'—','—','El resultado entra como un mensaje de usuario con el mismo id <code>t1</code>. Empieza el turno 2: el arnés reenvía los tres mensajes, porque el modelo no recuerda nada.'],
+         [4,'completada',2,'fin_de_turno','—','Texto sin llamadas y motivo <code>fin_de_turno</code>: la ejecución termina. Fueron 2 llamadas al modelo y 1 herramienta.']]},
+    error:{m:[U(T('«¿Cuánto vendimos en octubre?»')),S(L('t1','consultar_ventas','{"mes":"octubre"}')),U(E('t1','esError · formato de mes inválido: usa AAAA-MM, por ejemplo 2026-10')),S(L('t2','consultar_ventas','{"mes":"2026-10"}')),U(R('t2','{"total": 48230}')),S(T('«En octubre vendieron 48.230.»'))],
+      p:[[1,'modelo',1,'—','—','La persona pide y el arnés llama al modelo: turno 1.'],
+         [2,'herr',1,'uso_de_herramienta','consultar_ventas','El modelo pide <code>consultar_ventas</code> con <code>"mes":"octubre"</code>, un formato que la herramienta no acepta.'],
+         [3,'modelo',2,'—','—','La herramienta falla. El arnés <b>no</b> detiene la ejecución: devuelve el error como resultado de <code>t1</code>, con <code>esError</code> y un mensaje escrito para que el modelo pueda corregir.'],
+         [4,'herr',2,'uso_de_herramienta','consultar_ventas','Turno 2: el modelo lee el error y corrige el formato. Nueva llamada, nuevo id: <code>t2</code>.'],
+         [5,'modelo',3,'—','—','Esta vez la herramienta responde bien. El resultado de <code>t2</code> vuelve en el mensaje siguiente.'],
+         [6,'completada',3,'fin_de_turno','—','Respuesta final. El error costó un turno más, pero el agente se recuperó solo. Con una excepción, la persona habría visto un mensaje técnico y nada más.']]},
+    paralelo:{m:[U(T('«Compara las ventas de septiembre y octubre»')),S(T('«Consulto los dos meses.»'),L('t1','consultar_ventas','{"mes":"2026-09"}'),L('t2','consultar_ventas','{"mes":"2026-10"}')),U(R('t1','{"total": 45110}'),R('t2','{"total": 48230}')),S(T('«Septiembre: 45.110. Octubre: 48.230, un 6,9 % más.»'))],
+      p:[[1,'modelo',1,'—','—','La persona pide una comparación. Turno 1.'],
+         [2,'herr',1,'uso_de_herramienta','consultar_ventas ×2','Una sola respuesta trae tres bloques: un texto y <b>dos</b> llamadas, <code>t1</code> y <code>t2</code>. El modelo no tiene que esperar un turno por cada una.'],
+         [2,'herr',1,'uso_de_herramienta','consultar_ventas ×2','El arnés ejecuta las dos. Como solo leen, puede correrlas a la vez; el capítulo 3 explica cuándo se puede y cuándo no.'],
+         [3,'modelo',2,'—','—','Los <b>dos</b> resultados vuelven juntos en un solo mensaje, cada uno con su id. Si faltara uno, el proveedor rechazaría la conversación.'],
+         [4,'completada',2,'fin_de_turno','—','Respuesta final en el turno 2. Con llamadas en serie habría hecho falta un turno más.']]},
+    cortada:{m:[U(T('«Redacta el informe mensual completo»')),S(T('«Informe de octubre. 1. Ventas: el total fue de 48.230, un 6,9 % más que en sept»')),U(A('[arnés] Continúa exactamente donde quedaste.')),S(T('«iembre. 2. Cobranza: … 3. Reclamos: … Fin del informe.»'))],
+      p:[[1,'modelo',1,'—','—','La persona pide un texto largo. Turno 1, con un límite de tokens de salida bajo, para verlo.'],
+         [2,'modelo',1,'max_tokens','—','La respuesta llega con motivo <code>max_tokens</code>: se cortó a mitad de palabra. No hay llamadas, pero <b>no es un fin de turno</b>. Un bucle ingenuo entregaría el texto así.'],
+         [3,'modelo',2,'—','—','El arnés aplica su regla: pide que continúe, una sola vez. Ese pedido lo escribe el arnés, no la persona, y queda marcado como tal.'],
+         [4,'completada',2,'fin_de_turno','—','La segunda parte termina con <code>fin_de_turno</code>. El arnés une los dos textos y entrega el informe completo. Si se hubiera cortado otra vez, la regla dice terminar como <b>incompleta</b>.']]}
+  };
+  let esc,i=0,timer=null;
+  function blq(b){
+    const tag={texto:'texto',llamada:'llamada '+(b.id||''),resultado:'resultado '+(b.id||''),error:'resultado '+(b.id||''),arnes:'texto del arnés'}[b.t];
+    return `<div class="c2l1-b ${b.t}"><b>${tag}</b>${b.v}</div>`;
+  }
+  function pintar(){
+    const p=esc.p[i]; const [n,est,turno,parada,herr,txt]=p;
+    const prev=i>0?esc.p[i-1][0]:0;
+    $('#c2l1-conv').innerHTML=esc.m.slice(0,n).map((m,k)=>`<li class="c2l1-msg${k>=prev&&k<n&&n!==prev?' nuevo':''}"><span class="c2l1-cab">mensaje ${k+1} · ${m.rol}</span>${m.b.map(blq).join('')}</li>`).join('');
+    const c=$('#c2l1-conv');c.scrollTop=c.scrollHeight;
+    document.querySelectorAll('#c2l1-estados span').forEach(s=>s.classList.toggle('on',s.dataset.k===est));
+    $('#c2l1-out').innerHTML=`<span>Paso ${i+1} de ${esc.p.length}</span><span class="c2l1-datos"><span>turno <b>${turno}</b></span><span>mensajes <b>${n}</b></span><span>parada <b>${parada}</b></span><span>herramienta <b>${herr}</b></span></span><span class="c2l1-exp">${txt}</span>`;
+    $('#c2l1-atras').disabled=i===0;$('#c2l1-sig').disabled=i>=esc.p.length-1;
+  }
+  function parar(){if(timer){clearInterval(timer);timer=null;}const b=$('#c2l1-play');b.setAttribute('aria-pressed','false');b.textContent='▶ Reproducir';}
+  function cargar(){parar();esc=ESC[$('#c2l1-esc').value];i=0;pintar();}
+  $('#c2l1-sig').addEventListener('click',()=>{if(i<esc.p.length-1){i++;pintar();}});
+  $('#c2l1-atras').addEventListener('click',()=>{if(i>0){i--;pintar();}});
+  $('#c2l1-reini').addEventListener('click',cargar);
+  $('#c2l1-esc').addEventListener('change',cargar);
+  $('#c2l1-play').addEventListener('click',()=>{
+    if(timer){parar();return;}
+    if(i>=esc.p.length-1){i=0;pintar();}
+    const b=$('#c2l1-play');b.setAttribute('aria-pressed','true');b.textContent='⏸ Pausa';
+    timer=setInterval(()=>{if(i>=esc.p.length-1){parar();return;}i++;pintar();},2200);
+  });
+  cargar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const PIN=3/1e6,POUT=15/1e6,OUT=350;
+  const HERR=[1.5,0.8,4,2,1,6,1.2,2.5,0];
+  const entrada=k=>2000+1100*(k-1);
+  const costoT=k=>entrada(k)*PIN+OUT*POUT;
+  const miles=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const fmt=(x,d=3)=>x.toFixed(d).replace('.',',');
+  function simular(maxT,pres,maxS,atasco,det){
+    let costo=0,tiempo=0,hechos=[],motivo=null,rep=0;
+    const natural=atasco?20:9;
+    for(let k=1;k<=20;k++){
+      if(k>maxT){motivo='max_turnos';break;}
+      if(costo>=pres){motivo='presupuesto';break;}
+      if(tiempo>=maxS){motivo='tiempo';break;}
+      costo+=costoT(k);tiempo+=3;
+      if(!atasco&&k===9){hechos.push({k,c:costoT(k),fin:true});motivo='completada';break;}
+      if(atasco&&k>=5){rep++;if(det&&rep>=3){hechos.push({k,c:costoT(k),det:true});motivo='atascado';break;}}
+      tiempo+=atasco&&k>=5?2:HERR[k-1];
+      hechos.push({k,c:costoT(k),rep:atasco&&k>=5});
+    }
+    if(!motivo)motivo='max_turnos';
+    return {costo,tiempo,hechos,motivo,natural};
+  }
+  function pintar(){
+    const maxT=+$('#c2l2-t').value,pres=+$('#c2l2-p').value,maxS=+$('#c2l2-s').value;
+    const atasco=$('#c2l2-atasco').checked,det=$('#c2l2-det').checked;
+    $('#c2l2-vt').textContent=maxT;$('#c2l2-vp').textContent='$ '+fmt(pres,2);$('#c2l2-vs').textContent=maxS+' s';
+    const r=simular(maxT,pres,maxS,atasco,det);
+    // barras
+    const X0=40,Y0=190,W=27,HM=150,CM=0.08;
+    let s=`<line x1="${X0}" y1="${Y0}" x2="612" y2="${Y0}" style="stroke:var(--line)"/>`;
+    [0,0.02,0.04,0.06,0.08].forEach(v=>{const y=Y0-v/CM*HM;s+=`<line x1="${X0}" y1="${y}" x2="612" y2="${y}" style="stroke:var(--grid)"/><text x="${X0-4}" y="${y+4}" text-anchor="end">${v?fmt(v,2):'0'}</text>`;});
+    s+=`<text x="${X0}" y="14" class="b">Costo de cada turno (USD)</text>`;
+    const hechos=new Set(r.hechos.map(h=>h.k));
+    for(let k=1;k<=r.natural;k++){
+      const x=X0+6+(k-1)*W,h=costoT(k)/CM*HM,y=Y0-h;
+      const e=r.hechos.find(z=>z.k===k);
+      if(e){const col=e.fin?'--good':(e.det?'--warm':(e.rep?'--c-tra':'--accent'));
+        s+=`<rect x="${x}" y="${y}" width="${W-7}" height="${h}" rx="3" style="fill:var(${col})"/>`;}
+      else s+=`<rect x="${x}" y="${y}" width="${W-7}" height="${h}" rx="3" style="fill:none;stroke:var(--muted);stroke-dasharray:3 3"/>`;
+      s+=`<text x="${x+(W-7)/2}" y="${Y0+14}" text-anchor="middle">${k}</text>`;
+    }
+    const ult=r.hechos.length?r.hechos[r.hechos.length-1].k:0;
+    if(r.motivo!=='completada'){const x=X0+6+ult*W-4;s+=`<line x1="${x}" y1="24" x2="${x}" y2="${Y0}" style="stroke:var(--warm);stroke-width:2.5"/><text x="${Math.min(x+5,520)}" y="34" style="fill:var(--warm);font-weight:700">corte</text>`;}
+    s+=`<text x="${X0}" y="${Y0+32}">turno →   barras punteadas: lo que el arnés no ejecutó</text>`;
+    $('#c2l2-svg').innerHTML=s;
+    // medidores
+    const fil=[['Turnos',r.hechos.length,maxT,v=>v+' de '+maxT,'max_turnos'],['Costo',r.costo,pres,v=>'$ '+fmt(v)+' / '+fmt(pres,2),'presupuesto'],['Tiempo',r.tiempo,maxS,v=>fmt(v,1)+' s / '+maxS,'tiempo']];
+    $('#c2l2-med').innerHTML=fil.map(([n,v,m,f,k])=>`<div class="c2l2-fila${r.motivo===k?' corta':''}"><span>${n}</span><span class="c2l2-pista"><i style="width:${Math.min(100,v/m*100)}%"></i></span><output>${f(v)}</output></div>`).join('');
+    // texto
+    const M={completada:['<span class="ok">✔ Completada</span>','El modelo terminó con <code>fin_de_turno</code> en el turno 9, antes de tocar ningún límite.'],
+      max_turnos:['<span class="warn">✖ Cortada por máximo de turnos</span>',`El arnés no dejó empezar el turno ${maxT+1}.`],
+      presupuesto:['<span class="warn">✖ Cortada por presupuesto</span>',`Antes del turno ${ult+1} ya se habían gastado $ ${fmt(r.costo)}, y el límite era $ ${fmt(pres,2)}. Fíjate: el límite se revisa antes de cada turno, así que el gasto final puede pasarse un poco.`],
+      tiempo:['<span class="warn">✖ Cortada por tiempo</span>',`Al empezar el turno ${ult+1} ya iban ${fmt(r.tiempo,1)} s de reloj.`],
+      atascado:['<span class="warn">✖ Cortada por el detector de repeticiones</span>',`En el turno ${ult} el modelo propuso por tercera vez la misma llamada, <code>buscar_logs({"texto":"timeout"})</code>. El arnés no la ejecutó.`]};
+    const [t,d]=M[r.motivo];
+    let extra='';
+    if(atasco&&r.motivo!=='atascado')extra=`<span>El modelo repitió la misma llamada ${r.hechos.filter(h=>h.rep).length} veces (barras violetas): gasto sin avance. Activa el detector y compara.</span>`;
+    if(r.motivo!=='completada'&&!atasco)extra=`<span>La tarea quedó sin terminar: al arnés le tocará entregar un resultado parcial y decir por qué paró.</span>`;
+    $('#c2l2-out').innerHTML=`<span class="big">${t}</span><span>${d}</span>${extra}<span>Turno 1: ${miles(entrada(1))} tokens de entrada · turno 9: ${miles(entrada(9))}. La historia se reenvía completa en cada turno.</span>`;
+  }
+  ['#c2l2-t','#c2l2-p','#c2l2-s'].forEach(id=>$(id).addEventListener('input',pintar));
+  ['#c2l2-atasco','#c2l2-det'].forEach(id=>$(id).addEventListener('change',pintar));
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const SEG=[
+    {a:0,b:3,t:'m',n:'modelo T1',d:'el modelo planea la consulta'},
+    {a:3,b:5,t:'h',n:'consultar_ventas',c:'consulta',d:'la consulta de las ventas de todo el año'},
+    {a:5,b:8,t:'m',n:'modelo T2',d:'el modelo decide armar el informe'},
+    {a:8,b:10.5,t:'w',n:'escribir_archivo',c:'escribe',d:'la escritura de informe.xlsx',ef:'se escribió informe.xlsx con los 12 meses'},
+    {a:10.5,b:13,t:'m',n:'modelo T3',d:'el modelo revisa el informe'},
+    {a:13,b:14,t:'h',n:'leer',c:'leer',d:'la lectura de informe.xlsx'},
+    {a:14,b:16.5,t:'m',n:'modelo T4',d:'el modelo escribe la respuesta final'}];
+  const FIN=16.5,X0=30,ESC=560/FIN,X=t=>X0+t*ESC;
+  const FR=[5,10.5,14];
+  const f=v=>v.toFixed(1).replace('.',',');
+  const cl=x=>Math.min(Math.max(x,60),560);
+  function pintar(){
+    const tipo=$('#c2l3-tipo').value,t=+$('#c2l3-t').value;
+    $('#c2l3-vt').textContent=f(t)+' s';
+    const seg=SEG.find(s=>t>=s.a&&t<s.b)||SEG[SEG.length-1];
+    let ap,txt,perd='';
+    if(tipo==='redirigir'){
+      const fr=FR.find(x=>x>t);
+      if(fr!==undefined){ap=fr;
+        const viejo=SEG.filter(s=>s.b>t&&s.b<=fr).map(s=>s.d);
+        txt=`Tu mensaje llega durante <b>${seg.d}</b>. No se mete en medio: espera en la cola hasta la frontera del turno, a los ${f(fr)} s, cuando la conversación está completa. Esperó <b>${f(fr-t)} s</b>.`;
+        perd=`Hasta esa frontera, el arnés siguió con el plan viejo: ${viejo.join(' y ')}.`;
+        if(fr===10.5)perd+=' <span class="warn">La escritura con los 12 meses ya ocurrió: habrá que rehacer el archivo con la instrucción nueva.</span>';
+        if(fr===5)perd+=' <span class="ok">Todavía no se escribió nada: corregir aquí es barato.</span>';
+      }else{ap=FIN;txt=`Tu mensaje llega durante la respuesta final. No queda otra frontera de turno: el arnés deja terminar la respuesta (a los ${f(FIN)} s) y, en vez de cerrar la ejecución, agrega un turno más con tu corrección. Esperó <b>${f(FIN-t)} s</b>.`;perd='Todo lo hecho siguió el plan viejo; la corrección llega tarde y probablemente obliga a rehacer el informe.';}
+    }else if(tipo==='seguir'){
+      ap=FIN;txt=`Un seguimiento no cambia la tarea en curso: espera a que termine (a los ${f(FIN)} s) y entonces empieza una ejecución nueva con toda la historia. Esperó <b>${f(FIN-t)} s</b>.`;perd='No se pierde trabajo: la tarea actual termina tal como iba.';
+    }else{
+      ap=t;
+      if(seg.t==='m')txt=`Se cancela de inmediato: el arnés aborta la llamada al modelo y descarta su respuesta parcial (<b>${f(t-seg.a)} s</b> de trabajo del modelo que se pierden, aunque igual se cobran).`;
+      else if(seg.t==='w'){txt='La señal de cancelación llega durante <b>la escritura de informe.xlsx</b>. Si la herramienta respeta la señal, deja de escribir; si no, termina. En cualquier caso, lo que ya se escribió queda escrito.';
+        perd='<span class="warn">Riesgo: un archivo a medio escribir. Por eso las herramientas que escriben deben hacerlo de forma atómica (escribir aparte y luego renombrar) o declarar que no se pueden interrumpir.</span>';}
+      else txt=`La señal llega durante <b>${seg.d}</b>: es una lectura y se interrumpe sin consecuencias.`;
+    }
+    const efectos=SEG.filter(s=>s.ef&&s.b<=Math.min(ap,FIN)&&(tipo!=='cancelar'||s.b<=t)).map(s=>s.ef);
+    let s=`<text x="${X0}" y="14" class="b">Una ejecución de 4 turnos (segundos)</text>`;
+    SEG.forEach(g=>{const c=g.t==='m'?'c-tra':(g.t==='w'?'d-sis':'c-enl');
+      s+=`<rect x="${X(g.a)+1}" y="56" width="${(g.b-g.a)*ESC-2}" height="34" rx="5" style="fill:var(--${c}-s);stroke:var(--${c});stroke-width:1.5"/>`;
+      s+=`<text x="${X((g.a+g.b)/2)}" y="77" text-anchor="middle" class="b">${(g.b-g.a)*ESC>g.n.length*7+12?g.n:(g.c||g.n)}</text>`;});
+    FR.forEach(x=>{s+=`<line x1="${X(x)}" y1="48" x2="${X(x)}" y2="98" style="stroke:var(--ink);stroke-width:2"/><text x="${X(x)}" y="110" text-anchor="middle">frontera</text>`;});
+    s+=`<line x1="${X0}" y1="168" x2="${X(FIN)}" y2="168" style="stroke:var(--line)"/>`;
+    for(let k=0;k<=16;k+=2)s+=`<text x="${X(k)}" y="182" text-anchor="middle">${k}</text>`;
+    s+=`<path d="M${X(t)-7} 37 L${X(t)+7} 37 L${X(t)} 51 z" style="fill:var(--accent)"/><text x="${cl(X(t))}" y="33" text-anchor="middle" style="fill:var(--accent);font-weight:700">llega</text>`;
+    if(ap>t+0.05){s+=`<rect x="${X(t)}" y="124" width="${X(ap)-X(t)}" height="14" rx="3" style="fill:var(--accent-soft)"/><line x1="${X(t)}" y1="131" x2="${X(ap)-2}" y2="131" style="stroke:var(--accent);stroke-width:2"/>`;}
+    s+=`<circle cx="${X(ap)}" cy="131" r="6" style="fill:var(${tipo==='cancelar'?'--warm':'--good'})"/>`;
+    s+=`<text x="${cl(X(ap))}" y="156" text-anchor="middle" style="fill:var(--ink);font-weight:700">${tipo==='cancelar'?'se detiene aquí':'se aplica aquí'}</text>`;
+    $('#c2l3-svg').innerHTML=s;
+    const ef=efectos.length?`Efectos ya hechos en el mundo: ${efectos.join('; ')}. Ninguna de las tres entradas los deshace.`:'Ningún efecto en el mundo todavía: solo lecturas.';
+    $('#c2l3-out').innerHTML=`<span>${txt}</span>${perd?`<span>${perd}</span>`:''}<span>${ef}</span>`;
+  }
+  $('#c2l3-tipo').addEventListener('change',pintar);$('#c2l3-t').addEventListener('input',pintar);
+  pintar();
+})();
+</script>
+</body>
+</html>

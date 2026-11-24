@@ -4,7 +4,7 @@ El software que rodea a un modelo y lo convierte en un agente gobernable: el buc
 
 **Ver en línea:** https://aaramirez.github.io/arneses/
 
-Este repositorio solo tiene el sitio generado. El curso está en preparación: la tabla de contenido ya está publicada para revisión.
+Este repositorio solo tiene el sitio generado. Curso completo: 16 capítulos con laboratorios interactivos, diagramas y prácticas.
 
 | # | Capítulo |
 |---|---|

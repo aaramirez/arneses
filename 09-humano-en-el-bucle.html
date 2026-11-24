@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Humano en el bucle · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="humano-en-el-bucle">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 09 DE 16</span><h1>El servicio de interacción humana</h1><p class="lede">Cuando una regla dice «esto lo decide una persona», el agente tiene que detenerse, explicar qué quiere hacer, esperar horas si hace falta y seguir según la respuesta. Hacer eso bien es un servicio del arnés, no una ventana emergente.</p></header>
+<section><h2>Tipos de interacción: aprobar, elegir, completar y corregir</h2><div class="prose"><p>En el capítulo 7, el motor de políticas aprendió a contestar «pedir aprobación». En el capítulo 8, los validadores aprendieron a «escalar». Las dos respuestas dicen lo mismo: aquí decide una persona. Pero alguien tiene que convertir esa frase en algo real. Pausar la tarea sin perderla, avisarle a la persona correcta por el canal correcto, mostrarle lo necesario para decidir, recibir la respuesta, comprobar que vale y reanudar. Esa pieza es el <b>servicio de interacción humana</b> (<i>human interaction service</i>), y es lo que se suele llamar <b>humano en el bucle</b> (<i>human-in-the-loop</i>, HITL).</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en un hospital y en la firma del consentimiento antes de una operación. El cirujano no improvisa una hoja: hay un formulario fijo que dice qué se va a hacer, qué riesgos tiene y qué alternativas existen. Si el paciente no puede firmar, hay reglas sobre quién firma por él y qué pasa si nadie aparece. La operación espera, pero no se olvida. El servicio de interacción humana es ese formulario con sus reglas, hecho software.</p></div><div class="prose"><p>La primera decisión de diseño es que una persona no solo dice «sí» o «no». Hay cuatro tipos mínimos de interacción, y cada uno tiene su forma de respuesta:</p><ol class="steps"><li><span><b>Aprobar</b> (<i>approval</i>): la persona acepta o rechaza una acción concreta. «¿Reembolso US$ 480 a la cliente 4512?» Respuesta: aprobado o rechazado, con un motivo opcional.</span></li><li><span><b>Elegir</b> (<i>decision</i>): el agente presenta opciones y la persona escoge. «Encontré dos cobros duplicados, ¿reembolso el de marzo, el de abril o los dos?» Respuesta: una de las opciones ofrecidas, nunca otra.</span></li><li><span><b>Completar</b> (<i>input</i>): al agente le falta un dato que solo la persona tiene. «¿Cuál es el número de orden de compra?» Respuesta: un valor, que se valida contra un esquema como cualquier argumento.</span></li><li><span><b>Corregir</b> (<i>review</i>): la persona revisa lo que el agente preparó y lo cambia antes de que siga. «Este es el correo para la cliente; edítalo si hace falta.» Respuesta: la versión corregida, que reemplaza a la propuesta.</span></li></ol><p>La diferencia importa porque el arnés valida la respuesta según el tipo. Una aprobación no puede traer un valor; una elección no puede traer una opción que no se ofreció. Es el mismo principio de los validadores, aplicado a lo que entra desde una persona: <b>negar por defecto</b> (<i>default deny</i>). Una respuesta que no encaja con su solicitud no se acepta solo porque llegó.</p></div><figure class="fig fig-flujo" id="09-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 620" style="min-width:720px" role="img" aria-label="Diagrama de secuencia de una aprobación: el modelo propone un reembolso; la política responde pedir aprobación; el servicio de interacción crea la solicitud, la sesión guarda el estado y el agente se pausa; el canal lleva la tarjeta a la persona; horas después la persona aprueba; el servicio comprueba que la solicitud siga pendiente y que la respuesta sea válida; la sesión reanuda el bucle y la herramienta se ejecuta.">
+  <defs>
+    <marker id="d91-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d91-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d91-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d91-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+    <marker id="d91-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-fis"/></marker>
+    <marker id="d91-i" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-inet"/></marker>
+  </defs>
+  <g class="t">
+    <rect x="12" y="12" width="96" height="46" rx="10" class="c-tra"/><text x="60" y="40" text-anchor="middle" class="t-b k-tra">Modelo</text>
+    <rect x="127" y="12" width="96" height="46" rx="10" class="c-red"/><text x="175" y="40" text-anchor="middle" class="t-b k-red">Bucle</text>
+    <rect x="242" y="12" width="96" height="46" rx="10" class="d-sis"/><text x="290" y="40" text-anchor="middle" class="t-b k-sis">Política</text>
+    <rect x="357" y="12" width="106" height="46" rx="10" class="d-sis"/><text x="410" y="31" text-anchor="middle" class="t-b k-sis">Servicio de</text><text x="410" y="48" text-anchor="middle" class="t-b k-sis">interacción</text>
+    <rect x="482" y="12" width="96" height="46" rx="10" class="d-inet"/><text x="530" y="40" text-anchor="middle" class="t-b k-inet">Sesión</text>
+    <rect x="597" y="12" width="86" height="46" rx="10" class="c-fis"/><text x="640" y="40" text-anchor="middle" class="t-b k-fis">Canal</text>
+    <rect x="700" y="12" width="90" height="46" rx="10" class="d-casa"/><text x="745" y="40" text-anchor="middle" class="t-b k-casa">Persona</text>
+  </g>
+  <g>
+    <line x1="60" y1="58" x2="60" y2="605" class="vida"/><line x1="175" y1="58" x2="175" y2="605" class="vida"/>
+    <line x1="290" y1="58" x2="290" y2="605" class="vida"/><line x1="410" y1="58" x2="410" y2="605" class="vida"/>
+    <line x1="530" y1="58" x2="530" y2="605" class="vida"/><line x1="640" y1="58" x2="640" y2="605" class="vida"/>
+    <line x1="745" y1="58" x2="745" y2="605" class="vida"/>
+  </g>
+  <g class="t t-s">
+    <line x1="60" y1="96" x2="173" y2="96" class="ln s-tra" style="stroke-width:2" marker-end="url(#d91-t)"/>
+    <text x="66" y="89">① reembolsar(4512, 480)</text>
+    <line x1="175" y1="130" x2="288" y2="130" class="ln s-red" style="stroke-width:2" marker-end="url(#d91-r)"/>
+    <text x="181" y="123">② ¿se permite?</text>
+    <line x1="290" y1="164" x2="177" y2="164" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d91-s)"/>
+    <text x="182" y="157">③ pedir aprobación</text>
+    <line x1="175" y1="198" x2="408" y2="198" class="ln s-red" style="stroke-width:2" marker-end="url(#d91-r)"/>
+    <text x="210" y="191">④ crear solicitud (tipo: aprobar)</text>
+    <line x1="410" y1="232" x2="528" y2="232" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d91-s)"/>
+    <text x="416" y="225">⑤ guardar y pausar</text>
+    <rect x="524" y="242" width="12" height="40" rx="3" class="d-inet"/>
+    <text x="542" y="258" class="t-m">el proceso</text><text x="542" y="273" class="t-m">se libera</text>
+    <line x1="410" y1="300" x2="638" y2="300" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d91-s)"/>
+    <text x="440" y="293">⑥ tarjeta y plazo</text>
+    <line x1="640" y1="334" x2="743" y2="334" class="ln s-fis" style="stroke-width:2" marker-end="url(#d91-f)"/>
+    <text x="646" y="327">⑦ aviso</text>
+  </g>
+  
+  <rect x="12" y="350" width="778" height="34" class="caja" style="stroke-dasharray:5 4"/>
+  <text x="400" y="372" class="t t-s t-m" text-anchor="middle">… horas después (con recordatorios a mitad del plazo y cerca del final) …</text>
+  <g class="t t-s">
+    <line x1="745" y1="414" x2="642" y2="414" class="ln" style="stroke-width:2;stroke:var(--d-casa)" marker-end="url(#d91-c)"/>
+    <text x="650" y="407">⑧ aprueba</text>
+    <line x1="640" y1="448" x2="412" y2="448" class="ln s-fis" style="stroke-width:2" marker-end="url(#d91-f)"/>
+    <text x="440" y="441">⑨ resolución + identidad</text>
+    <rect x="404" y="460" width="12" height="44" rx="3" class="d-sis"/>
+    <text x="422" y="476">⑩ ¿sigue pendiente?</text><text x="422" y="492">¿respuesta válida?</text>
+    <line x1="410" y1="530" x2="528" y2="530" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d91-s)"/>
+    <text x="416" y="523">⑪ retomar</text>
+    <line x1="530" y1="566" x2="177" y2="566" class="ln" style="stroke-width:2;stroke:var(--d-inet)" marker-end="url(#d91-i)"/>
+    <text x="230" y="559">⑫ reanuda: la herramienta corre</text>
+  </g>
+  
+  <g class="t t-xs t-b">
+    <path d="M808 80V172" class="ln s-tra" style="stroke-width:3"/>
+    <text transform="translate(826 126) rotate(-90)" text-anchor="middle" class="k-tra">PROPONER</text>
+    <path d="M808 186V390" class="ln" style="stroke-width:3;stroke:var(--d-casa)"/>
+    <text transform="translate(826 288) rotate(-90)" text-anchor="middle" class="k-casa">ESPERAR</text>
+    <path d="M808 404V580" class="ln s-red" style="stroke-width:3"/>
+    <text transform="translate(826 492) rotate(-90)" text-anchor="middle" class="k-red">REANUDAR</text>
+  </g>
+</svg></div><figcaption><b>El flujo de una aprobación.</b> Siete participantes arriba y el tiempo corriendo hacia abajo. El modelo propone un reembolso, la política responde «pedir aprobación» y el servicio de interacción crea una solicitud persistida; la sesión guarda el estado y el agente se pausa. El canal le lleva la tarjeta a la persona, que responde horas después. El servicio comprueba que la solicitud siga pendiente y que la respuesta sea válida, y solo entonces el bucle se reanuda y la herramienta corre. A la derecha, las fases: proponer, esperar y reanudar.</figcaption></figure><div class="prose"><p>Observa en el diagrama que el servicio no decide <b>si</b> hace falta aprobación (eso es de la política), ni <b>cómo</b> se ejecuta la acción aprobada (eso es de la herramienta), ni <b>por dónde</b> se le avisa a la persona (eso es de un <b>adaptador de canal</b>, <i>channel adapter</i>: chat, correo, aplicación móvil o una API). El servicio decide una sola cosa: cómo se representa, se espera y se resuelve una intervención humana. Por eso la misma aprobación puede llegar por chat a una persona y por correo a otra sin cambiar el núcleo.</p><p>En código, la solicitud y su resolución son dos registros con forma fija, guardados por el arnés:</p><div class="code-copia"><pre><code>type TipoInteraccion = "aprobar" | "elegir" | "completar" | "corregir";
+
+interface SolicitudHumana {
+  id: string;
+  tipo: TipoInteraccion;
+  llamadaId: string;          // la llamada a herramienta que la originó
+  paraQuien: string[];        // roles o personas que pueden resolverla
+  presentacion: Tarjeta;      // lo que ve la persona (siguiente sección)
+  opciones?: string[];        // solo para "elegir"
+  esquema?: object;           // solo para "completar"
+  venceEn: string;            // fecha y hora límite
+  siVence: "denegar" | "escalar" | "cancelar_tarea";
+  estado: "pendiente" | "resuelta" | "vencida";
+}
+
+interface Resolucion {
+  solicitudId: string;
+  resultado: "aprobada" | "rechazada" | "elegida" | "completada" | "corregida";
+  valor?: unknown;            // la opción, el dato o la versión corregida
+  motivo?: string;            // vuelve al modelo si se rechaza
+  resueltaPor: string;        // identidad verificada, no un nombre escrito
+  resueltaEn: string;
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Dos campos merecen atención. <code>resueltaPor</code> es una identidad verificada por el sistema de acceso, no un nombre que alguien escribió: es lo que luego permite auditar quién aprobó qué (capítulo 11). Y <code>siVence</code> existe desde el principio, porque una solicitud que nadie contesta es el caso normal, no la excepción.</p></div></section>
+<section><h2>Presentar la acción: resumen, diferencias y riesgo</h2><div class="prose"><p>Una aprobación solo vale lo que vale la información con que se toma. Si la persona ve «¿Aprobar <code>reembolsar({"cliente":"4512","monto":480})</code>?», va a decir que sí sin entender, o va a tener que abrir tres sistemas para entender. Las dos cosas destruyen el valor del control.</p><p>La pieza que resuelve esto es la <b>tarjeta de aprobación</b> (<i>approval card</i>): una presentación fija, armada por el arnés y no por el modelo, con lo que hace falta para decidir en menos de un minuto.</p></div><figure class="fig fig-esquema" id="09-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 420" style="min-width:700px" role="img" aria-label="Anatomía de una tarjeta de aprobación: a la izquierda, la tarjeta con el resumen, las diferencias de saldo, la regla que pidió la aprobación, el contexto, el plazo y los botones; a la derecha, de dónde sale cada parte: el resumen lo redacta el modelo y todo lo demás lo pone el arnés desde la llamada real y los sistemas.">
+  <defs>
+    <marker id="d92-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  
+  <rect x="12" y="12" width="440" height="396" rx="14" class="caja"/>
+  <rect x="12" y="12" width="8" height="396" rx="4" class="d-casa"/>
+  <g class="t">
+    <text x="36" y="40" class="t-xs t-b t-m">APROBACIÓN REQUERIDA · FINANZAS</text>
+    <text x="36" y="68" class="t-b" style="font-size:16px">Reembolsar US$ 480,00 a la cliente 4512</text>
+    <text x="36" y="88" class="t-s t-m">por el cobro duplicado de abril</text>
+
+    <rect x="36" y="104" width="392" height="70" rx="8" class="c-enl"/>
+    <text x="50" y="124" class="t-xs t-b k-enl">DIFERENCIAS</text>
+    <text x="50" y="146" class="t-s t-mono">saldo de la cliente:  −480,00  →  0,00</text>
+    <text x="50" y="164" class="t-s t-mono">cobros abril:  2  →  1 (el 2.º se devuelve)</text>
+
+    <rect x="36" y="186" width="392" height="44" rx="8" class="d-sis"/>
+    <text x="50" y="204" class="t-xs t-b k-sis">POR QUÉ SE PIDE</text>
+    <text x="50" y="221" class="t-s">reembolsos mayores de US$ 100 requieren aprobación</text>
+
+    <text x="36" y="254" class="t-xs t-b t-m">CONTEXTO</text>
+    <text x="36" y="272" class="t-s">ticket 5512 · cobros del 3 y del 4 de abril · ver en el sistema ↗</text>
+
+    <text x="36" y="302" class="t-xs t-b t-m">SI RECHAZAS</text>
+    <text x="36" y="320" class="t-s">el agente recibe tu motivo y puede proponer otra cosa</text>
+
+    <rect x="36" y="336" width="392" height="8" rx="4" style="fill:var(--grid)"/>
+    <rect x="36" y="336" width="150" height="8" rx="4" class="d-casa" style="stroke:none;fill:var(--d-casa)"/>
+    <text x="428" y="358" class="t-s t-m" text-anchor="end">vence en 15 h · si vence: se deniega</text>
+
+    <rect x="36" y="368" width="90" height="30" rx="7" class="d-casa"/><text x="81" y="388" text-anchor="middle" class="t-s t-b k-casa">Aprobar</text>
+    <rect x="136" y="368" width="90" height="30" rx="7" class="caja"/><text x="181" y="388" text-anchor="middle" class="t-s t-b">Rechazar</text>
+    <rect x="236" y="368" width="90" height="30" rx="7" class="caja"/><text x="281" y="388" text-anchor="middle" class="t-s t-b">Corregir</text>
+  </g>
+  
+  <g class="ln ln-d" style="stroke-width:1.4">
+    <line x1="522" y1="70" x2="456" y2="70" marker-end="url(#d92-m)"/>
+    <line x1="522" y1="140" x2="456" y2="140" marker-end="url(#d92-m)"/>
+    <line x1="522" y1="208" x2="456" y2="208" marker-end="url(#d92-m)"/>
+    <line x1="522" y1="280" x2="456" y2="280" marker-end="url(#d92-m)"/>
+    <line x1="522" y1="346" x2="456" y2="346" marker-end="url(#d92-m)"/>
+    <line x1="522" y1="384" x2="456" y2="384" marker-end="url(#d92-m)"/>
+  </g>
+  <g class="t">
+    <rect x="524" y="50" width="324" height="40" rx="8" class="c-tra"/>
+    <text x="536" y="67" class="t-s t-b k-tra">Resumen: lo redacta el modelo</text><text x="536" y="82" class="t-s">monto y cliente se reemplazan por los reales</text>
+    <rect x="524" y="120" width="324" height="40" rx="8" class="d-sis"/>
+    <text x="536" y="137" class="t-s t-b k-sis">Diferencias: los argumentos reales</text><text x="536" y="152" class="t-s">de la llamada y el estado del sistema</text>
+    <rect x="524" y="188" width="324" height="40" rx="8" class="d-sis"/>
+    <text x="536" y="205" class="t-s t-b k-sis">Por qué: la regla de política</text><text x="536" y="220" class="t-s">que devolvió «pedir aprobación»</text>
+    <rect x="524" y="260" width="324" height="40" rx="8" class="d-sis"/>
+    <text x="536" y="277" class="t-s t-b k-sis">Contexto: datos con procedencia</text><text x="536" y="292" class="t-s">el ticket y los cobros, con enlace</text>
+    <rect x="524" y="326" width="324" height="40" rx="8" class="d-sis"/>
+    <text x="536" y="343" class="t-s t-b k-sis">Plazo y política si vence</text><text x="536" y="358" class="t-s">los fija el servicio, no el modelo</text>
+    <rect x="524" y="374" width="324" height="34" rx="8" class="d-casa"/>
+    <text x="536" y="396" class="t-s t-b k-casa">Botones según el tipo de interacción</text>
+  </g>
+</svg></div><figcaption><b>Anatomía de una tarjeta de aprobación.</b> A la izquierda, la tarjeta como la ve la persona; a la derecha, de dónde sale cada parte. El resumen lo propone el modelo, pero los datos, las diferencias, el riesgo y la regla que pidió la aprobación los pone el arnés desde el sistema. Abajo, los botones según el tipo de interacción y el plazo visible.</figcaption></figure><div class="prose"><p>Una buena tarjeta tiene seis partes:</p><ul><li><b>Qué se va a hacer</b>, en una frase y en lenguaje del negocio: «Reembolsar US$ 480,00 a la cliente 4512 por el cobro duplicado de abril».</li><li><b>Las diferencias</b> (<i>diff</i>): el antes y el después. En un cambio de código, las líneas que cambian; en un reembolso, el saldo antes y después; en un correo, el texto completo y los destinatarios.</li><li><b>El riesgo y por qué se pide aprobación</b>: la regla que se activó, por ejemplo «reembolsos mayores de US$ 100 requieren aprobación de finanzas». Esto le dice a la persona qué mirar.</li><li><b>El contexto mínimo</b>: el ticket que originó la tarea, los dos cobros que el agente considera duplicados, con enlace al sistema donde se pueden ver.</li><li><b>Qué pasa si rechazas</b>: la tarea no se cancela necesariamente; el agente recibe el motivo y puede proponer otra cosa.</li><li><b>El plazo</b>: hasta cuándo se espera la respuesta y qué pasa si no llega.</li></ul><p>La regla de oro: <b>el modelo puede redactar el resumen, pero los hechos los pone el arnés</b>. Los montos, los destinatarios y las diferencias se toman de los argumentos reales de la llamada y del sistema, no de lo que el modelo dice que va a hacer. Si el modelo escribiera la tarjeta completa, una inyección de prompts podría hacer que la tarjeta diga «reembolso de US$ 48» mientras la llamada real es de US$ 4.800.</p></div><div class="ml"><b>En la práctica</b><p>Los agentes de código en la terminal son el ejemplo más visible. Antes de editar un archivo, muestran las líneas que se quitan y las que se agregan, con colores; antes de correr un comando, muestran el comando exacto que se va a ejecutar, no una descripción. Y suelen ofrecer más de dos botones: «sí», «sí, y no me preguntes más por este comando en este proyecto» y «no, y te digo qué hacer distinto». Esa tercera opción es una corrección, no un simple rechazo.</p></div></section>
+<section><h2>Plazos, recordatorios y qué pasa si nadie responde</h2><div class="prose"><p>Una aprobación puede tardar dos minutos o dos días. Mientras tanto, el agente no puede quedarse con un proceso abierto esperando: el servidor se reinicia, la conexión se cae, el costo de mantenerlo vivo se acumula. Por eso la espera tiene que ser <b>durable</b> (<i>durable wait</i>): el arnés guarda el estado completo de la ejecución, libera los recursos y la retoma cuando llega la respuesta. Las piezas para eso, la sesión y los pasos durables, son del capítulo 6; aquí se usan.</p><p>Toda solicitud tiene un <b>plazo</b> (<i>deadline</i>) y una política para cuando se vence. Las opciones razonables son tres:</p><ul><li><b>Denegar por defecto</b>: si nadie aprobó, la acción no ocurre y el agente recibe el resultado «vencida sin aprobación». Es la opción segura para acciones riesgosas.</li><li><b>Escalar</b> (<i>escalate</i>): la solicitud pasa a otra persona o a un rol superior, con un plazo nuevo.</li><li><b>Cancelar la tarea</b>: si la acción era imprescindible y nadie respondió, la tarea entera termina y queda registrada como incompleta.</li></ul><p>Lo que nunca es razonable: <b>aprobar por defecto</b>. Un control que se aprueba solo cuando nadie mira no es un control.</p><p>Entre la creación y el vencimiento, el servicio manda <b>recordatorios</b> (<i>reminders</i>): uno a mitad del plazo, otro cerca del final. Y hay un caso delicado: una respuesta que llega <b>tarde</b>, después de que la solicitud venció o fue escalada. El servicio la rechaza, porque la solicitud ya no está pendiente. Si no lo hiciera, la misma acción podría quedar aprobada dos veces por dos personas distintas.</p></div><figure class="fig fig-esquema" id="09-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 372" style="min-width:680px" role="img" aria-label="Máquina de estados de una solicitud de interacción: nace pendiente; una persona la resuelve (aprobada, rechazada o corregida) o se vence; vencida, su política decide denegar o escalar, y escalar crea una solicitud nueva pendiente para otra persona. Los recordatorios no cambian el estado. Una respuesta que llega a una solicitud que ya no está pendiente se rechaza.">
+  <defs>
+    <marker id="d93-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d93-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+  </defs>
+  <circle cx="30" cy="110" r="9" class="k-red"/>
+  <line x1="39" y1="110" x2="98" y2="110" class="ln" style="stroke-width:2" marker-end="url(#d93-m)"/>
+  <text x="44" y="100" class="t t-s">creada</text>
+  <g class="t">
+    <rect x="100" y="80" width="150" height="60" rx="30" class="d-casa" style="stroke-width:2.5"/>
+    <text x="175" y="107" text-anchor="middle" class="t-b k-casa">Pendiente</text><text x="175" y="124" text-anchor="middle" class="t-s">el agente espera</text>
+
+    <rect x="460" y="20" width="200" height="120" rx="16" class="c-enl"/>
+    <text x="560" y="44" text-anchor="middle" class="t-b k-enl">Resuelta</text>
+    <text x="480" y="68" class="t-s">• aprobada → ejecuta</text>
+    <text x="480" y="86" class="t-s">• rechazada → motivo al modelo</text>
+    <text x="480" y="104" class="t-s">• corregida → ejecuta lo nuevo</text>
+    <text x="480" y="122" class="t-s">• elegida o completada</text>
+
+    <rect x="100" y="230" width="150" height="60" rx="30" class="d-sis"/>
+    <text x="175" y="257" text-anchor="middle" class="t-b k-sis">Vencida</text><text x="175" y="274" text-anchor="middle" class="t-s">nadie respondió</text>
+
+    <rect x="400" y="200" width="150" height="50" rx="12" class="caja"/>
+    <text x="475" y="222" text-anchor="middle" class="t-b">Denegar</text><text x="475" y="239" text-anchor="middle" class="t-s t-m">la acción no ocurre</text>
+    <rect x="400" y="270" width="150" height="50" rx="12" class="caja"/>
+    <text x="475" y="292" text-anchor="middle" class="t-b">Escalar</text><text x="475" y="309" text-anchor="middle" class="t-s t-m">otra persona, otro plazo</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <path d="M250 100C330 70 380 70 458 76" marker-end="url(#d93-m)"/>
+    <line x1="175" y1="140" x2="175" y2="228" marker-end="url(#d93-m)"/>
+    <path d="M250 255C320 240 350 228 398 225" marker-end="url(#d93-m)"/>
+    <path d="M250 268C320 285 350 295 398 295" marker-end="url(#d93-m)"/>
+    <path d="M550 295H700V170H215V143" class="ln-d" marker-end="url(#d93-m)"/>
+  </g>
+  
+  <path d="M140 80C120 30 230 30 210 80" class="ln" style="stroke-width:1.6;stroke-dasharray:4 3" marker-end="url(#d93-m)"/>
+  <g class="t t-s">
+    <text x="175" y="26" text-anchor="middle" class="t-m">recordatorio (mismo estado)</text>
+    <text x="330" y="62" class="t-b">una persona responde</text>
+    <text x="183" y="190" class="t-b">se cumple el plazo</text>
+    <text x="268" y="226" class="t-m">política</text>
+    <text x="268" y="306" class="t-m">política</text>
+    <text x="710" y="224" class="t-m">crea una solicitud</text><text x="710" y="239" class="t-m">nueva, pendiente</text>
+  </g>
+  
+  <path d="M600 352H175V293" class="ln" style="stroke:var(--d-sis);stroke-width:1.6;stroke-dasharray:6 4" marker-end="url(#d93-s)"/>
+  <text x="300" y="358" class="t t-b k-sis" style="font-size:16px" text-anchor="middle">✖</text>
+  <text x="610" y="356" class="t t-s k-sis">respuesta tardía: se rechaza,</text><text x="610" y="370" class="t t-s k-sis">la solicitud ya no está pendiente</text>
+</svg></div><figcaption><b>Los estados de una solicitud de interacción.</b> Nace pendiente. Desde ahí, una persona la aprueba, la rechaza o la corrige, y la solicitud queda resuelta; o se cumple el plazo y queda vencida, y entonces su política decide: denegar o escalar, que crea una solicitud nueva con otra persona y otro plazo. Los recordatorios no cambian el estado. Una respuesta que llega a una solicitud que ya no está pendiente se rechaza (la flecha tachada).</figcaption></figure><div class="prose"><p>Pruébalo. Tienes una aprobación con plazo en curso y el reloj corre comprimido. Decide qué hacer y mira en qué estado queda el agente.</p></div><div class="lab" id="09-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Una aprobación con plazo: aprueba, rechaza, corrige o deja vencer</h3></div><p class="hint">Ajusta el plazo y la política para cuando se vence, y pon a correr el reloj. Responde con un botón en cualquier momento o deja que se venza. Mira el estado de la solicitud y del agente en el diagrama, y el registro de eventos. Prueba responder después del vencimiento.</p><style>
+[id="09-lab-1"] .c9l1-tarjeta{border:1px solid var(--line);border-left:5px solid var(--d-casa);border-radius:10px;background:var(--card);padding:12px 14px;display:grid;gap:6px;font:500 .9rem/1.4 var(--f-display)}
+[id="09-lab-1"] .c9l1-tarjeta .tit{font-weight:800;font-size:1rem}
+[id="09-lab-1"] .c9l1-tarjeta .m{color:var(--muted);font-weight:400;font-size:.84rem}
+[id="09-lab-1"] .c9l1-tarjeta .r{color:var(--d-sis);font-weight:700;font-size:.84rem}
+[id="09-lab-1"] .c9l1-barra{height:10px;border-radius:5px;background:var(--grid);overflow:hidden}
+[id="09-lab-1"] .c9l1-barra i{display:block;height:100%;width:0;background:var(--d-casa);transition:width .1s linear}
+[id="09-lab-1"] .c9l1-barra.tarde i{background:var(--warm)}
+[id="09-lab-1"] .c9l1-svg{width:100%;max-width:560px;height:auto;display:block;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="09-lab-1"] .c9l1-svg .nd rect{fill:var(--card);stroke:var(--line);stroke-width:1.5;transition:all .2s}
+[id="09-lab-1"] .c9l1-svg .nd text{font:600 11.5px var(--f-display);fill:var(--muted)}
+[id="09-lab-1"] .c9l1-svg .nd.act rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3}
+[id="09-lab-1"] .c9l1-svg .nd.act text{fill:var(--ink)}
+[id="09-lab-1"] .c9l1-svg .nd.fue rect{stroke:var(--accent);stroke-dasharray:4 3}
+[id="09-lab-1"] .c9l1-svg .ar{stroke:var(--muted);stroke-width:1.4;fill:none}
+[id="09-lab-1"] .c9l1-svg .lb{font:500 10.5px var(--f-display);fill:var(--muted)}
+[id="09-lab-1"] .c9l1-log{list-style:none;margin:0;padding:0;display:grid;gap:3px;font:400 .8rem/1.35 var(--f-mono);max-height:180px;overflow-y:auto}
+[id="09-lab-1"] .c9l1-log li b{color:var(--accent);font-weight:600}
+[id="09-lab-1"] .c9l1-log li.x{color:var(--warm)}
+</style>
+<div class="ctls">
+  <label class="ctl">Plazo para responder <output id="c9l1-plo">24 h</output><input type="range" id="c9l1-pl" min="2" max="48" step="2" value="24"></label>
+  <div class="opciones" style="grid-template-columns:1fr"><label>Si vence sin respuesta
+    <select id="c9l1-si"><option value="denegar">Denegar la acción</option><option value="escalar">Escalar a la supervisora (plazo: la mitad)</option><option value="cancelar">Cancelar la tarea</option></select></label></div>
+</div>
+<div class="split">
+  <div style="display:grid;gap:10px">
+    <div class="c9l1-tarjeta" id="c9l1-tarjeta" aria-live="polite">
+      <span class="m" id="c9l1-para">Para: finanzas (Marta)</span>
+      <span class="tit" id="c9l1-que">Reembolsar US$ 480,00 a la cliente 4512</span>
+      <span class="m">Cobro duplicado de abril · saldo de la cliente: −480,00 → 0,00</span>
+      <span class="r">Regla: reembolsos mayores de US$ 100 requieren aprobación de finanzas</span>
+      <div class="c9l1-barra" id="c9l1-barra"><i></i></div>
+      <span class="m" id="c9l1-reloj">Plazo: 24 h · reloj detenido</span>
+    </div>
+    <div class="btns">
+      <button type="button" class="primary" id="c9l1-ini">▶ Correr el reloj</button>
+      <button type="button" id="c9l1-ap">Aprobar</button>
+      <button type="button" id="c9l1-re">Rechazar</button>
+      <button type="button" id="c9l1-co">Corregir a US$ 240</button>
+      <button type="button" id="c9l1-ve">Dejar vencer ⏩</button>
+      <button type="button" id="c9l1-rs">Reiniciar</button>
+    </div>
+  </div>
+  <svg class="c9l1-svg" viewBox="0 0 300 270" role="img" aria-label="Estados de la solicitud y del agente; el estado actual se resalta">
+    <defs><marker id="c9l1-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
+    <text x="8" y="16" class="lb" style="font-weight:700;letter-spacing:.06em">SOLICITUD</text>
+    <g class="nd" id="c9l1-n-pend"><rect x="8" y="26" width="110" height="34" rx="8"/><text x="63" y="47" text-anchor="middle">pendiente</text></g>
+    <g class="nd" id="c9l1-n-res"><rect x="182" y="26" width="110" height="34" rx="8"/><text x="237" y="47" text-anchor="middle" id="c9l1-t-res">resuelta</text></g>
+    <g class="nd" id="c9l1-n-ven"><rect x="8" y="96" width="110" height="34" rx="8"/><text x="63" y="117" text-anchor="middle">vencida</text></g>
+    <g class="nd" id="c9l1-n-esc"><rect x="182" y="96" width="110" height="34" rx="8"/><text x="237" y="117" text-anchor="middle">escalada</text></g>
+    <path class="ar" d="M118 43H180" marker-end="url(#c9l1-m)"/><text x="149" y="38" class="lb" text-anchor="middle">responde</text>
+    <path class="ar" d="M63 60V94" marker-end="url(#c9l1-m)"/><text x="68" y="81" class="lb">plazo</text>
+    <path class="ar" d="M118 113H180" marker-end="url(#c9l1-m)"/>
+    <path class="ar" d="M237 96V62" marker-end="url(#c9l1-m)"/>
+    <text x="8" y="160" class="lb" style="font-weight:700;letter-spacing:.06em">AGENTE</text>
+    <g class="nd" id="c9l1-a-esp"><rect x="8" y="170" width="140" height="40" rx="8"/><text x="78" y="187" text-anchor="middle">esperando</text><text x="78" y="202" text-anchor="middle" style="font-size:10.5px">sin proceso abierto</text></g>
+    <g class="nd" id="c9l1-a-ok"><rect x="156" y="170" width="136" height="40" rx="8"/><text x="224" y="187" text-anchor="middle">reanudado</text><text x="224" y="202" text-anchor="middle" style="font-size:10.5px" id="c9l1-t-ok">ejecuta</text></g>
+    <g class="nd" id="c9l1-a-no"><rect x="8" y="220" width="140" height="40" rx="8"/><text x="78" y="237" text-anchor="middle">reanudado</text><text x="78" y="252" text-anchor="middle" style="font-size:10.5px">recibe el «no»</text></g>
+    <g class="nd" id="c9l1-a-fin"><rect x="156" y="220" width="136" height="40" rx="8"/><text x="224" y="237" text-anchor="middle">tarea cancelada</text><text x="224" y="252" text-anchor="middle" style="font-size:10.5px">incompleta</text></g>
+  </svg>
+</div>
+<ol class="c9l1-log" id="c9l1-log" aria-label="Registro de eventos"></ol>
+<div class="readout texto" id="c9l1-out" aria-live="polite"></div></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Encuentra cómo un SDK pausa y reanuda una aprobación</h3></div><p>Vas a leer, sin ejecutarlo, el código del OpenAI Agents SDK para Python, un SDK de agentes de código abierto, y ubicar las piezas de este capítulo. Necesitas <code>git</code>. El clon no extrae los archivos al disco (<code>--no-checkout</code>): las búsquedas leen directamente la última versión guardada.</p><div class="cmds"><div class="cmd-panel" data-so="win mac linux"><div class="cmd-l"><code>git clone --depth 1 --no-checkout https://github.com/openai/openai-agents-python</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>cd openai-agents-python</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n "needs_approval" HEAD -- src/agents/tool.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n -e "def approve" -e "def reject" HEAD -- src/agents/run_state.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n "rejection_message" HEAD -- src/agents/run_state.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>git grep -n -e "def to_json" -e "def from_json" HEAD -- src/agents/run_state.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la primera búsqueda, mira dónde una herramienta declara que necesita aprobación: es un dato de la herramienta, no algo que decide el modelo.</span></li><li><span>En la segunda, ubica los métodos para aprobar y rechazar sobre el estado de la ejecución (<code>RunState</code>).</span></li><li><span>En la tercera, lee el comentario sobre <code>rejection_message</code>: qué texto vuelve al modelo cuando una persona rechaza.</span></li><li><span>En la cuarta, encuentra cómo el estado se convierte a JSON y vuelve: eso es lo que permite esperar horas sin un proceso abierto.</span></li><li><span>Cuando termines, puedes borrar la carpeta <code>openai-agents-python</code>.</span></li></ol><p><b>Qué observar:</b> la pausa no es un <code>input()</code> que bloquea el programa. La ejecución se detiene con una lista de interrupciones, el estado se guarda como dato y se reanuda con la aprobación o el rechazo aplicados. El rechazo lleva un mensaje que el modelo recibe como resultado, igual que un error de herramienta. Los nombres y números de línea cambian entre versiones; si algo no aparece, busca con <code>git grep -n -i "approv" HEAD -- src/agents</code>.</p></div></section>
+<section><h2>Redirigir y dar seguimiento (<i>steering</i> y <i>follow-up</i>)</h2><div class="prose"><p>No toda intervención humana la pide el agente. A veces la persona interviene por su cuenta mientras el agente trabaja: «espera, la cliente es la 4521, no la 4512», o «cuando termines, mándame un resumen». El capítulo 2 mostró cómo el bucle acepta una interrupción; aquí el problema es otro: <b>cuándo</b> y <b>cómo</b> entra ese mensaje en una ejecución en marcha sin romperla.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es la diferencia entre el copiloto que dice «gira en la próxima» mientras manejas y el pasajero que dice «cuando lleguemos, recuérdame comprar pan». Lo primero cambia la ruta ahora, en la siguiente esquina, no en medio de la curva. Lo segundo se anota y se atiende cuando el viaje termina.</p></div><div class="prose"><p>El arnés distingue dos clases de mensaje que llegan durante una ejecución:</p><ul><li><b>Redirección</b> (<i>steering</i>): cambia lo que el agente está haciendo. Se guarda en una cola y se entrega en la <b>próxima frontera de turno</b> (<i>turn boundary</i>): después de que termina la herramienta en curso y antes de la siguiente llamada al modelo. Nunca en medio de una herramienta, porque eso dejaría un efecto a medias.</li><li><b>Seguimiento</b> (<i>follow-up</i>): agrega algo para después. Se guarda y se entrega cuando el agente iba a terminar, como un pedido nuevo en la misma sesión.</li></ul></div><figure class="fig fig-flujo" id="09-diagrama-4"><div class="lienzo"><svg viewBox="0 0 860 330" style="min-width:700px" role="img" aria-label="Redirección y seguimiento en una ejecución en marcha. Tres turnos del agente con su llamada al modelo y su herramienta, separados por fronteras de turno. Un mensaje de redirección que llega durante la herramienta del turno 1 espera en la cola y entra en la primera frontera. Un mensaje de seguimiento que llega durante el turno 2 espera hasta que el agente iba a terminar y abre un turno extra.">
+  <defs>
+    <marker id="d94-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+    <marker id="d94-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  <g class="t t-xs t-b t-m">
+    <text x="12" y="38">PERSONA</text>
+    <text x="12" y="140">COLA</text>
+    <text x="12" y="232">AGENTE</text>
+  </g>
+  
+  <g class="t">
+    <rect x="180" y="14" width="200" height="40" rx="10" class="d-casa"/>
+    <text x="190" y="31" class="t-s t-b k-casa">redirección</text><text x="190" y="46" class="t-s">«la cliente es la 4521»</text>
+    <rect x="470" y="14" width="210" height="40" rx="10" class="d-casa" style="stroke-dasharray:5 4"/>
+    <text x="480" y="31" class="t-s t-b k-casa">seguimiento</text><text x="480" y="46" class="t-s">«después mándame un resumen»</text>
+  </g>
+  
+  <rect x="80" y="118" width="770" height="34" rx="8" class="caja" style="stroke-dasharray:3 4"/>
+  <g class="ln" style="stroke-width:2">
+    <line x1="240" y1="54" x2="240" y2="116" style="stroke:var(--d-casa)" marker-end="url(#d94-c)"/>
+    <line x1="560" y1="54" x2="560" y2="116" style="stroke:var(--d-casa)" marker-end="url(#d94-c)"/>
+    <path d="M240 152V180H318V198" style="stroke:var(--d-casa)" marker-end="url(#d94-c)"/>
+    <path d="M560 152V172H738V198" style="stroke:var(--d-casa);stroke-dasharray:5 4" marker-end="url(#d94-c)"/>
+  </g>
+  <g class="t t-s">
+    <text x="248" y="140" class="t-m">espera la frontera</text>
+    <text x="568" y="140" class="t-m">espera el final de la tarea</text>
+  </g>
+  
+  <g class="t t-s">
+    <rect x="80" y="200" width="90" height="44" rx="6" class="c-tra"/><text x="125" y="226" text-anchor="middle" class="k-tra t-b">modelo</text>
+    <rect x="172" y="200" width="140" height="44" rx="6" class="c-enl"/><text x="242" y="226" text-anchor="middle" class="k-enl t-b">herramienta</text>
+    <rect x="324" y="200" width="90" height="44" rx="6" class="c-tra"/><text x="369" y="220" text-anchor="middle" class="k-tra t-b">modelo</text><text x="369" y="235" text-anchor="middle">ya sabe: 4521</text>
+    <rect x="416" y="200" width="140" height="44" rx="6" class="c-enl"/><text x="486" y="226" text-anchor="middle" class="k-enl t-b">herramienta</text>
+    <rect x="568" y="200" width="150" height="44" rx="6" class="c-tra"/><text x="643" y="220" text-anchor="middle" class="k-tra t-b">modelo</text><text x="643" y="235" text-anchor="middle">iba a terminar</text>
+    <rect x="730" y="200" width="120" height="44" rx="6" class="c-tra" style="stroke-dasharray:5 4"/><text x="790" y="220" text-anchor="middle" class="k-tra t-b">turno extra</text><text x="790" y="235" text-anchor="middle">el resumen</text>
+  </g>
+  
+  <g class="ln" style="stroke:var(--c-red);stroke-width:2.5">
+    <line x1="318" y1="192" x2="318" y2="252"/><line x1="562" y1="192" x2="562" y2="252"/><line x1="724" y1="192" x2="724" y2="252"/>
+  </g>
+  <g class="t t-s k-red">
+    <text x="318" y="270" text-anchor="middle">frontera</text>
+    <text x="562" y="270" text-anchor="middle">frontera</text>
+    <text x="724" y="270" text-anchor="middle">frontera</text>
+  </g>
+  <line x1="80" y1="292" x2="840" y2="292" class="ln" style="stroke-width:1.6" marker-end="url(#d94-m)"/>
+  <text x="80" y="314" class="t t-s t-m">turno 1</text><text x="324" y="314" class="t t-s t-m">turno 2</text><text x="568" y="314" class="t t-s t-m">turno 3</text><text x="840" y="314" class="t t-s t-m" text-anchor="end">tiempo →</text>
+</svg></div><figcaption><b>Redirección y seguimiento en una ejecución en marcha.</b> La línea del tiempo muestra tres turnos del agente, con sus llamadas a herramienta. Un mensaje de redirección que llega durante la herramienta del turno 1 espera en la cola y entra en la frontera, antes del turno 2. Un mensaje de seguimiento espera hasta el final y abre un turno extra. Las fronteras de turno son los únicos puntos donde algo entra.</figcaption></figure><div class="prose"><p>Hay un detalle de seguridad. Un mensaje de redirección cambia la tarea, así que pasa por los mismos controles que el pedido original: identidad de quien lo manda (¿es la misma persona o alguien con permiso?), validadores de entrada y registro. Que alguien pueda escribir en el chat de un agente en marcha no quiere decir que pueda cambiarle el destino de un reembolso.</p></div></section>
+<section><h2>Traspasar la tarea a una persona</h2><div class="prose"><p>A veces lo correcto no es pedir una aprobación, sino entregar la tarea. El agente llegó a un caso que no sabe resolver, el validador escaló tres veces seguidas, la cliente pidió hablar con una persona, o la política dice que este tipo de caso lo atiende alguien del equipo. Eso es un <b>traspaso a una persona</b> (<i>human handoff</i>).</p><p>Un buen traspaso tiene tres partes:</p><ol class="steps"><li><span><b>Un resumen estructurado</b> del caso, con la misma forma que la compactación del capítulo 5: objetivo, lo que ya se hizo, lo que falló, datos críticos y qué falta. La persona no debería tener que releer toda la conversación.</span></li><li><span><b>El estado de los efectos</b>: qué acciones ya ocurrieron y cuáles no. Si el agente ya reembolsó un cobro y faltaba el segundo, la persona tiene que saberlo para no repetirlo.</span></li><li><span><b>Una cola de destino</b>: el traspaso entra en el sistema donde trabaja esa persona (una mesa de ayuda, una cola de tickets), con su prioridad, no en un correo que se pierde.</span></li></ol><p>Después del traspaso, el agente deja de actuar sobre ese caso. Si la persona quiere devolverlo, lo hace explícitamente, y el agente retoma con lo que la persona agregó. Lo peor es el traspaso a medias: el agente y la persona trabajando el mismo caso a la vez, sin saber lo que hace el otro.</p></div><div class="caso"><b>Un caso real</b><p>Un equipo que operaba un agente de atención de primer nivel medía cuántos casos traspasaba a personas, pero no qué pasaba después. Al mirar una muestra encontraron que en muchos traspasos la persona volvía a preguntarle a la cliente datos que el agente ya tenía, porque el traspaso solo decía «la cliente pide hablar con un humano». Agregaron un resumen estructurado con los datos verificados y las acciones ya hechas, visible en la ficha del ticket. El tiempo de atención de los casos traspasados bajó, y las clientes dejaron de quejarse de «repetir todo otra vez».</p></div></section>
+<section><h2>Medir el costo de las aprobaciones</h2><div class="prose"><p>Las aprobaciones no son gratis. Cada una cuesta minutos de una persona, retrasa la tarea y, si son demasiadas, produce el peor efecto posible: la <b>fatiga de aprobación</b> (<i>approval fatigue</i>). Una persona que aprueba ochenta solicitudes al día empieza a hacer clic sin leer, y entonces el control existe en el papel pero no en la práctica. El mismo fenómeno se ve con las alarmas de un hospital o con las ventanas de permisos de un sistema operativo.</p><p>Por eso el umbral de riesgo a partir del cual se pide aprobación es una decisión de diseño que se mide. Si el umbral es muy bajo, el agente pide aprobación para todo, la persona se cansa y los errores pasan igual. Si es muy alto, casi nada pasa por una persona y los errores caros llegan al mundo. Hay un punto intermedio, y depende del volumen, del riesgo de cada acción y de cuántas personas aprueban.</p><p>Las métricas que conviene registrar, como eventos del servicio, son:</p><ul><li><b>solicitudes por día y por persona</b> que aprueba;</li><li><b>tiempo hasta la respuesta</b>, en mediana y en el peor 5 %;</li><li><b>tasa de aprobación</b>: si es casi 100 %, o el umbral es demasiado bajo o la gente aprueba sin leer;</li><li><b>tasa de vencimiento</b>: solicitudes que nadie contestó;</li><li><b>incidentes de acciones aprobadas</b>: errores que pasaron con la firma de alguien.</li></ul></div><div class="lab" id="09-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Ajusta el umbral de riesgo y mira cuántas aprobaciones pide el arnés por día</h3></div><p class="hint">Mueve el umbral de riesgo, el número de personas que aprueban y el volumen de acciones. La gráfica muestra cuántas aprobaciones pide el arnés, cuánto tiempo cuestan y cuántos incidentes se esperan por día, incluidos los que pasan por fatiga. Busca el umbral que deja el menor costo total.</p><div class="ctls">
+  <label class="ctl">Umbral de riesgo para pedir aprobación <output id="c9l2-uo">0,50</output><input type="range" id="c9l2-u" min="0" max="1" step="0.05" value="0.5"></label>
+  <label class="ctl">Personas que aprueban <output id="c9l2-po">3</output><input type="range" id="c9l2-p" min="1" max="8" step="1" value="3"></label>
+  <label class="ctl">Acciones del agente por día <output id="c9l2-no">2.000</output><input type="range" id="c9l2-n" min="500" max="6000" step="500" value="2000"></label>
+</div>
+<canvas id="c9l2-cv" aria-label="Costo total por día según el umbral de riesgo: costo de las aprobaciones, daño esperado de los errores y su suma, con el umbral elegido marcado"></canvas>
+<div class="legend"><span><i style="background:var(--d-casa)"></i>costo de aprobar (tiempo de personas)</span><span><i style="background:var(--warm)"></i>daño esperado de errores</span><span><i style="background:var(--accent)"></i>costo total</span><span><i style="background:var(--grid);border:1px solid var(--muted)"></i>zona de fatiga</span></div>
+<div class="readout" id="c9l2-out" aria-live="polite"></div>
+<p class="hint">Modelo de juguete: el riesgo de cada acción va de 0 a 1 y la mayoría son de riesgo bajo; el 1 % de las acciones tiene un error, cuyo daño crece con el riesgo. Revisar cuesta 1,5 minutos de una persona. Con más de 30 aprobaciones por persona al día, la revisión empieza a fallar por fatiga.</p></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Compara cómo dos SDK pausan una ejecución para una persona</h3></div><p>Vas a leer la documentación pública de dos SDK de agentes y comparar cómo representan la interacción humana. Abre la <a href="https://openai.github.io/openai-agents-python/human_in_the_loop/" target="_blank" rel="noopener">guía de humano en el bucle del OpenAI Agents SDK</a> y la <a href="https://docs.langchain.com/oss/python/langgraph/interrupts" target="_blank" rel="noopener">de interrupciones de LangGraph</a>.</p><ol class="steps"><li><span>En cada una, busca cómo se marca que una acción necesita a una persona: ¿en la herramienta, en el grafo o en una función dentro del código?</span></li><li><span>Busca cómo se reanuda la ejecución: ¿con qué objeto o comando se entrega la respuesta de la persona?</span></li><li><span>Clasifica los patrones que muestra LangGraph (aprobar, editar, revisar, pedir un dato) en los cuatro tipos de este capítulo.</span></li><li><span>Busca qué se guarda mientras la ejecución espera y dónde: en memoria, en un archivo o en una base de datos.</span></li></ol><p><b>Qué observar:</b> los dos SDK separan la pausa (una interrupción con datos) de la respuesta (un comando que reanuda), y los dos necesitan guardar el estado para que la espera sobreviva. Ninguno trae la tarjeta, los plazos ni los recordatorios: esas partes del servicio las pone quien construye el arnés. Las páginas cambian con cada versión.</p></div><div class="prose"><p>Una regla práctica para cerrar: cada aprobación que pide el arnés debería poder responder a la pregunta «¿qué error caro evita esta firma?». Si la respuesta es «ninguno, pero por si acaso», esa aprobación es un candidato a convertirse en un validador automático, y la atención de la persona queda para lo que de verdad la necesita.</p><p><b>El humano en el bucle como un servicio del arnés.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Cuáles son los cuatro tipos de interacción humana y en qué se diferencian sus respuestas?</summary><p>Aprobar (sí o no, con motivo), elegir (una de las opciones ofrecidas), completar (un valor que se valida con un esquema) y corregir (una versión editada que reemplaza a la propuesta). El arnés valida cada respuesta según su tipo.</p></details><details><summary>¿Por qué los datos de la tarjeta de aprobación los pone el arnés y no el modelo?</summary><p>Porque el modelo puede equivocarse o ser manipulado con una inyección de prompts, y la tarjeta podría decir algo distinto de lo que la llamada real va a hacer. Los montos, los destinatarios y las diferencias se toman de los argumentos reales y del sistema.</p></details><details><summary>¿Qué opciones razonables hay cuando una aprobación vence, y cuál nunca lo es?</summary><p>Denegar por defecto, escalar a otra persona o cancelar la tarea. Aprobar por defecto nunca es razonable: un control que se aprueba solo cuando nadie mira no es un control.</p></details><details><summary>¿Por qué el servicio rechaza una respuesta que llega después del vencimiento?</summary><p>Porque la solicitud ya no está pendiente; quizá ya se escaló y otra persona la resolvió. Aceptarla podría aprobar la misma acción dos veces.</p></details><details><summary>¿Cuándo entra un mensaje de redirección en una ejecución en marcha y por qué ahí?</summary><p>En la próxima frontera de turno: después de la herramienta en curso y antes de la siguiente llamada al modelo. Nunca en medio de una herramienta, para no dejar un efecto a medias.</p></details><details><summary>¿Qué es la fatiga de aprobación y cómo se detecta?</summary><p>El hábito de aprobar sin leer cuando hay demasiadas solicitudes. Se detecta con las métricas: muchas solicitudes por persona, tasa de aprobación cercana al 100 % y respuestas muy rápidas.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es un <i>webhook</i> y cómo lo usa un adaptador de canal para avisar que una persona respondió en una aplicación de mensajería?</li><li>¿Qué es la «automatización complaciente» (<i>automation bias</i>) y qué dicen los estudios de aviación y de medicina sobre ella?<small>Pista: busca «automation bias» y «alarm fatigue».</small></li><li>¿Cómo se firma un enlace de aprobación que se manda por correo para que no lo pueda usar otra persona ni reusarse?<small>Pista: busca «signed URL» y «one-time token».</small></li><li>¿Qué es un percentil 95 (p95) y por qué se usa para medir tiempos de respuesta en vez del promedio?</li><li>¿Qué dice el principio de los «cuatro ojos» (<i>four-eyes principle</i>) en los controles financieros y cuándo exige dos aprobaciones distintas?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://openai.github.io/openai-agents-python/human_in_the_loop/" target="_blank" rel="noopener">OpenAI Agents SDK: human-in-the-loop <small>documentación, en inglés</small></a><a class="vid" href="https://docs.langchain.com/oss/python/langgraph/interrupts" target="_blank" rel="noopener">LangGraph: interrupts <small>documentación, en inglés</small></a><a class="vid" href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents <small>lectura, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const HPS=2; // horas simuladas por segundo
+  let S;
+  function reset(){
+    if(S&&S.tm)clearInterval(S.tm);
+    S={h:0,plazo:+$('#c9l1-pl').value,inicioSol:0,sol:1,para:'finanzas (Marta)',estado:'pendiente',agente:'esperando',res:null,corre:false,rec:[],tm:null,fin:false};
+    $('#c9l1-log').innerHTML='';
+    log('solicitud_creada','tipo: aprobar · para: finanzas · vence en '+S.plazo+' h');
+    log('ejecucion_pausada','estado guardado; el proceso se libera');
+    pintar();
+  }
+  const hfmt=h=>'+'+(h<10?h.toFixed(1):Math.round(h)).toString().replace('.',',')+' h';
+  function log(ev,txt,x){const li=document.createElement('li');if(x)li.className='x';li.innerHTML=`${hfmt(S.h)} <b>${ev}</b> ${txt}`;const L=$('#c9l1-log');L.appendChild(li);L.scrollTop=L.scrollHeight;}
+  function restante(){return S.inicioSol+S.plazo-S.h;}
+  function tick(){
+    S.h+=HPS*0.1;
+    const r=restante(),frac=(S.h-S.inicioSol)/S.plazo;
+    [0.5,0.9].forEach(f=>{const k=S.sol+'-'+f;if(frac>=f&&!S.rec.includes(k)&&S.estado==='pendiente'){S.rec.push(k);log('recordatorio_enviado',`a ${S.para.split(' ')[0]} · quedan ${Math.max(0,Math.round(r))} h`);}});
+    if(r<=0&&S.estado==='pendiente')vencer();
+    pintar();
+  }
+  function vencer(){
+    S.h=Math.max(S.h,S.inicioSol+S.plazo);
+    const pol=$('#c9l1-si').value;
+    log('solicitud_vencida',`nadie respondió en ${String(S.plazo).replace('.',',')} h · política: ${pol==='escalar'&&S.sol===2?'denegar (ya se escaló una vez)':pol}`,true);
+    if(pol==='escalar'&&S.sol===1){
+      S.sol=2;S.para='supervisora (Inés)';S.inicioSol=S.h;S.plazo=Math.max(1,S.plazo/2);S.estado='pendiente';S.escalada=true;
+      log('solicitud_creada',`escalada · para: supervisora · vence en ${String(S.plazo).replace('.',',')} h`);
+      return;
+    }
+    S.estado='vencida';S.fin=true;
+    if(pol==='cancelar'){S.agente='fin';log('ejecucion_terminada','motivo: aprobación vencida · tarea incompleta',true);}
+    else{S.agente='no';log('ejecucion_reanudada','el modelo recibe: «vencida sin aprobación; el reembolso no se hizo»');}
+    parar();
+  }
+  function parar(){if(S.tm){clearInterval(S.tm);S.tm=null;}S.corre=false;}
+  function responder(tipo){
+    if(S.estado!=='pendiente'){
+      log('respuesta_rechazada',`«${tipo}» llegó tarde: la solicitud ya está ${S.estado}`,true);pintar();return;
+    }
+    parar();S.estado='resuelta';S.fin=true;S.res=tipo;
+    const quien=S.para.split(' ')[0];
+    if(tipo==='aprobar'){log('solicitud_resuelta',`aprobada por ${quien} (identidad verificada)`);S.agente='ok';log('herramienta_ejecutada','reembolsar(4512, 480,00) · validador posterior: aplicado');}
+    if(tipo==='corregir'){log('solicitud_resuelta',`corregida por ${quien}: monto 480,00 → 240,00`);S.agente='ok';log('herramienta_ejecutada','reembolsar(4512, 240,00) con el valor corregido');}
+    if(tipo==='rechazar'){log('solicitud_resuelta',`rechazada por ${quien} · motivo: «el segundo cobro no es duplicado»`);S.agente='no';log('ejecucion_reanudada','el modelo recibe el rechazo y su motivo como resultado');}
+    pintar();
+  }
+  function pintar(){
+    const r=restante(),frac=Math.min(1,(S.h-S.inicioSol)/S.plazo);
+    $('#c9l1-barra i').style.width=(frac*100)+'%';
+    $('#c9l1-barra').classList.toggle('tarde',frac>0.85);
+    $('#c9l1-para').textContent='Para: '+S.para;
+    $('#c9l1-reloj').textContent=S.estado==='pendiente'?`Plazo: ${S.plazo} h · quedan ${Math.max(0,r).toFixed(0)} h${S.corre?'':' · reloj detenido'}`:`Solicitud ${S.estado}${S.res?' ('+({aprobar:'aprobada',rechazar:'rechazada',corregir:'corregida'})[S.res]+')':''}`;
+    const act=(id,on)=>$('#'+id).classList.toggle('act',on);
+    act('c9l1-n-pend',S.estado==='pendiente');act('c9l1-n-res',S.estado==='resuelta');act('c9l1-n-ven',S.estado==='vencida');
+    $('#c9l1-n-esc').classList.toggle('act',!!S.escalada&&S.estado==='pendiente');
+    $('#c9l1-n-esc').classList.toggle('fue',!!S.escalada);
+    $('#c9l1-t-res').textContent=S.res?({aprobar:'aprobada',rechazar:'rechazada',corregir:'corregida'})[S.res]:'resuelta';
+    act('c9l1-a-esp',S.agente==='esperando');act('c9l1-a-ok',S.agente==='ok');act('c9l1-a-no',S.agente==='no');act('c9l1-a-fin',S.agente==='fin');
+    $('#c9l1-t-ok').textContent=S.res==='corregir'?'ejecuta 240,00':'ejecuta 480,00';
+    $('#c9l1-ini').textContent=S.corre?'⏸ Pausar el reloj':'▶ Correr el reloj';
+    $('#c9l1-ini').disabled=S.fin;
+    let h;
+    if(S.estado==='pendiente')h=`<span class="big">El agente espera: ${S.escalada?'la solicitud se escaló a la supervisora':'nadie ha respondido todavía'}</span><span>No hay un proceso esperando: el estado está guardado y se retoma con la respuesta. Lleva ${hfmt(S.h).slice(1)} de espera.</span>`;
+    else if(S.agente==='ok')h=`<span class="big ok">Reanudado: el reembolso se ejecuta${S.res==='corregir'?' con el monto corregido':''}</span><span>Quién aprobó, cuándo y con qué cambios queda en el registro.${S.escalada?' La aprobó la supervisora, no la persona original.':''}</span>`;
+    else if(S.agente==='no')h=`<span class="big">Reanudado sin el reembolso</span><span>El modelo recibe ${S.res==='rechazar'?'el rechazo con su motivo':'«vencida sin aprobación»'} como resultado de la herramienta y puede proponer otra cosa o explicarle a la cliente.</span>`;
+    else h=`<span class="big warn">La tarea terminó incompleta</span><span>Nadie respondió y la política era cancelar: queda registrada para que alguien la retome.</span>`;
+    if(S.fin)h+=`<span class="hint">Prueba ahora un botón de respuesta: llega tarde y el servicio la rechaza.</span>`;
+    $('#c9l1-out').innerHTML=h;
+  }
+  $('#c9l1-ini').addEventListener('click',()=>{if(S.fin)return;if(S.corre)parar();else{S.corre=true;S.tm=setInterval(tick,100);}pintar();});
+  $('#c9l1-ap').addEventListener('click',()=>responder('aprobar'));
+  $('#c9l1-re').addEventListener('click',()=>responder('rechazar'));
+  $('#c9l1-co').addEventListener('click',()=>responder('corregir'));
+  $('#c9l1-ve').addEventListener('click',()=>{if(S.estado!=='pendiente')return;S.h=S.inicioSol+S.plazo;vencer();pintar();});
+  $('#c9l1-rs').addEventListener('click',reset);
+  $('#c9l1-pl').addEventListener('input',e=>{$('#c9l1-plo').textContent=e.target.value+' h';reset();});
+  $('#c9l1-si').addEventListener('change',reset);
+  reset();
+})();
+</script>
+<script>
+(function(){
+  const L=window.Lab,$=L.$;
+  const B=40,rs=[],w=[];
+  for(let i=0;i<B;i++){const r=(i+.5)/B;rs.push(r);w.push(Math.exp(-5*r));}
+  const sw=w.reduce((a,b)=>a+b,0);for(let i=0;i<B;i++)w[i]/=sw;
+  const PE=.01,K=6000,MIN=1.5,USDMIN=.6;
+  function calidad(A){return A<=30?.95:(A>=120?.3:.95-(A-30)/90*.65);}
+  function sim(u,N,P){
+    let na=0;for(let i=0;i<B;i++)if(rs[i]>=u)na+=N*w[i];
+    const A=na/P,q=calidad(A);
+    let dmg=0,inc=0;
+    for(let i=0;i<B;i++){const f=rs[i]>=u?(1-q):1;dmg+=N*w[i]*PE*K*rs[i]**3*f;if(rs[i]>=.5)inc+=N*w[i]*PE*f;}
+    const ca=na*MIN*USDMIN;
+    return {na,A,q,dmg,ca,tot:dmg+ca,inc};
+  }
+  const miles=n=>Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const draw=(ctx,W,H)=>{
+    const u=+$('#c9l2-u').value,P=+$('#c9l2-p').value,N=+$('#c9l2-n').value;
+    const pts=[];for(let k=0;k<=100;k++){const x=k/100;pts.push([x,sim(x,N,P)]);}
+    const ymax=Math.max(...pts.map(p=>Math.max(p[1].tot,p[1].ca,p[1].dmg)))*1.08;
+    const m={l:52,r:12,t:14,b:38},pw=W-m.l-m.r,ph=H-m.t-m.b;
+    const X=x=>m.l+x*pw,Y=y=>m.t+ph-y/ymax*ph;
+    ctx.clearRect(0,0,W,H);
+    // zona de fatiga: umbrales donde A>30
+    ctx.fillStyle=L.tok('--grid');
+    let z0=null;pts.forEach(([x,s])=>{if(s.A>30&&z0===null)z0=x;});
+    let z1=null;pts.forEach(([x,s])=>{if(s.A>30)z1=x;});
+    if(z0!==null)ctx.fillRect(X(z0),m.t,X(z1)-X(z0)+pw/100,ph);
+    // ejes
+    ctx.strokeStyle=L.tok('--muted');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(m.l,m.t);ctx.lineTo(m.l,m.t+ph);ctx.lineTo(m.l+pw,m.t+ph);ctx.stroke();
+    ctx.font='11px '+L.tok('--f-mono');ctx.fillStyle=L.tok('--muted');ctx.textAlign='center';ctx.textBaseline='top';
+    for(let x=0;x<=1.001;x+=.25)ctx.fillText(x.toFixed(2).replace('.',','),X(x),m.t+ph+5);
+    ctx.fillText('umbral de riesgo →',m.l+pw/2,m.t+ph+20);
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    const st=Math.pow(10,Math.floor(Math.log10(ymax/3)));const step=ymax/st>8?st*2:st;
+    for(let y=0;y<=ymax;y+=step){ctx.fillText(miles(y),m.l-5,Y(y));ctx.strokeStyle=L.tok('--line');ctx.beginPath();ctx.moveTo(m.l+1,Y(y));ctx.lineTo(m.l+pw,Y(y));ctx.stroke();}
+    ctx.save();ctx.translate(11,m.t+ph/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText('US$ por día',0,0);ctx.restore();
+    const linea=(key,col,wd,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.setLineDash(dash||[]);ctx.beginPath();pts.forEach(([x,s],i)=>{i?ctx.lineTo(X(x),Y(s[key])):ctx.moveTo(X(x),Y(s[key]));});ctx.stroke();ctx.setLineDash([]);};
+    linea('ca',L.tok('--d-casa'),2,[6,4]);linea('dmg',L.tok('--warm'),2,[2,3]);linea('tot',L.tok('--accent'),3);
+    // mínimo
+    let best=pts[0];pts.forEach(p=>{if(p[1].tot<best[1].tot)best=p;});
+    ctx.fillStyle=L.tok('--good');ctx.beginPath();ctx.arc(X(best[0]),Y(best[1].tot),4.5,0,7);ctx.fill();
+    // actual
+    const s=sim(u,N,P);
+    ctx.strokeStyle=L.tok('--ink');ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(X(u),m.t);ctx.lineTo(X(u),m.t+ph);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=L.tok('--accent');ctx.beginPath();ctx.arc(X(u),Y(s.tot),6,0,7);ctx.fill();
+    ctx.strokeStyle=L.tok('--card');ctx.lineWidth=2;ctx.stroke();
+    // lectura
+    const fat=s.A>30;
+    $('#c9l2-out').innerHTML=
+      `<span class="big">Costo total ≈ US$ ${miles(s.tot)} por día</span>`+
+      `<span>Aprobaciones: ${miles(s.na)} por día · ${s.A.toFixed(0)} por persona · ${miles(s.na*MIN)} minutos de personas</span>`+
+      `<span class="${fat?'warn':'ok'}">Calidad de la revisión: ${(s.q*100).toFixed(0)} % de los errores se detectan${fat?' · fatiga: demasiadas por persona':''}</span>`+
+      `<span>Errores graves (riesgo ≥ 0,5) que llegan al mundo: ${s.inc.toFixed(2).replace('.',',')} por día</span>`+
+      `<span>El menor costo total está en el umbral ${best[0].toFixed(2).replace('.',',')} (punto verde)${Math.abs(best[0]-u)<.051?': estás ahí.':'.'}</span>`;
+  };
+  const r=L.canvasWidget($('#c9l2-cv'),w=>w<500?0.75:0.48,draw);
+  [['u','uo',v=>(+v).toFixed(2).replace('.',',')],['p','po',v=>v],['n','no',v=>miles(+v)]].forEach(([i,o,f])=>{
+    $('#c9l2-'+i).addEventListener('input',e=>{$('#c9l2-'+o).textContent=f(e.target.value);r();});
+  });
+})();
+</script>
+</body>
+</html>

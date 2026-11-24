@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orquestador y subagentes · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="orquestador-y-subagentes">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 13 DE 16</span><h1>Orquestador y subagentes</h1><p class="lede">Cuando una tarea no cabe en un solo bucle, el arnés la reparte: un orquestador delega a subagentes con su propio contexto y menos permisos, espera, junta los resultados y, si hace falta, entrega el control a otro agente sin perder nada en el camino.</p></header>
+<section><h2>Cuándo dividir en varios agentes y cuándo no</h2><div class="prose"><p>Hasta el capítulo 12, todo el trabajo lo hacía un solo bucle: un agente, una ventana de contexto, una lista de herramientas. Con un plan y un ejecutor, ese agente ya puede llevar tareas largas. Pero hay tareas que no le caben. Investigar cinco fuentes a fondo llena la ventana antes de la tercera. Revisar un contrato y a la vez cobrar una factura pide permisos que no deberían estar juntos. Comparar tres proveedores, uno por uno, tarda tres veces lo que tardaría en paralelo.</p><p>La respuesta es un <b>sistema multiagente</b> (<i>multi-agent system</i>): varios agentes, cada uno con su bucle, que se reparten una tarea. La forma más común es la de un <b>orquestador</b> (<i>orchestrator</i>), el agente que recibe el pedido, lo divide y delega cada parte a un <b>subagente</b> (<i>subagent</i>), un agente que trabaja para otro agente y no para una persona.</p></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en una periodista que prepara un reportaje grande. No lee ella sola los cien documentos: le pide a tres colegas que investiguen un ángulo cada uno, con una consigna corta, y cada uno le devuelve una página con lo que encontró y de dónde lo sacó. Ella nunca ve los cien documentos, ve tres páginas. Si las consignas fueron vagas, dos colegas investigan lo mismo y nadie cubre el tercer ángulo. El orquestador es la periodista; la consigna, el <i>brief</i>; la página, el resumen que vuelve.</p></div><div class="prose"><p>Dividir tiene tres razones buenas:</p><ul><li><b>Aislar el contexto.</b> Cada subagente empieza con una ventana limpia y solo ve su parte. Lo que lee para llegar a su conclusión no ensucia el contexto de los demás.</li><li><b>Paralelizar.</b> Partes independientes corren al mismo tiempo, y el tiempo total se acerca al de la parte más lenta.</li><li><b>Separar permisos.</b> El subagente que lee el correo de clientes no necesita poder cobrar, y el que cobra no necesita leer el correo. Cada uno recibe solo lo que su parte necesita.</li></ul><p>Y tiene costos que se pagan siempre. Los <b>tokens</b> (<i>tokens</i>, fragmentos de texto con los que se mide y se cobra el uso del modelo) se multiplican: cada subagente vuelve a leer instrucciones, herramientas y su consigna, y los equipos que publican sus sistemas de investigación multiagente reportan varias veces el consumo de un chat normal. La coordinación falla de formas nuevas: dos subagentes que hacen lo mismo, uno que espera a otro que nunca termina, una conclusión que se pierde al resumir. Y cada frontera entre agentes es un lugar donde se cae información.</p><p>Por eso el capítulo 1 dejó un principio escrito: <b>un buen agente simple va antes que muchos agentes</b>. Entre los dos extremos hay una opción intermedia que conviene mirar primero: un <b>flujo de trabajo</b> (<i>workflow</i>) con pasos deterministas, donde el arnés es dueño del orden del proceso y solo llama a un agente para las partes que necesitan razonar. Si el proceso tiene plazos, aprobaciones y auditoría obligatoria, ese suele ser el diseño correcto.</p></div><figure class="fig fig-esquema" id="13-diagrama-1"><div class="lienzo"><svg viewBox="0 0 860 430" style="min-width:720px" role="img" aria-label="Árbol de decisión para elegir entre un agente con plan, un flujo determinista que llama a agentes o un orquestador con subagentes, con el costo y la coordinación de cada opción a la derecha.">
+  <defs><marker id="d131-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker></defs>
+  <g class="t t-xs t-b t-m">
+    <text x="20" y="22">PREGUNTA</text><text x="440" y="22">OPCIÓN</text><text x="700" y="22">LO QUE CUESTA</text>
+  </g>
+  <g class="t">
+    <rect x="20" y="40" width="360" height="56" rx="10" class="caja"/>
+    <text x="36" y="63" class="t-b">① ¿Cabe en una ventana de contexto</text>
+    <text x="36" y="82" class="t-b">y no mezcla permisos?</text>
+    <rect x="20" y="140" width="360" height="56" rx="10" class="caja"/>
+    <text x="36" y="163" class="t-b">② ¿Es un proceso con pasos fijos,</text>
+    <text x="36" y="182" class="t-b">plazos y aprobaciones?</text>
+    <rect x="20" y="240" width="360" height="56" rx="10" class="caja"/>
+    <text x="36" y="263" class="t-b">③ ¿Tiene partes independientes</text>
+    <text x="36" y="282" class="t-b">o que piden permisos distintos?</text>
+
+    <rect x="440" y="40" width="240" height="56" rx="10" class="c-red"/>
+    <text x="560" y="63" text-anchor="middle" class="t-b k-red">Un agente con plan</text>
+    <text x="560" y="82" text-anchor="middle" class="t-s">capítulos 2 a 12</text>
+    <rect x="440" y="140" width="240" height="56" rx="10" class="d-sis"/>
+    <text x="560" y="163" text-anchor="middle" class="t-b k-sis">Flujo determinista</text>
+    <text x="560" y="182" text-anchor="middle" class="t-s">que llama a agentes</text>
+    <rect x="440" y="240" width="240" height="56" rx="10" class="c-enl"/>
+    <text x="560" y="263" text-anchor="middle" class="t-b k-enl">Orquestador</text>
+    <text x="560" y="282" text-anchor="middle" class="t-s">con subagentes</text>
+    <rect x="440" y="340" width="240" height="56" rx="10" class="caja" style="stroke-dasharray:5 4"/>
+    <text x="560" y="363" text-anchor="middle" class="t-b">Replantear la tarea</text>
+    <text x="560" y="382" text-anchor="middle" class="t-s t-m">dividir no la arregla</text>
+
+    <text x="700" y="60" class="t-s">tokens: la base</text>
+    <text x="700" y="78" class="t-s t-m">sin coordinación</text>
+    <text x="700" y="160" class="t-s">tokens: algo más</text>
+    <text x="700" y="178" class="t-s t-m">el orden lo pone el arnés</text>
+    <text x="700" y="260" class="t-s">tokens: varias veces</text>
+    <text x="700" y="278" class="t-s t-m">coordina el orquestador</text>
+    <text x="700" y="360" class="t-s t-m">antes de sumar agentes,</text>
+    <text x="700" y="378" class="t-s t-m">mejorar contexto y</text>
+    <text x="700" y="396" class="t-s t-m">herramientas</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <path d="M380 68H436" marker-end="url(#d131-m)"/>
+    <path d="M380 168H436" marker-end="url(#d131-m)"/>
+    <path d="M380 268H436" marker-end="url(#d131-m)"/>
+    <path d="M200 96V136" marker-end="url(#d131-m)"/>
+    <path d="M200 196V236" marker-end="url(#d131-m)"/>
+    <path d="M200 296V368H436" marker-end="url(#d131-m)"/>
+  </g>
+  <g class="t t-s t-b">
+    <text x="392" y="60" class="k-enl">sí</text><text x="392" y="160" class="k-enl">sí</text><text x="392" y="260" class="k-enl">sí</text>
+    <text x="208" y="120" class="t-m">no</text><text x="208" y="220" class="t-m">no</text><text x="208" y="330" class="t-m">no</text>
+  </g>
+  <text x="20" y="420" class="t t-s t-m">Principio del capítulo 1: un buen agente simple va antes que muchos agentes.</text>
+</svg></div><figcaption><b>¿Uno, un flujo o varios agentes?</b> Se lee de arriba hacia abajo, respondiendo cada pregunta. Si la tarea cabe en una ventana y no mezcla permisos, basta un agente con plan. Si el proceso tiene pasos fijos, plazos y aprobaciones, conviene un flujo determinista que llama a agentes para las partes que razonan. Solo cuando hay partes independientes que no caben juntas, o que necesitan permisos distintos, aparece el orquestador con subagentes. En la columna de la derecha, lo que cuesta cada opción.</figcaption></figure></section>
+<section><h2>El orquestador: repartir, esperar y juntar</h2><div class="prose"><p>El trabajo del orquestador tiene tres tiempos. <b>Repartir</b> (<i>fan-out</i>, abanico de salida): convierte el pedido en partes, cada una con una consigna, y lanza un subagente por parte. <b>Esperar</b>: los subagentes trabajan, y el orquestador queda en pausa. <b>Juntar</b> (<i>fan-in</i>, abanico de entrada): recibe los resultados y arma la respuesta.</p><p>Para el arnés, lanzar un subagente no es nada exótico: es una <b>llamada a herramienta</b> larga. El modelo del orquestador propone <code>delegar({agente: "investigador", consigna: "..."})</code>, la política la autoriza como cualquier otra acción (capítulo 7), y el resultado del subagente vuelve como el resultado de esa herramienta. Mientras tanto, la ejecución del orquestador queda estacionada con una espera durable, igual que en el capítulo 6: si el proceso se cae, la invocación sigue registrada y no se lanza dos veces.</p><div class="code-copia"><pre><code>interface Invocacion {
+  id: string;               // sale del paso y la llamada: igual al reanudar
+  padre: string;            // la ejecución que delegó
+  agente: string;           // a quién se delegó
+  consigna: string;         // lo único que el subagente sabe de la tarea
+  profundidad: number;      // 0 es la ejecución raíz
+  presupuesto: Presupuesto; // sale del presupuesto madre (cap. 10)
+  plazo: string;            // hasta cuándo se espera
+  estado: "en_curso" | "esperando_persona" | "completada" | "fallida" | "vencida";
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>¿Cuánto se espera? Depende de la tarea, y el arnés debe dejarlo explícito con una <b>estrategia de espera</b>:</p><ul><li><b>Todos</b>: se junta cuando terminan todos. Sirve cuando cada parte es indispensable, como las secciones de un informe.</li><li><b>El primero</b>: gana el primer resultado válido y los demás se cancelan. Sirve para buscar lo mismo por caminos distintos.</li><li><b>Quórum</b>: basta con que terminen <i>k</i> de <i>n</i>. Sirve cuando hay redundancia, como tres fuentes de las que alcanza con dos.</li><li><b>Plazo</b>: se junta lo que haya llegado a una hora fija, y lo que falte se marca como faltante.</li></ul><p>En las cuatro, el resultado puede ser <b>parcial</b>. La regla es que el orquestador nunca lo disimula: la respuesta final dice qué partes llegaron, cuáles fallaron y cuáles vencieron. Un informe que omite en silencio la fuente que no respondió es peor que uno que dice «no se pudo consultar la fuente C».</p></div><figure class="fig fig-flujo" id="13-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 500" style="min-width:740px" role="img" aria-label="Diagrama de secuencia de un orquestador con tres subagentes: el modelo propone delegar, la política autoriza, el bucle lanza tres subagentes en paralelo, dos devuelven un resumen, el tercero vence su plazo, y el bucle entrega al modelo lo que llegó marcando lo faltante.">
+  <defs>
+    <marker id="d132-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d132-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d132-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d132-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+  </defs>
+  <g class="t">
+    <rect x="12" y="12" width="116" height="46" rx="10" class="c-tra"/><text x="70" y="31" text-anchor="middle" class="t-b k-tra">Modelo del</text><text x="70" y="48" text-anchor="middle" class="t-b k-tra">orquestador</text>
+    <rect x="150" y="12" width="100" height="46" rx="10" class="c-red"/><text x="200" y="40" text-anchor="middle" class="t-b k-red">Bucle</text>
+    <rect x="270" y="12" width="100" height="46" rx="10" class="d-sis"/><text x="320" y="40" text-anchor="middle" class="t-b k-sis">Política</text>
+    <rect x="400" y="12" width="110" height="46" rx="10" class="c-enl"/><text x="455" y="31" text-anchor="middle" class="t-b k-enl">Subagente A</text><text x="455" y="48" text-anchor="middle" class="t-s">competidores</text>
+    <rect x="525" y="12" width="110" height="46" rx="10" class="c-enl"/><text x="580" y="31" text-anchor="middle" class="t-b k-enl">Subagente B</text><text x="580" y="48" text-anchor="middle" class="t-s">precios</text>
+    <rect x="650" y="12" width="110" height="46" rx="10" class="c-enl"/><text x="705" y="31" text-anchor="middle" class="t-b k-enl">Subagente C</text><text x="705" y="48" text-anchor="middle" class="t-s">normativa</text>
+  </g>
+  <g>
+    <line x1="70" y1="58" x2="70" y2="485" class="vida"/><line x1="200" y1="58" x2="200" y2="485" class="vida"/>
+    <line x1="320" y1="58" x2="320" y2="485" class="vida"/><line x1="455" y1="58" x2="455" y2="485" class="vida"/>
+    <line x1="580" y1="58" x2="580" y2="485" class="vida"/><line x1="705" y1="58" x2="705" y2="485" class="vida"/>
+  </g>
+  <g class="t t-s">
+    <line x1="70" y1="100" x2="198" y2="100" class="ln s-tra" style="stroke-width:2" marker-end="url(#d132-t)"/>
+    <text x="76" y="93">① delegar × 3</text>
+    <line x1="200" y1="132" x2="318" y2="132" class="ln s-red" style="stroke-width:2" marker-end="url(#d132-r)"/>
+    <text x="206" y="125">② ¿se permite?</text>
+    <line x1="320" y1="160" x2="202" y2="160" class="ln" style="stroke-width:2;stroke:var(--d-sis);stroke-dasharray:5 4" marker-end="url(#d132-s)"/>
+    <text x="214" y="176" class="k-sis">permitir · se registra</text>
+    <line x1="200" y1="204" x2="453" y2="204" class="ln s-red" style="stroke-width:2" marker-end="url(#d132-r)"/>
+    <line x1="200" y1="222" x2="578" y2="222" class="ln s-red" style="stroke-width:2" marker-end="url(#d132-r)"/>
+    <line x1="200" y1="240" x2="703" y2="240" class="ln s-red" style="stroke-width:2" marker-end="url(#d132-r)"/>
+    <text x="206" y="197">③ invocar: consigna, presupuesto, plazo</text>
+    <rect x="449" y="250" width="12" height="70" rx="3" class="c-enl"/>
+    <rect x="574" y="250" width="12" height="100" rx="3" class="c-enl"/>
+    <rect x="699" y="250" width="12" height="140" rx="3" class="c-enl" style="stroke-dasharray:4 3"/>
+    <text x="466" y="270" class="t-m">lee 30 páginas</text>
+    <text x="591" y="290" class="t-m">lee 18 páginas</text>
+    <line x1="455" y1="330" x2="202" y2="330" class="ln s-enl" style="stroke-width:2" marker-end="url(#d132-e)"/>
+    <text x="220" y="323">④ resumen + fuentes (≈ 400 tokens)</text>
+    <line x1="580" y1="360" x2="202" y2="360" class="ln s-enl" style="stroke-width:2" marker-end="url(#d132-e)"/>
+    <text x="220" y="353">⑤ resumen + fuentes</text>
+    <text x="700" y="410" text-anchor="end" class="t-b k-sis">✖ ⑥ vence el plazo</text>
+    <line x1="200" y1="438" x2="72" y2="438" class="ln s-red" style="stroke-width:2" marker-end="url(#d132-r)"/>
+    <text x="80" y="431">⑦ A y B listos · falta C</text>
+    <text x="76" y="470" class="k-tra">⑧ respuesta que declara lo que falta</text>
+  </g>
+  <g class="t t-xs t-b">
+    <rect x="780" y="84" width="70" height="166" rx="8" class="c-red"/><text x="815" y="172" text-anchor="middle" class="k-red">REPARTIR</text>
+    <rect x="780" y="256" width="70" height="152" rx="8" class="c-enl"/><text x="815" y="337" text-anchor="middle" class="k-enl">ESPERAR</text>
+    <rect x="780" y="414" width="70" height="66" rx="8" class="c-tra"/><text x="815" y="452" text-anchor="middle" class="k-tra">JUNTAR</text>
+  </g>
+</svg></div><figcaption><b>El flujo de un orquestador con tres subagentes.</b> Participantes arriba y el tiempo hacia abajo. El modelo del orquestador propone delegar; el bucle pasa cada invocación por la política y la registra; los tres subagentes corren en paralelo, cada uno con su consigna. Dos devuelven un resumen y el tercero vence su plazo. El bucle junta lo que llegó, marca lo faltante y se lo entrega al modelo para la respuesta. A la derecha, las tres fases: repartir, esperar y juntar.</figcaption></figure></section>
+<section><h2>Subagentes con contexto propio y menos permisos</h2><div class="prose"><p>La gracia de un subagente es lo que <b>no</b> ve. Empieza con una ventana nueva: sus instrucciones, sus herramientas y la consigna del orquestador. No ve la conversación con la persona, ni lo que leyeron los otros subagentes, ni la historia de la tarea. Todo lo que necesita saber tiene que estar en la consigna.</p><p>Eso convierte a la consigna en la pieza más delicada del patrón. Una buena consigna dice el objetivo, el alcance (qué sí y qué no), el formato del resultado, cuándo parar y qué fuentes usar. Una consigna vaga, como «investiga el mercado de fibra», produce subagentes que repiten trabajo o se van por las ramas.</p><p>A la vuelta pasa lo mismo, en sentido contrario. El subagente pudo leer 40.000 tokens de documentos, pero al orquestador le devuelve un <b>resumen condensado</b> (<i>condensed summary</i>) de unos cientos, con las conclusiones y las referencias. Si devolviera todo lo que leyó, el contexto del orquestador se llenaría igual que si hubiera hecho el trabajo él mismo, y la división no habría servido de nada.</p><p>Los permisos siguen la misma lógica de reducción. Un subagente recibe un <b>subconjunto</b> (<i>subset</i>) de las herramientas y del alcance del orquestador, nunca más. El arnés lo arma desde el registro de capacidades del capítulo 3: el investigador recibe <code>buscar_web</code> y <code>leer_documento</code>, sin <code>enviar_correo</code> ni <code>cobrar</code>. Y como la identidad del llamante viaja con la invocación (capítulo 7), el subagente actúa en nombre de la misma persona, con sus mismos límites o menos.</p></div><div class="lab" id="13-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Reparte una investigación entre tres subagentes y mira el contexto de cada uno</h3></div><p class="hint">Compara un agente solo con un orquestador y tres subagentes. Cambia la calidad de las consignas y lo que devuelve cada subagente (un resumen o todo lo que leyó), y mira cómo se llena la ventana de cada agente, cuántos tokens se gastan en total y qué herramientas tiene cada uno.</p><style>
+[id="13-lab-1"] .c13l1-ag{display:grid;gap:10px}
+[id="13-lab-1"] .c13l1-row{display:grid;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+[id="13-lab-1"] .c13l1-row.orq{border-color:var(--c-red)}
+[id="13-lab-1"] .c13l1-hd{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;font:700 .86rem var(--f-display)}
+[id="13-lab-1"] .c13l1-hd span{font:500 .8rem var(--f-mono);color:var(--muted)}
+[id="13-lab-1"] .c13l1-hd span.mal{color:var(--warm);font-weight:700}
+[id="13-lab-1"] .c13l1-bar{position:relative;height:18px;border-radius:5px;background:var(--grid);overflow:hidden;display:flex}
+[id="13-lab-1"] .c13l1-bar i{display:block;height:100%}
+[id="13-lab-1"] .c13l1-bar .lim{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
+[id="13-lab-1"] .c13l1-chips{display:flex;flex-wrap:wrap;gap:4px}
+[id="13-lab-1"] .c13l1-chips b{font:600 .72rem var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--c-enl-s);color:var(--c-enl)}
+[id="13-lab-1"] .c13l1-chips b.riesgo{background:var(--warm-soft);color:var(--warm)}
+[id="13-lab-1"] .c13l1-note{font:500 .78rem/1.35 var(--f-display);color:var(--muted)}
+[id="13-lab-1"] .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+</style>
+<div class="btns" role="group" aria-label="Forma de trabajar">
+  <button type="button" id="c13l1-solo" aria-pressed="false">Un agente solo</button>
+  <button type="button" id="c13l1-multi" aria-pressed="true">Orquestador y 3 subagentes</button>
+</div>
+<div class="opciones">
+  <label>Consignas del orquestador
+    <select id="c13l1-brief">
+      <option value="buena" selected>Precisas: objetivo, alcance, formato y cuándo parar</option>
+      <option value="vaga">Vagas: «investiga el mercado de fibra»</option>
+    </select></label>
+  <label>Lo que devuelve cada subagente
+    <select id="c13l1-ret">
+      <option value="resumen" selected>Un resumen con fuentes</option>
+      <option value="todo">Todo lo que leyó</option>
+    </select></label>
+</div>
+<div class="legend" aria-hidden="true">
+  <span><i style="background:var(--c-fis)"></i>instrucciones y herramientas</span>
+  <span><i style="background:var(--c-red)"></i>pedido o consigna</span>
+  <span><i style="background:var(--c-enl)"></i>documentos leídos</span>
+  <span><i style="background:var(--c-tra)"></i>resultados recibidos</span>
+  <span><i style="background:var(--muted)"></i>razonamiento</span>
+</div>
+<div class="c13l1-ag" id="c13l1-ag" aria-label="Ventana de contexto de cada agente"></div>
+<div class="readout texto" id="c13l1-out" aria-live="polite"></div></div><div class="prose"><p>Fíjate en dos efectos del laboratorio. Con resúmenes, la ventana del orquestador queda casi vacía aunque el trabajo total sea grande; si los subagentes devuelven todo, el orquestador se desborda como el agente solo. Y el total de tokens siempre sube al dividir: se paga aislamiento y paralelismo con más consumo, no se ahorra.</p></div></section>
+<section><h2>El coordinador de traspasos (<i>handoff</i>)</h2><div class="prose"><p>Delegar no es la única forma de repartir. En una <b>delegación</b> (<i>delegation</i>) el control vuelve: el orquestador espera y sigue siendo el dueño de la tarea. En un <b>traspaso</b> (<i>handoff</i>) el control se entrega: un agente le pasa la tarea entera a otro y deja de actuar sobre ella. El agente de atención que detecta un caso de facturación y se lo entrega al agente de facturación no espera la respuesta; la conversación sigue con el otro.</p><p>El capítulo 9 trató el traspaso a una persona. Aquí la idea es la misma con un agente del otro lado, y con un riesgo extra: un agente no pregunta «¿y esto qué es?» como lo haría una persona; actúa con lo que recibe.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es el cambio de turno en un hospital. La enfermera que se va no le dice a la que llega «todo bien, suerte»: le entrega cada paciente con su diagnóstico, lo que ya se le dio, a qué hora, y lo que falta. Si omite que la paciente de la cama 4 ya recibió su dosis de las 8, la del turno siguiente se la vuelve a dar. El error no está en ninguna de las dos: está en la entrega.</p></div><div class="prose"><p>La pieza que hace bien la entrega es el <b>coordinador de traspasos</b> (<i>handoff coordinator</i>). No decide si hay que traspasar (eso lo deciden el modelo con sus herramientas o las políticas), sino <b>cómo</b> se representa el traspaso: un <b>paquete de traspaso</b> (<i>handoff package</i>) estructurado, no un párrafo libre.</p><div class="code-copia"><pre><code>interface PaqueteDeTraspaso {
+  objetivo: string;                 // qué quiere la persona, en una frase
+  hecho: string[];                  // lo que ya se resolvió
+  pendiente: string[];              // lo que falta
+  datosVerificados: Record&lt;string, string&gt;;  // identidad, cuenta, montos ya confirmados
+  efectos: { accion: string; clave: string;
+             estado: "ocurrido" | "no_ocurrido" | "dudoso" }[];
+  contexto: string;                 // referencia a la sesión, no una copia
+  motivo: "especialidad" | "permisos" | "limite" | "pedido_de_la_persona";
+  estado: "pendiente" | "aceptado" | "completado";
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Tres campos evitan los errores más caros. <code>datosVerificados</code> evita que el agente que recibe vuelva a pedirle a la cliente lo que ya dio. <code>efectos</code>, con la clave de idempotencia del capítulo 10, evita que repita un reembolso que ya ocurrió. Y <code>estado</code> hace explícito quién tiene el control: mientras el traspaso está <code>pendiente</code>, el primer agente todavía responde; cuando pasa a <code>aceptado</code>, deja de actuar. Así nunca hay dos agentes trabajando el mismo caso a la vez.</p></div><div class="lab" id="13-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Un traspaso que pierde información, y cómo se arregla</h3></div><p class="hint">El agente de atención traspasa el caso de la cliente 4512 al agente de facturación. Enciende y apaga los campos del paquete de traspaso y mira qué hace el agente que lo recibe: qué pregunta de nuevo, qué repite y qué deja sin hacer.</p><style>
+[id="13-lab-2"] .c13l2-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px}
+@media (max-width:620px){[id="13-lab-2"] .c13l2-wrap{grid-template-columns:minmax(0,1fr)}}
+[id="13-lab-2"] .c13l2-pq{display:grid;gap:6px;padding:10px;border:1px dashed var(--c-red);border-radius:10px;background:var(--card)}
+[id="13-lab-2"] .c13l2-pq h4,[id="13-lab-2"] .c13l2-res h4{margin:0;font:700 .72rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+[id="13-lab-2"] .c13l2-pq label{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:start;font:500 .8rem/1.3 var(--f-display);cursor:pointer}
+[id="13-lab-2"] .c13l2-pq label input{margin-top:3px}
+[id="13-lab-2"] .c13l2-pq label b{font:600 .78rem var(--f-mono)}
+[id="13-lab-2"] .c13l2-pq label small{grid-column:2;color:var(--muted);font-size:.74rem}
+[id="13-lab-2"] .c13l2-res{display:grid;gap:6px;align-content:start}
+[id="13-lab-2"] .c13l2-res ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+[id="13-lab-2"] .c13l2-res li{font:500 .8rem/1.35 var(--f-display);padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--card)}
+[id="13-lab-2"] .c13l2-res li.bien{border-color:var(--good);background:var(--good-soft)}
+[id="13-lab-2"] .c13l2-res li.mal{border-color:var(--warm);background:var(--warm-soft)}
+</style>
+<div class="btns" role="group" aria-label="Paquetes de ejemplo">
+  <button type="button" id="c13l2-prosa">Solo un párrafo: «la cliente tiene un tema de facturación»</button>
+  <button type="button" id="c13l2-completo">Paquete completo</button>
+</div>
+<div class="c13l2-wrap">
+  <div class="c13l2-pq" role="group" aria-label="Campos del paquete de traspaso">
+    <h4>Paquete del agente de atención</h4>
+    <label><input type="checkbox" id="c13l2-objetivo"><b>objetivo</b><small>«Corregir el cobro duplicado y mover la fecha de corte al día 15»</small></label>
+    <label><input type="checkbox" id="c13l2-hecho"><b>hecho</b><small>«Cobro duplicado identificado: C-7731»</small></label>
+    <label><input type="checkbox" id="c13l2-pendiente"><b>pendiente</b><small>«Cambiar la fecha de corte»</small></label>
+    <label><input type="checkbox" id="c13l2-datos"><b>datosVerificados</b><small>cliente 4512, identidad verificada por código, cobro C-7731 de US$ 25,00</small></label>
+    <label><input type="checkbox" id="c13l2-efectos"><b>efectos</b><small>reembolsar(C-7731): ocurrido · clave k9f3…a2c</small></label>
+    <label><input type="checkbox" id="c13l2-contexto"><b>contexto</b><small>referencia a la sesión S-17</small></label>
+    <label><input type="checkbox" id="c13l2-estado"><b>estado</b><small>«pendiente» → «aceptado»: control explícito</small></label>
+  </div>
+  <div class="c13l2-res">
+    <h4>Lo que hace el agente de facturación</h4>
+    <ol id="c13l2-lista" aria-label="Acciones del agente que recibe"></ol>
+  </div>
+</div>
+<div class="readout texto" id="c13l2-out" aria-live="polite"></div></div></section>
+<section><h2>Comunicación e invocación entre agentes</h2><div class="prose"><p>Hasta aquí, orquestador y subagentes vivían en el mismo arnés. La invocación era una llamada dentro del mismo proceso. Pero un agente también puede estar en otro servicio, en otro equipo de la empresa o en otra empresa. Entonces hace falta un medio para hablar, y cada medio tiene sus cuidados:</p><ul><li><b>En el mismo proceso</b>: una función. Lo más simple y lo más rápido.</li><li><b>HTTP o gRPC</b> (<i>gRPC Remote Procedure Calls</i>, un sistema de llamadas remotas entre servicios): un servicio llama a otro y espera. Exige autenticación entre servicios, plazos y límites.</li><li><b>Colas de mensajes</b> (<i>message queues</i>), como Kafka o RabbitMQ: el pedido se deja en una cola y la respuesta llega después. Desacopla, pero exige idempotencia, porque un mensaje puede llegar dos veces o en otro orden.</li><li><b>A2A</b> (<i>Agent2Agent</i>, de agente a agente): un protocolo abierto para que agentes hechos con arneses distintos se descubran y se pasen tareas. Cada agente publica una <b>tarjeta de agente</b> (<i>Agent Card</i>), un documento JSON con su nombre, sus habilidades, sus direcciones y cómo autenticarse.</li></ul><p>No hay que confundir A2A con MCP. <b>MCP</b> (<i>Model Context Protocol</i>, protocolo de contexto de modelos) conecta un agente con <b>herramientas y datos</b>; A2A conecta un agente con <b>otro agente</b>, que tiene su propio bucle y su propio juicio.</p><p>Y hay una regla que vale para todos los medios: <b>el protocolo transporta mensajes, no da permisos</b>. Que la tarjeta de un agente diga «sé emitir reembolsos» no autoriza a nadie a pedirle reembolsos. La autorización sale de un contrato de delegación explícito, y el arnés la verifica igual sea cual sea el medio.</p><p>Por eso toda <b>solicitud delegada</b> (<i>delegated request</i>) lleva más que la consigna:</p><ul><li>la ejecución madre y un <b>identificador de correlación</b> (<i>correlation id</i>) para seguir el pedido en las trazas;</li><li>la identidad del llamante y una <b>concesión de delegación</b> (<i>delegation grant</i>): qué puede hacer el agente destino en nombre de quién, y hasta cuándo;</li><li>el plazo, el presupuesto y la profundidad;</li><li>una <b>clave de idempotencia</b>, para que reenviar la misma solicitud no duplique el trabajo.</li></ul></div><figure class="fig fig-flujo" id="13-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 520" style="min-width:740px" role="img" aria-label="Diagrama de secuencia de una solicitud delegada entre agentes: el agente origen envía la solicitud con ejecución madre, correlación, concesión, plazo, presupuesto y clave de idempotencia; el adaptador de transporte la normaliza; el arnés destino verifica la identidad, reevalúa los permisos con sus políticas y busca la clave antes de correr su bucle; el resultado vuelve con la misma correlación. Abajo, la diferencia entre un agente interno y uno externo.">
+  <defs>
+    <marker id="d133-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d133-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-sis"/></marker>
+    <marker id="d133-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+  </defs>
+  <g class="t">
+    <rect x="12" y="12" width="116" height="46" rx="10" class="c-red"/><text x="70" y="31" text-anchor="middle" class="t-b k-red">Agente</text><text x="70" y="48" text-anchor="middle" class="t-b k-red">origen</text>
+    <rect x="152" y="12" width="116" height="46" rx="10" class="caja"/><text x="210" y="31" text-anchor="middle" class="t-b">Adaptador de</text><text x="210" y="48" text-anchor="middle" class="t-b">transporte</text>
+    <rect x="292" y="12" width="116" height="46" rx="10" class="d-sis"/><text x="350" y="31" text-anchor="middle" class="t-b k-sis">Identidad</text><text x="350" y="48" text-anchor="middle" class="t-s">arnés destino</text>
+    <rect x="422" y="12" width="116" height="46" rx="10" class="d-sis"/><text x="480" y="31" text-anchor="middle" class="t-b k-sis">Políticas</text><text x="480" y="48" text-anchor="middle" class="t-s">arnés destino</text>
+    <rect x="552" y="12" width="116" height="46" rx="10" class="d-sis"/><text x="610" y="31" text-anchor="middle" class="t-b k-sis">Guardia de</text><text x="610" y="48" text-anchor="middle" class="t-b k-sis">idempotencia</text>
+    <rect x="702" y="12" width="116" height="46" rx="10" class="c-red"/><text x="760" y="31" text-anchor="middle" class="t-b k-red">Bucle</text><text x="760" y="48" text-anchor="middle" class="t-b k-red">destino</text>
+  </g>
+  <g>
+    <line x1="70" y1="58" x2="70" y2="340" class="vida"/><line x1="210" y1="58" x2="210" y2="340" class="vida"/>
+    <line x1="350" y1="58" x2="350" y2="340" class="vida"/><line x1="480" y1="58" x2="480" y2="340" class="vida"/>
+    <line x1="610" y1="58" x2="610" y2="340" class="vida"/><line x1="760" y1="58" x2="760" y2="340" class="vida"/>
+  </g>
+  <g class="t t-s">
+    <line x1="70" y1="104" x2="208" y2="104" class="ln s-red" style="stroke-width:2" marker-end="url(#d133-r)"/>
+    <text x="76" y="97">① solicitud delegada</text>
+    <line x1="210" y1="138" x2="348" y2="138" class="ln" style="stroke-width:2" marker-end="url(#d133-m)"/>
+    <text x="216" y="131">② normalizada</text>
+    <text x="356" y="160" class="k-sis">③ ¿quién la manda?</text>
+    <line x1="350" y1="178" x2="478" y2="178" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d133-s)"/>
+    <text x="486" y="200" class="k-sis">④ reevalúa permisos</text>
+    <text x="486" y="215" class="k-sis">del solicitante</text>
+    <line x1="480" y1="232" x2="608" y2="232" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d133-s)"/>
+    <text x="616" y="254" class="k-sis">⑤ ¿clave conocida?</text>
+    <line x1="610" y1="270" x2="758" y2="270" class="ln" style="stroke-width:2;stroke:var(--d-sis)" marker-end="url(#d133-s)"/>
+    <text x="620" y="290">nueva → ejecutar</text>
+    <rect x="754" y="276" width="12" height="30" rx="3" class="c-red"/>
+    <line x1="760" y1="322" x2="72" y2="322" class="ln s-red" style="stroke-width:2" marker-end="url(#d133-r)"/>
+    <text x="300" y="315">⑥ resultado con la misma correlación</text>
+  </g>
+  <g class="t">
+    <rect x="12" y="360" width="250" height="148" rx="10" class="caja"/>
+    <text x="26" y="382" class="t-xs t-b t-m">LA SOLICITUD LLEVA</text>
+    <text x="26" y="404" class="t-s t-mono">madre: ejec-81</text>
+    <text x="26" y="422" class="t-s t-mono">correlacion: c-7f2a</text>
+    <text x="26" y="440" class="t-s t-mono">concesion: reembolsos ≤ 50</text>
+    <text x="26" y="458" class="t-s t-mono">plazo: 10 min</text>
+    <text x="26" y="476" class="t-s t-mono">presupuesto: US$ 0,40</text>
+    <text x="26" y="494" class="t-s t-mono">clave: 3be1…09d</text>
+    <rect x="282" y="360" width="276" height="148" rx="10" class="d-casa"/>
+    <text x="296" y="382" class="t-xs t-b k-casa">AGENTE INTERNO</text>
+    <text x="296" y="406" class="t-s">recibe la identidad de Ana,</text>
+    <text x="296" y="424" class="t-s">acotada por la concesión:</text>
+    <text x="296" y="442" class="t-s t-b">actúa por Ana, con menos que Ana</text>
+    <text x="296" y="468" class="t-s t-m">sus políticas vuelven a</text>
+    <text x="296" y="486" class="t-s t-m">decidir con esa identidad</text>
+    <rect x="578" y="360" width="270" height="148" rx="10" class="d-inet"/>
+    <text x="592" y="382" class="t-xs t-b k-inet">AGENTE EXTERNO</text>
+    <text x="592" y="406" class="t-s">no ve la identidad de Ana:</text>
+    <text x="592" y="424" class="t-s">autentica a tu arnés como cliente</text>
+    <text x="592" y="442" class="t-s t-b">tu arnés responde por el pedido</text>
+    <text x="592" y="468" class="t-s t-m">su tarjeta dice qué sabe hacer,</text>
+    <text x="592" y="486" class="t-s t-m">no qué se le puede pedir</text>
+  </g>
+</svg></div><figcaption><b>El flujo de una solicitud delegada a otro agente.</b> El agente origen arma la solicitud con su ejecución madre, la correlación, la concesión, el plazo, el presupuesto y la clave de idempotencia. El adaptador de transporte la normaliza; el arnés destino verifica la identidad, vuelve a evaluar los permisos del solicitante con sus propias políticas y busca la clave. Solo entonces corre su bucle. El resultado vuelve con la misma correlación. Abajo, la diferencia entre un agente interno, que recibe la identidad de la persona acotada, y uno externo, que autentica al arnés y no a la persona.</figcaption></figure><div class="prose"><p>El destino <b>vuelve a evaluar</b> los permisos, aunque el origen ya lo haya hecho. Si Ana no puede ver la nómina, el agente de nómina tampoco se la muestra al agente que trabaja para Ana. Y la identidad cruza de dos formas. Un agente <b>interno</b> recibe la identidad de la persona, acotada por la concesión: actúa por Ana, con menos que Ana. Un agente <b>externo</b>, de otra empresa, no recibe la identidad de Ana: autentica a tu arnés como cliente, con sus propias credenciales, y tu arnés responde por lo que pide.</p></div><div class="practica"><div class="practica-title"><span class="tag">En el navegador</span><h3>Lee una tarjeta de agente en la especificación de A2A</h3></div><p>Vas a mirar qué anuncia un agente sobre sí mismo en el protocolo A2A y qué no. Abre la <a href="https://a2a-protocol.org/latest/specification/" target="_blank" rel="noopener">especificación de A2A</a> y busca la sección «Agent Discovery: The Agent Card».</p><ol class="steps"><li><span>En «Discovery Mechanisms», anota la dirección conocida (<i>well-known URI</i>) donde un servidor publica su tarjeta.</span></li><li><span>Mira el ejemplo de tarjeta y anota sus campos principales: nombre, descripción, interfaces soportadas, capacidades y habilidades (<i>skills</i>).</span></li><li><span>Busca cómo declara la tarjeta los esquemas de seguridad: qué tipo de autenticación pide el agente.</span></li><li><span>Busca la parte sobre firmar tarjetas (<i>Agent Card Signing</i>) y anota para qué sirve la firma.</span></li><li><span>Para cada campo, pregúntate: ¿esto me dice qué <b>sabe</b> hacer el agente, o qué <b>puedo</b> pedirle?</span></li></ol><p><b>Qué observar:</b> la tarjeta describe habilidades y cómo conectarse, pero ningún campo dice quién está autorizado a pedir qué en nombre de quién. Eso sigue siendo trabajo de tu arnés y del contrato de delegación. La firma prueba quién publicó la tarjeta, no que sus habilidades sean seguras. La especificación cambia entre versiones; los nombres de las secciones pueden variar.</p></div></section>
+<section><h2>Presupuestos heredados y límites de profundidad</h2><div class="prose"><p>El capítulo 10 dejó la regla del dinero: una subtarea recibe una porción de lo que le queda a su madre, y lo que gasta se descuenta. Con subagentes que a su vez delegan, esa regla necesita compañía, porque un árbol de agentes crece rápido. Con tres hijos por agente y tres niveles, ya son 39 agentes; con cinco hijos y cuatro niveles, 780.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es una cadena de mensajes del tipo «reenvía esto a cinco amigos». Cada persona hace algo pequeño y razonable, y en pocas vueltas el mensaje le llegó a medio país. Nadie decidió eso; lo decidió la forma del árbol. Los límites del arnés son la regla que dice «esta cadena se corta en la tercera vuelta».</p></div><div class="prose"><p>Los límites que pone el arnés se cuentan <b>por árbol</b>, no por agente:</p><ul><li><b>Profundidad máxima</b>: cuántos niveles de delegación puede haber debajo de la ejecución raíz.</li><li><b>Hijos por agente y agentes por árbol</b>: cuántos subagentes puede lanzar cada uno y cuántos en total.</li><li><b>Concurrencia</b>: cuántos corren a la vez, para no saturar al proveedor del modelo ni a las herramientas.</li><li><b>Detección de ciclos</b>: si A delega en B y B intenta delegar de vuelta en A, el arnés lo ve recorriendo la cadena de ejecuciones madre y deniega la invocación, registrándola como ciclo.</li><li><b>Parada del árbol</b>: si el árbol agota su presupuesto o alguien lo cancela, ningún agente del árbol lanza hijos nuevos, y los que corren se detienen en su próxima frontera (capítulo 10).</li></ul></div><div class="lab" id="13-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El árbol de agentes: profundidad, hijos y ciclos</h3></div><p class="hint">Mueve la profundidad y los hijos por agente y mira cómo crecen el árbol, la cantidad de agentes y el costo. Enciende los límites del arnés y mira qué ramas se cortan. Activa el ciclo para ver una delegación que vuelve al agente que la pidió.</p><style>
+[id="13-lab-3"] .c13l3-svg{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:10px}
+[id="13-lab-3"] .c13l3-svg text{font:600 11px var(--f-display);fill:var(--muted)}
+</style>
+<div class="ctls">
+  <label class="ctl">Profundidad que intenta el modelo <output id="c13l3-do">3</output><input type="range" id="c13l3-d" min="1" max="5" step="1" value="3"></label>
+  <label class="ctl">Hijos que lanza cada agente <output id="c13l3-ho">3</output><input type="range" id="c13l3-h" min="1" max="6" step="1" value="3"></label>
+</div>
+<div class="btns" role="group" aria-label="Controles del arnés">
+  <button type="button" id="c13l3-lim" aria-pressed="false">Límites del arnés: profundidad 2, 12 agentes por árbol</button>
+  <button type="button" id="c13l3-ciclo" aria-pressed="false">Un subagente delega de vuelta en el orquestador</button>
+</div>
+<svg class="c13l3-svg" id="c13l3-svg" viewBox="0 0 640 280" role="img" aria-label="Árbol de agentes"></svg>
+<p class="legend"><span><i style="background:var(--c-red)"></i>agente que corre</span> · <span><i style="background:var(--warm)"></i>invocación denegada</span></p>
+<div class="readout texto" id="c13l3-out" aria-live="polite"></div></div></section>
+<section><h2>El agente como directorio: la configuración que se lee de archivos</h2><div class="prose"><p>Con varios agentes, cada uno con sus instrucciones, herramientas, habilidades y reglas, aparece un problema práctico: ¿dónde se define cada agente? Si vive en el código, cambiar una instrucción exige desplegar. La solución que adoptaron muchos arneses es tratar al <b>agente como directorio</b> (<i>agent as a directory</i>): una carpeta con <b>ranuras</b> (<i>slots</i>) convencionales, donde cada archivo produce una pieza que el arnés ya conoce.</p><div class="code-copia"><pre><code>agentes/facturacion/
+  agente.json          # modelo, presupuesto, límites (obligatorio)
+  instrucciones.md     # el bloque de sistema (obligatorio)
+  herramientas/        # contratos de herramientas (capítulo 3)
+    reembolso.json
+  habilidades/         # procedimientos que se cargan a demanda (capítulo 14)
+  politicas/           # reglas del motor de políticas (capítulo 7)
+  ganchos/             # código que interviene en el ciclo (capítulo 8)</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Tres reglas lo hacen seguro. <b>La ruta es la identidad</b>: <code>herramientas/reembolso.json</code> dentro de <code>facturacion</code> se llama <code>facturacion-reembolso</code>, sin que el archivo pueda declararse otro nombre. <b>El markdown es dato y el código necesita confianza</b>: instrucciones y habilidades en texto se leen siempre; un gancho en código solo se carga si el directorio es de confianza, porque ejecuta en el arnés. Y <b>el arnés publica un manifiesto</b> (<i>manifest</i>): la lista de todo lo que descubrió, con su ruta y con <b>diagnósticos</b> (<i>diagnostics</i>) por nivel. Un error en el manifiesto impide activar al agente; una advertencia lo deja correr y queda a la vista.</p></div><figure class="fig fig-esquema" id="13-diagrama-4"><div class="lienzo"><svg viewBox="0 0 860 400" style="min-width:720px" role="img" aria-label="Del directorio al manifiesto: a la izquierda la carpeta del agente de facturación con sus ranuras; al centro el cargador del arnés con sus tres reglas; a la derecha el manifiesto con cada pieza, su nombre derivado de la ruta y dos diagnósticos, una advertencia por código retenido y un error que impide activar.">
+  <defs><marker id="d134-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker></defs>
+  <g class="t t-xs t-b t-m">
+    <text x="20" y="22">EL DIRECTORIO</text><text x="320" y="22">EL CARGADOR DEL ARNÉS</text><text x="560" y="22">EL MANIFIESTO</text>
+  </g>
+  <g class="t">
+    <rect x="12" y="34" width="268" height="300" rx="10" class="caja"/>
+    <g class="t-s t-mono">
+      <text x="26" y="60" class="t-b">agentes/facturacion/</text>
+      <text x="40" y="86">agente.json</text>
+      <text x="40" y="108">instrucciones.md</text>
+      <text x="40" y="134">herramientas/</text>
+      <text x="56" y="154">reembolso.json</text>
+      <text x="56" y="174">consulta.json</text>
+      <text x="40" y="200">habilidades/</text>
+      <text x="56" y="220">notas-de-credito.md</text>
+      <text x="40" y="246">politicas/</text>
+      <text x="56" y="266">reembolsos.json</text>
+      <text x="40" y="292">ganchos/</text>
+      <text x="56" y="312">antes_de_cobrar.py</text>
+    </g>
+    <text x="200" y="86" class="t-xs t-b k-red">OBLIGATORIO</text>
+    <text x="200" y="108" class="t-xs t-b k-red">OBLIGATORIO</text>
+
+    <rect x="312" y="34" width="216" height="300" rx="10" class="c-red"/>
+    <text x="420" y="60" text-anchor="middle" class="t-b k-red">Lee cada ranura</text>
+    <text x="326" y="92" class="t-s t-b">① La ruta es la identidad</text>
+    <text x="326" y="110" class="t-s">herramientas/reembolso.json</text>
+    <text x="326" y="126" class="t-s">→ facturacion-reembolso</text>
+    <text x="326" y="160" class="t-s t-b">② El markdown es dato</text>
+    <text x="326" y="178" class="t-s">se lee siempre; el código</text>
+    <text x="326" y="194" class="t-s">solo si el directorio es</text>
+    <text x="326" y="210" class="t-s">de confianza</text>
+    <text x="326" y="244" class="t-s t-b">③ Todo se diagnostica</text>
+    <text x="326" y="262" class="t-s">un ERROR impide activar;</text>
+    <text x="326" y="278" class="t-s">una advertencia queda</text>
+    <text x="326" y="294" class="t-s">a la vista</text>
+
+    <rect x="560" y="34" width="290" height="190" rx="10" class="c-enl"/>
+    <text x="574" y="58" class="t-xs t-b k-enl">PIEZAS DESCUBIERTAS</text>
+    <g class="t-s">
+      <text x="574" y="82">configuración · presupuesto</text>
+      <text x="574" y="102">instrucciones del sistema</text>
+      <text x="574" y="122" class="t-mono">facturacion-reembolso</text>
+      <text x="574" y="142" class="t-mono">facturacion-notas-de-credito</text>
+      <text x="574" y="162" class="t-mono">facturacion-reembolsos</text>
+      <text x="574" y="182" class="t-m">cada una con su ruta de origen</text>
+      <text x="574" y="208" class="t-m">es lo único que el arnés conoce</text>
+    </g>
+    <rect x="560" y="236" width="290" height="98" rx="10" class="d-sis"/>
+    <text x="574" y="258" class="t-xs t-b k-sis">DIAGNÓSTICOS</text>
+    <text x="574" y="280" class="t-s">advertencia · código retenido</text>
+    <text x="574" y="296" class="t-s t-mono">ganchos/antes_de_cobrar.py</text>
+    <text x="574" y="318" class="t-s t-b k-sis">ERROR · JSON inválido → no se activa</text>
+  </g>
+  <g class="ln" style="stroke-width:2">
+    <path d="M280 184H308" marker-end="url(#d134-m)"/>
+    <path d="M528 130H556" marker-end="url(#d134-m)"/>
+    <path d="M528 284H556" marker-end="url(#d134-m)"/>
+  </g>
+  <text x="20" y="364" class="t t-s t-m">Ejemplos del mercado con la misma idea: subagentes en .claude/agents/*.md (Claude Code) o un AGENTS.md en la raíz de un repositorio.</text>
+  <text x="20" y="384" class="t t-s t-m">Los archivos se versionan y se revisan como cualquier otro código.</text>
+</svg></div><figcaption><b>Del directorio al manifiesto.</b> A la izquierda, la carpeta de un agente con sus ranuras. Al centro, el cargador del arnés: lee cada ranura, convierte la ruta en nombre, deja pasar el markdown y retiene el código si el directorio no es de confianza. A la derecha, el manifiesto que resulta, con cada pieza, su origen y los diagnósticos: una advertencia y un error que impide activar.</figcaption></figure><div class="prose"><p>Los arneses del mercado usan variantes de esta idea. Claude Code define sus <b>subagentes</b> en archivos markdown dentro de <code>.claude/agents/</code>, con un encabezado que dice su nombre, su descripción y sus herramientas permitidas. Muchos agentes de código leen un archivo <code>AGENTS.md</code> en la raíz del repositorio con instrucciones para el proyecto. Son ejemplos del mercado, no recomendaciones: la idea común es que el agente se configura con archivos que se versionan y se revisan como cualquier otro código.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Arma un directorio de agente y genera su manifiesto</h3></div><p>Vas a crear, con un script de Python sin dependencias, una carpeta de agente de ejemplo (solo la primera vez que lo corres) y leerla como lo haría un arnés: nombres desde la ruta, código retenido si no hay confianza y diagnósticos. Necesitas Python 3. Crea un archivo <code>manifiesto.py</code> con este contenido:</p><div class="code-copia"><pre><code># manifiesto.py: lee un directorio de agente y publica su manifiesto (ejemplo, sin red)
+import json
+import pathlib
+import sys
+
+RANURAS = {"herramientas": ".json", "habilidades": ".md", "politicas": ".json", "ganchos": ".py"}
+
+def crear_ejemplo(raiz):
+    (raiz / "herramientas").mkdir(parents=True, exist_ok=True)
+    (raiz / "habilidades").mkdir(exist_ok=True)
+    (raiz / "ganchos").mkdir(exist_ok=True)
+    (raiz / "agente.json").write_text(json.dumps({"modelo": "modelo-medio", "maxTurnos": 12, "maxCostoUSD": 1.5}))
+    (raiz / "instrucciones.md").write_text("Atiendes facturación. Nunca reembolsas más de US$ 50 sin aprobación.\n", encoding="utf-8")
+    (raiz / "herramientas" / "reembolso.json").write_text(json.dumps({"descripcion": "Emite un reembolso", "riesgo": "alto"}))
+    (raiz / "herramientas" / "consulta.json").write_text("{ esto no es JSON")
+    (raiz / "habilidades" / "notas-de-credito.md").write_text("# Notas de crédito\nPasos para emitir una nota de crédito.\n", encoding="utf-8")
+    (raiz / "ganchos" / "antes_de_cobrar.py").write_text("def gancho(accion):\n    return 'permitir'\n")
+
+def leer(raiz, confiable):
+    agente = raiz.name
+    piezas, diagnosticos = [], []
+    for obligatorio in ("agente.json", "instrucciones.md"):
+        if not (raiz / obligatorio).exists():
+            diagnosticos.append(("ERROR", "falta-obligatorio", obligatorio))
+    for ranura, ext in RANURAS.items():
+        for archivo in sorted((raiz / ranura).glob("*")) if (raiz / ranura).is_dir() else []:
+            ruta = archivo.relative_to(raiz).as_posix()
+            nombre = f"{agente}-{archivo.stem}"          # la ruta es la identidad
+            if archivo.suffix != ext:
+                diagnosticos.append(("ADVERTENCIA", "extension-inesperada", ruta))
+                continue
+            if ext == ".py" and not confiable:
+                diagnosticos.append(("ADVERTENCIA", "codigo-retenido", ruta))
+                continue
+            if ext == ".json":
+                try:
+                    json.loads(archivo.read_text(encoding="utf-8"))
+                except ValueError:
+                    diagnosticos.append(("ERROR", "json-invalido", ruta))
+                    continue
+            piezas.append((ranura, nombre, ruta))
+    return piezas, diagnosticos
+
+if __name__ == "__main__":
+    raiz = pathlib.Path("agentes") / "facturacion"
+    if not raiz.exists():                               # solo la primera vez
+        crear_ejemplo(raiz)
+    confiable = "--confiable" in sys.argv
+    piezas, diags = leer(raiz, confiable)
+    print(f"Manifiesto de '{raiz.name}' (directorio confiable: {confiable})")
+    for ranura, nombre, ruta in piezas:
+        print(f"  {ranura:&lt;13} {nombre:&lt;36} &lt;- {ruta}")
+    print("Diagnósticos:")
+    for nivel, codigo, ruta in diags:
+        print(f"  {nivel:&lt;12} {codigo:&lt;22} {ruta}")
+    errores = sum(1 for d in diags if d[0] == "ERROR")
+    print("Resultado:", "NO se puede activar" if errores else "se puede activar")</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta, córrelo dos veces, sin y con confianza:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python manifiesto.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python manifiesto.py --confiable</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 manifiesto.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 manifiesto.py --confiable</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la primera corrida, mira el nombre de cada pieza: sale de la carpeta del agente y del archivo, no de su contenido.</span></li><li><span>Busca el diagnóstico <code>codigo-retenido</code>: el gancho en Python no se cargó porque el directorio no es de confianza. Compara con la segunda corrida.</span></li><li><span>Mira por qué el resultado es «NO se puede activar»: un archivo de herramienta tiene JSON inválido.</span></li><li><span>Abre <code>agentes/facturacion/herramientas/consulta.json</code>, escribe <code>{"descripcion": "Consulta saldo", "riesgo": "bajo"}</code> y vuelve a correr el script. Cuando termines, puedes borrar la carpeta <code>agentes</code>.</span></li></ol><p><b>Qué observar:</b> el arnés no le cree al archivo, le cree a la ruta y a sus reglas: el nombre lo pone la ubicación, el código espera confianza y un error impide activar en vez de dejar al agente a medias. El manifiesto es lo único que el arnés sabe del agente, y por eso se puede revisar antes de ponerlo a trabajar. El resultado es el mismo en cualquier sistema; el script escribe la carpeta <code>agentes</code> donde lo corras.</p></div><div class="caso"><b>Un caso real</b><p>Un equipo armó un sistema de investigación con un orquestador y cinco subagentes para preparar informes de mercado. En las primeras pruebas, los informes salían largos y con huecos: dos subagentes cubrían el mismo competidor y nadie cubría precios. Al leer las trazas vieron que el orquestador mandaba consignas de una línea. Cambiaron el prompt del orquestador para exigir en cada consigna el objetivo, el alcance, el formato de salida y qué no investigar, y limitaron a los subagentes a devolver un resumen con fuentes. La duplicación desapareció y el consumo total de tokens bajó, aunque seguía siendo varias veces el de un solo agente.</p></div><div class="prose"><p>Con el orquestador, los subagentes, los traspasos y los límites del árbol, el arnés ya puede repartir una tarea grande sin perder el control de lo que hace cada parte. Falta que los agentes recuerden lo que aprendieron entre una tarea y otra, y que carguen procedimientos solo cuando les hacen falta: eso es el capítulo 14.</p><p>La idea de este capítulo: dividir es una herramienta con costo, y el arnés, no el modelo, decide cómo se reparte, qué ve cada parte, qué puede hacer y cuándo se corta el árbol. La pieza que se agrega: <b>orquestador y subagentes.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Cuáles son las tres buenas razones para dividir una tarea entre varios agentes?</summary><p>Aislar el contexto (cada subagente ve solo su parte), paralelizar partes independientes y separar permisos que no deberían estar juntos.</p></details><details><summary>¿Por qué el total de tokens sube al usar subagentes, aunque cada ventana quede más liviana?</summary><p>Porque cada subagente vuelve a leer sus instrucciones, sus herramientas y su consigna, y hace su propio trabajo. Se paga aislamiento y paralelismo con más consumo total.</p></details><details><summary>¿Qué diferencia hay entre una delegación y un traspaso?</summary><p>En la delegación el control vuelve al orquestador, que espera el resultado y sigue siendo dueño de la tarea. En el traspaso el control se entrega: el primer agente deja de actuar y la tarea sigue con el otro.</p></details><details><summary>¿Qué campo del paquete de traspaso evita que el agente que recibe repita un reembolso?</summary><p>El estado de los efectos, con cada acción marcada como ocurrida, no ocurrida o dudosa y su clave de idempotencia.</p></details><details><summary>Si la tarjeta A2A de un agente anuncia que sabe emitir reembolsos, ¿ya se le pueden pedir reembolsos?</summary><p>No. El protocolo transporta mensajes, no da permisos. Hace falta un contrato de delegación explícito, y el arnés destino vuelve a evaluar los permisos del solicitante.</p></details><details><summary>¿Cómo detecta el arnés que A delega en B y B intenta delegar de vuelta en A?</summary><p>Recorre la cadena de ejecuciones madre de la invocación; si el agente destino ya aparece en esa cadena, deniega la invocación y la registra como ciclo.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es mTLS (TLS mutuo) y por qué se usa para autenticar servicios entre sí, además del usuario?<small>Pista: busca «mutual TLS service-to-service authentication».</small></li><li>¿Qué es una cola de mensajes fallidos (<i>dead letter queue</i>) y qué se hace con los mensajes que terminan ahí?</li><li>¿Qué es JSON-RPC y en qué se diferencia de una API REST?</li><li>¿Qué es el patrón <i>MapReduce</i> y de qué sistema de procesamiento de datos viene el nombre?<small>Pista: busca el artículo de 2004 sobre MapReduce.</small></li><li>¿Qué es la canonicalización de JSON (<a href="https://www.rfc-editor.org/rfc/rfc8785" target="_blank" rel="noopener">RFC 8785</a>) y por qué hace falta antes de firmar un documento JSON?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system <small>lectura, en inglés</small></a><a class="vid" href="https://openai.github.io/openai-agents-python/handoffs/" target="_blank" rel="noopener">OpenAI Agents SDK: handoffs <small>documentación, en inglés</small></a><a class="vid" href="https://a2a-protocol.org/latest/specification/" target="_blank" rel="noopener">Especificación del protocolo A2A <small>norma, en inglés</small></a><a class="vid" href="https://docs.claude.com/en/docs/claude-code/sub-agents" target="_blank" rel="noopener">Claude Code: subagentes <small>documentación, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const VENT=100; // miles de tokens por ventana
+  const st={multi:true};
+  const k=n=>(Math.round(n*10)/10).toString().replace('.',',')+' k';
+  const SEG=[['base','var(--c-fis)'],['consigna','var(--c-red)'],['docs','var(--c-enl)'],['res','var(--c-tra)'],['raz','var(--muted)']];
+  function modelo(){
+    const vaga=$('#c13l1-brief').value==='vaga', todo=$('#c13l1-ret').value==='todo';
+    if(!st.multi){
+      return {agentes:[{n:'Agente solo',cls:'orq',seg:{base:8,consigna:1,docs:83,res:0,raz:10},
+        chips:['buscar_web','leer_documento','leer_crm','enviar_correo'],riesgo:['enviar_correo'],
+        nota:'Lee competidores, precios y normativa en la misma ventana, y además tiene la herramienta para enviar el informe.'}],
+        cobertura:{comp:'✔',prec:'✔',norm:'◐'},dup:false};
+    }
+    const subs=vaga?[
+      {n:'Subagente A · «el mercado»',docs:30,chips:['buscar_web','leer_documento'],nota:'Entendió «competidores» y leyó sobre ellos.'},
+      {n:'Subagente B · «el mercado»',docs:28,chips:['buscar_web','leer_documento','leer_crm'],nota:'También investigó competidores (20 k) y apenas tocó precios.'},
+      {n:'Subagente C · «el mercado»',docs:25,chips:['buscar_web','leer_documento'],nota:'Leyó noticias generales del sector; nadie cubrió la normativa.'}
+    ]:[
+      {n:'Subagente A · competidores',docs:30,chips:['buscar_web','leer_documento'],nota:'Solo competidores, con formato de tabla y fuentes.'},
+      {n:'Subagente B · precios',docs:28,chips:['leer_crm','leer_documento'],nota:'Precios propios desde el CRM, solo lectura.'},
+      {n:'Subagente C · normativa',docs:25,chips:['buscar_web','leer_documento'],nota:'Solo normativa vigente; para cuando encuentra 5 fuentes.'}
+    ];
+    const cons=vaga?0.05:0.4;
+    const res=todo?subs.reduce((a,s)=>a+s.docs+4,0):1.5;  // todo: documentos y razonamiento de cada uno
+    const agentes=[{n:'Orquestador',cls:'orq',seg:{base:6,consigna:1+3*cons,docs:0,res:res,raz:3},chips:['delegar','enviar_correo'],riesgo:['enviar_correo'],
+      nota:todo?'Recibe todo lo que leyeron los subagentes: la ventana se llena como si hubiera hecho el trabajo él mismo.':'Recibe tres resúmenes con fuentes. Es el único que puede enviar el informe.'}];
+    subs.forEach(s=>agentes.push({n:s.n,cls:'',seg:{base:4,consigna:cons,docs:s.docs,res:0,raz:4},chips:s.chips,riesgo:[],nota:s.nota}));
+    return {agentes,cobertura:vaga?{comp:'✔✔',prec:'◐',norm:'✖'}:{comp:'✔',prec:'✔',norm:'✔'},dup:vaga,todo};
+  }
+  function pintar(){
+    $('#c13l1-solo').setAttribute('aria-pressed',!st.multi);$('#c13l1-multi').setAttribute('aria-pressed',st.multi);
+    $('#c13l1-brief').disabled=!st.multi;$('#c13l1-ret').disabled=!st.multi;
+    const m=modelo();let total=0,desb=0;
+    $('#c13l1-ag').innerHTML=m.agentes.map(a=>{
+      const t=Object.values(a.seg).reduce((x,y)=>x+y,0);total+=t;const over=t>VENT;if(over)desb++;
+      const esc=Math.max(VENT,t);
+      const bar=SEG.map(([key,col])=>a.seg[key]>0?`<i style="width:${a.seg[key]/esc*100}%;background:${col}" title="${key}"></i>`:'').join('');
+      const lim=over?`<span class="lim" style="left:${VENT/esc*100}%"></span>`:'';
+      return `<div class="c13l1-row ${a.cls}"><div class="c13l1-hd">${a.n}<span class="${over?'mal':''}">${k(t)} de ${VENT} k${over?' · se desborda':''}</span></div>
+        <div class="c13l1-bar" role="img" aria-label="${a.n}: ${k(t)} tokens en una ventana de ${VENT} k">${bar}${lim}</div>
+        <div class="c13l1-chips">${a.chips.map(c=>`<b class="${a.riesgo.includes(c)?'riesgo':''}">${c}</b>`).join('')}</div>
+        <div class="c13l1-note">${a.nota}</div></div>`;
+    }).join('');
+    const c=m.cobertura;
+    let h=`<span class="big">${k(total)} tokens en total · ${m.agentes.length} ${m.agentes.length===1?'ventana':'ventanas'}</span>`;
+    h+=`<span>Cobertura: competidores ${c.comp} · precios ${c.prec} · normativa ${c.norm}</span>`;
+    if(!st.multi)h+=`<span class="warn">Una sola ventana con todo: se desborda y el arnés tiene que compactar (capítulo 5), con lo que se pierde detalle de la normativa, que se leyó al final. Y el mismo agente que lee la web puede enviar correos.</span>`;
+    else{
+      if(desb)h+=`<span class="warn">La ventana del orquestador se desborda: devolver todo lo leído anula la ventaja de dividir.</span>`;
+      else h+=`<span class="ok">Ninguna ventana se desborda: cada subagente vio solo su parte y el orquestador, solo los resúmenes.</span>`;
+      if(m.dup)h+=`<span class="warn">Con consignas vagas, dos subagentes investigaron lo mismo y la normativa quedó sin cubrir. Se pagaron los tokens y falta una parte.</span>`;
+      h+=`<span>Ningún subagente tiene enviar_correo: solo el orquestador puede mandar el informe.</span>`;
+      h+=`<span class="hint">Compara el total con el del agente solo: dividir casi nunca ahorra tokens. En un sistema real cada turno vuelve a leer la ventana, así que la diferencia es aún mayor.</span>`;
+    }
+    $('#c13l1-out').innerHTML=h;
+  }
+  $('#c13l1-solo').addEventListener('click',()=>{st.multi=false;pintar();});
+  $('#c13l1-multi').addEventListener('click',()=>{st.multi=true;pintar();});
+  $('#c13l1-brief').addEventListener('change',pintar);
+  $('#c13l1-ret').addEventListener('change',pintar);
+  pintar();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const C=['objetivo','hecho','pendiente','datos','efectos','contexto','estado'];
+  const v=k=>$('#c13l2-'+k).checked;
+  function set(on){C.forEach(k=>{$('#c13l2-'+k).checked=on.includes(k);});pintar();}
+  function pintar(){
+    const L=[];let malos=0,cobros=1;
+    const add=(t,c)=>{L.push([t,c]);if(c==='mal')malos++;};
+    if(v('datos'))add('Toma la identidad y la cuenta ya verificadas: no le pregunta nada de nuevo a la cliente.','bien');
+    else add('Le pide otra vez a la cliente su número de cuenta y un código de verificación: «¿otra vez?».','mal');
+    if(!v('objetivo')&&!v('pendiente'))add('No sabe qué quiere la cliente: abre con «¿en qué le puedo ayudar?» y la conversación vuelve a empezar.','mal');
+    else if(v('objetivo'))add('Entiende el objetivo completo, incluido el cambio de fecha de corte.','bien');
+    if(v('efectos'))add('Ve que reembolsar(C-7731) ya ocurrió, con su clave: no lo repite.','bien');
+    else if(v('hecho'))add('Sabe que el cobro duplicado ya se identificó, pero no si se reembolsó: lo marca como dudoso y consulta la pasarela antes de actuar. Sale bien, pero tarda.','');
+    else{add('No sabe que el reembolso ya ocurrió: vuelve a reembolsar C-7731. La cliente recibe US$ 50,00 por un cobro de 25.','mal');cobros=2;}
+    if(v('pendiente'))add('Cambia la fecha de corte al día 15 y cierra el caso.','bien');
+    else if(v('objetivo'))add('Deduce el cambio de fecha del objetivo, pero no sabe si ya se hizo: lo verifica antes.','');
+    else add('Nadie le dijo que faltaba cambiar la fecha de corte: el caso se cierra a medias.','mal');
+    if(v('contexto'))add('Si necesita un detalle, lo busca en la sesión S-17 por referencia, sin copiar toda la conversación.','bien');
+    if(v('estado'))add('Con el traspaso «aceptado», el agente de atención deja de actuar sobre el caso.','bien');
+    else add('Sin estado explícito, el agente de atención le sigue respondiendo a la cliente en paralelo: dos agentes en el mismo caso.','mal');
+    $('#c13l2-lista').innerHTML=L.map(x=>`<li class="${x[1]}">${x[0]}</li>`).join('');
+    const n=C.filter(v).length;
+    let h=`<span class="big">${n} de 7 campos · ${malos} ${malos===1?'problema':'problemas'}</span>`;
+    if(cobros>1)h+=`<span class="warn">El error más caro: un efecto repetido. Sin el campo efectos, el traspaso borra la memoria de lo que ya pasó en el mundo.</span>`;
+    if(malos===0)h+=`<span class="ok">Traspaso limpio: la cliente no repite nada, ningún efecto se duplica y hay un solo agente a cargo.</span>`;
+    else h+=`<span class="hint">El agente que recibe no pregunta «¿y esto qué es?»: actúa con lo que le llega. Lo que falta en el paquete se convierte en una pregunta repetida, un efecto doble o una tarea a medias.</span>`;
+    $('#c13l2-out').innerHTML=h;
+  }
+  C.forEach(k=>$('#c13l2-'+k).addEventListener('change',pintar));
+  $('#c13l2-prosa').addEventListener('click',()=>set([]));
+  $('#c13l2-completo').addEventListener('click',()=>set(C));
+  set(['objetivo','hecho']);
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const st={lim:false,ciclo:false};
+  const COSTO=0.40,MAXD=2,MAXA=12;
+  function pintar(){
+    const D=+$('#c13l3-d').value,H=+$('#c13l3-h').value;
+    $('#c13l3-do').textContent=D;$('#c13l3-ho').textContent=H;
+    $('#c13l3-lim').setAttribute('aria-pressed',st.lim);$('#c13l3-ciclo').setAttribute('aria-pressed',st.ciclo);
+    // construir por niveles, en anchura
+    const niveles=[[{ok:true}]];let corren=1,denP=0,denA=0,cicloInf=false,cicloDen=false;
+    for(let d=1;d<=D;d++){
+      const fila=[];
+      niveles[d-1].forEach((p,pi)=>{
+        if(!p.ok)return;
+        for(let k=0;k<H;k++){
+          let ok=true,motivo='';
+          if(st.lim&&d>MAXD){ok=false;motivo='p';}
+          else if(st.lim&&corren>=MAXA){ok=false;motivo='a';}
+          fila.push({ok,motivo,padre:pi});
+          if(ok)corren++;else if(motivo==='p')denP++;else denA++;
+          if(fila.length>400)break;
+        }
+      });
+      niveles.push(fila);
+    }
+    if(st.ciclo){ if(st.lim)cicloDen=true; else cicloInf=true; }
+    // dibujar
+    const W=640,Hh=280,dy=(Hh-40)/Math.max(D,1);
+    let s='',lin='';const pos=[];
+    niveles.forEach((fila,d)=>{
+      const y=20+d*dy;pos[d]=[];
+      const n=fila.length||1,r=n>60?2:n>20?3.5:6;
+      fila.forEach((nd,i)=>{
+        const x=20+(W-40)*(i+0.5)/n;pos[d][i]=[x,y];
+        if(d>0&&pos[d-1][nd.padre]){const [px,py]=pos[d-1][nd.padre];if(n<=80)lin+=`<line x1="${px}" y1="${py}" x2="${x}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;}
+        s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${nd.ok?'var(--c-red)':'var(--warm)'}" opacity="${nd.ok?1:.55}"/>`;
+      });
+      s+=`<text x="4" y="${y-8}">nivel ${d} · ${fila.length}</text>`;
+    });
+    if(st.ciclo){const [x,y]=pos[0][0];const b=pos[1]?pos[1][0]:[x,y+40];
+      s+=`<path d="M${b[0]} ${b[1]} C ${b[0]-60} ${b[1]-10}, ${x-80} ${y+10}, ${x-8} ${y}" fill="none" stroke="var(--warm)" stroke-width="2" stroke-dasharray="5 4"/>`;
+      s+=`<text x="${Math.max(b[0]-60,30)}" y="${b[1]-14}" style="fill:var(--warm)">${cicloDen?'✖ ciclo denegado':'↻ A → B → A …'}</text>`;}
+    $('#c13l3-svg').innerHTML=lin+s;
+    const total=niveles.reduce((a,f)=>a+f.length,0);
+    let h=`<span class="big">${corren} ${corren===1?'agente corre':'agentes corren'} · US$ ${(corren*COSTO).toFixed(2).replace('.',',')}</span>`;
+    h+=`<span>Cada agente cuesta unos US$ 0,40 en este ejemplo. Sin límites, ${H} hijos por agente y ${D} niveles son ${total} agentes: el orquestador y ${total-1} subagentes.</span>`;
+    if(st.lim&&(denP||denA))h+=`<span class="ok">El arnés denegó ${denP+denA} invocaciones${denP?`: ${denP} por profundidad`:''}${denA?`${denP?' y':':'} ${denA} por superar 12 agentes en el árbol`:''}. Cada denegación vuelve al agente como un resultado de error y queda en el registro.</span>`;
+    if(!st.lim&&corren>30)h+=`<span class="warn">Nadie decidió gastar esto: lo decidió la forma del árbol. Enciende los límites del arnés.</span>`;
+    if(cicloInf)h+=`<span class="warn">Ciclo sin control: el subagente delega en el orquestador, que vuelve a delegar en él. Sin recorrer la cadena de ejecuciones madre, solo lo frena el presupuesto agotado.</span>`;
+    if(cicloDen)h+=`<span class="ok">Ciclo denegado: el arnés recorre la cadena de ejecuciones madre, encuentra al orquestador en ella y rechaza la invocación.</span>`;
+    $('#c13l3-out').innerHTML=h;
+  }
+  $('#c13l3-lim').addEventListener('click',()=>{st.lim=!st.lim;pintar();});
+  $('#c13l3-ciclo').addEventListener('click',()=>{st.ciclo=!st.ciclo;pintar();});
+  ['#c13l3-d','#c13l3-h'].forEach(s=>$(s).addEventListener('input',pintar));
+  pintar();
+})();
+</script>
+</body>
+</html>

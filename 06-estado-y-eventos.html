@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="es">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KX76XF8R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estado y eventos · Cómo construir un arnés · Cómo construir un arnés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="El software que rodea a un modelo y lo convierte en un agente gobernable: el bucle, las herramientas, el contexto, las reglas, los validadores, la aprobación humana, los registros y la auditoría, y los patrones de agentes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KX76XF8R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap" data-page="estado-y-eventos">
+<header class="topbar"><a class="brand" href="index.html">Cómo construir un <b>arnés</b></a><span class="eyebrow">Curso visual e interactivo · Datos e inteligencia artificial</span><a class="al-sitio" href="https://aaramirez.github.io/">← Todos los cursos</a></header>
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
+<main>
+<header class="page-head"><span class="num">CAPÍTULO 06 DE 16</span><h1>Sesiones, eventos y ejecución durable</h1><p class="lede">Un agente que trabaja durante horas, o que espera dos días a que alguien apruebe un pago, no puede vivir solo en la memoria de un proceso. Este capítulo le da al arnés un estado que sobrevive a las caídas, un bus de eventos para que todos se enteren de lo que pasa, y la forma de reanudar una tarea sin repetir lo que ya hizo.</p></header>
+<section><h2>El gestor de sesiones: qué se guarda de cada turno</h2><div class="prose"><p>Hasta aquí, el arnés del curso guarda todo en variables: la historia, el presupuesto gastado, el turno en que va. Funciona en una demostración. En producción, el proceso que corre al agente se reinicia por una actualización, el servidor se cae o la tarea tiene que esperar a una persona que contesta mañana. Si el estado vive solo en memoria, todo eso significa empezar de cero.</p><p>La pieza que resuelve esto es el <b>gestor de sesiones</b> (<i>session manager</i>). Responde una pregunta: ¿qué historia de ejecución se guarda y desde dónde se puede reconstruir? Para contestarla separa dos cosas que suelen mezclarse:</p><ul><li>La <b>ejecución</b> (<i>run</i>): una corrida del bucle para un pedido, con su estado operativo (en curso, esperando, terminada). Le pertenece al bucle.</li><li>La <b>sesión</b> (<i>session</i>): la historia continua de un agente con una persona o un canal, que puede abarcar muchas ejecuciones a lo largo de días. Le pertenece al gestor de sesiones.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en un expediente de un trámite en una oficina pública. Cada visita del ciudadano es una ejecución: llega, presenta un papel, se le pide otro, se va. El expediente es la sesión: guarda todo lo que pasó en cada visita, y cualquier funcionario, aunque no sea el de la primera vez, puede abrirlo y seguir exactamente desde donde quedó. Si el funcionario se enferma, el trámite no vuelve a empezar.</p></div><div class="prose"><p>De cada turno se guarda lo necesario para <b>reconstruir</b> la sesión sin ningún proceso vivo: los mensajes con sus bloques, las llamadas a herramientas con sus argumentos, los resultados, las decisiones de política, el uso del presupuesto y un <b>punto de control</b> (<i>checkpoint</i>), una foto inmutable del estado del agente en ese momento. Inmutable quiere decir que no se corrige: si algo cambia, se escribe un punto de control nuevo. El capítulo 5 ya usó estos puntos para bifurcar sesiones; aquí son la base para reanudarlas.</p><div class="code-copia"><pre><code>interface PuntoDeControl {
+  id: string;
+  ejecucion: string;        // a qué corrida pertenece
+  turno: number;
+  historia: Mensaje[];      // o una referencia a donde está guardada
+  presupuestoUsado: { turnos: number; tokens: number; costoUSD: number };
+  creado: string;           // fecha y hora
+}
+
+interface Sesion {
+  id: string;
+  ejecuciones: string[];    // en orden
+  ultimoPunto: PuntoDeControl;
+  puntoPadre?: string;      // si nació de una bifurcación
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Dónde se guarda es una decisión de infraestructura: una base de datos relacional como PostgreSQL o SQLite, un almacén de documentos, archivos. Los agentes de código suelen guardar cada sesión como un archivo de líneas JSON (<i>JSON Lines</i>, un objeto JSON por línea) en la carpeta del usuario, y por eso pueden retomar una conversación de ayer. Lo que no se negocia es la regla: <b>la sesión se puede reconstruir solo desde lo guardado</b>.</p></div></section>
+<section><h2>El bus de eventos: lo que pasa en el arnés, publicado para quien lo necesite</h2><div class="prose"><p>Cada pieza del arnés hace cosas que a otros les interesan. La interfaz quiere mostrar que el agente está corriendo una prueba. Auditoría quiere cada decisión de política. Finanzas quiere el costo de cada llamada al modelo. Operación quiere una alerta si una ejecución falla tres veces. Si cada pieza llamara directamente a cada interesado, el bucle terminaría sabiendo de pantallas, de contabilidad y de alertas.</p><p>La solución es un <b>bus de eventos</b> (<i>event bus</i>): cada pieza <b>publica</b> (<i>publish</i>) un evento cuando pasa algo, y quien quiera <b>se suscribe</b> (<i>subscribe</i>) a los que le interesan, con un filtro. El bus no decide nada; solo reparte. A ese patrón se le llama <b>publicación y suscripción</b> (<i>publish/subscribe</i>, o <i>pub/sub</i>).</p></div><figure class="fig fig-arquitectura" id="06-diagrama-1"><div class="lienzo"><svg viewBox="0 0 800 400" style="min-width:660px" role="img" aria-label="Arquitectura del bus de eventos: arriba, bucle, contexto, políticas, herramientas y humano publican eventos; en el centro, el bus de eventos y el gestor de sesiones, que guarda puntos de control; abajo, consumidores con filtro: interfaz, auditoría, costos, alertas y evaluaciones, que solo observan">
+  <defs>
+    <marker id="d61-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d61-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+  </defs>
+  <text x="20" y="24" class="t t-xs t-b t-m">PRODUCEN EVENTOS</text>
+  <rect x="20" y="34" width="130" height="50" rx="10" class="c-red"/><text x="85" y="64" class="t t-b k-red" text-anchor="middle">Bucle</text>
+  <rect x="175" y="34" width="130" height="50" rx="10" class="c-fis"/><text x="240" y="64" class="t t-b k-fis" text-anchor="middle">Contexto</text>
+  <rect x="330" y="34" width="130" height="50" rx="10" class="d-sis"/><text x="395" y="64" class="t t-b k-sis" text-anchor="middle">Políticas</text>
+  <rect x="485" y="34" width="130" height="50" rx="10" class="c-enl"/><text x="550" y="64" class="t t-b k-enl" text-anchor="middle">Herramientas</text>
+  <rect x="640" y="34" width="130" height="50" rx="10" class="d-casa"/><text x="705" y="64" class="t t-b k-casa" text-anchor="middle">Humano</text>
+  <g class="ln" style="stroke-width:1.6">
+    <line x1="85" y1="84" x2="85" y2="146" marker-end="url(#d61-m)"/><line x1="240" y1="84" x2="240" y2="146" marker-end="url(#d61-m)"/>
+    <line x1="395" y1="84" x2="395" y2="146" marker-end="url(#d61-m)"/><line x1="550" y1="84" x2="550" y2="146" marker-end="url(#d61-m)"/>
+    <line x1="705" y1="84" x2="705" y2="146" marker-end="url(#d61-m)"/>
+  </g>
+  <text x="100" y="120" class="t t-s t-m">publican</text>
+
+  <rect x="20" y="150" width="560" height="52" rx="10" class="d-inet"/>
+  <text x="36" y="173" class="t t-b k-inet">Bus de eventos</text>
+  <text x="36" y="191" class="t t-s">reparte cada evento a quien se suscribió; no decide nada</text>
+  <rect x="600" y="150" width="170" height="52" rx="10" class="d-casa"/>
+  <text x="614" y="173" class="t t-b k-casa">Gestor de sesiones</text>
+  <text x="614" y="191" class="t t-s">puntos de control</text>
+  <line x1="580" y1="176" x2="598" y2="176" class="ln s-fis" style="stroke:var(--d-casa);stroke-width:2" marker-end="url(#d61-c)"/>
+
+  <text x="20" y="250" class="t t-xs t-b t-m">CONSUMIDORES DESACOPLADOS · SOLO OBSERVAN</text>
+  <g class="ln ln-d" style="stroke-width:1.6">
+    <line x1="80" y1="202" x2="80" y2="266" marker-end="url(#d61-m)"/><line x1="230" y1="202" x2="230" y2="266" marker-end="url(#d61-m)"/>
+    <line x1="380" y1="202" x2="380" y2="266" marker-end="url(#d61-m)"/><line x1="530" y1="202" x2="530" y2="266" marker-end="url(#d61-m)"/>
+    <line x1="680" y1="202" x2="680" y2="266" marker-end="url(#d61-m)"/>
+  </g>
+  <rect x="20" y="270" width="130" height="110" rx="10" class="caja"/>
+  <text x="85" y="294" class="t t-b" text-anchor="middle">Interfaz</text>
+  <text x="85" y="316" class="t t-s t-m" text-anchor="middle">filtro: esta</text>
+  <text x="85" y="331" class="t t-s t-m" text-anchor="middle">ejecución</text>
+  <text x="85" y="356" class="t t-s" text-anchor="middle">«corriendo pruebas…»</text>
+  <rect x="170" y="270" width="130" height="110" rx="10" class="caja"/>
+  <text x="235" y="294" class="t t-b" text-anchor="middle">Auditoría</text>
+  <text x="235" y="316" class="t t-s t-m" text-anchor="middle">filtro: todo</text>
+  <text x="235" y="356" class="t t-s" text-anchor="middle">libro inalterable</text>
+  <rect x="320" y="270" width="130" height="110" rx="10" class="caja"/>
+  <text x="385" y="294" class="t t-b" text-anchor="middle">Costos</text>
+  <text x="385" y="316" class="t t-s t-m" text-anchor="middle">filtro: modelo</text>
+  <text x="385" y="331" class="t t-s t-m" text-anchor="middle">respondió</text>
+  <text x="385" y="356" class="t t-s" text-anchor="middle">tokens y dólares</text>
+  <rect x="470" y="270" width="130" height="110" rx="10" class="caja"/>
+  <text x="535" y="294" class="t t-b" text-anchor="middle">Alertas</text>
+  <text x="535" y="316" class="t t-s t-m" text-anchor="middle">filtro: fallos y</text>
+  <text x="535" y="331" class="t t-s t-m" text-anchor="middle">denegaciones</text>
+  <text x="535" y="356" class="t t-s" text-anchor="middle">aviso a operación</text>
+  <rect x="620" y="270" width="150" height="110" rx="10" class="caja"/>
+  <text x="695" y="294" class="t t-b" text-anchor="middle">Evaluaciones</text>
+  <text x="695" y="316" class="t t-s t-m" text-anchor="middle">filtro: ejecución</text>
+  <text x="695" y="331" class="t t-s t-m" text-anchor="middle">terminada</text>
+  <text x="695" y="356" class="t t-s" text-anchor="middle">trayectorias</text>
+</svg></div><figcaption><b>El gestor de sesiones y el bus de eventos dentro del arnés.</b> Arriba, las piezas que producen eventos: bucle, contexto, políticas, herramientas, humano. Todas publican en el bus, la franja central, y el gestor de sesiones guarda lo que hace falta para reconstruir. Abajo, los consumidores desacoplados, cada uno con su filtro: la interfaz, la auditoría, los costos, las alertas y las evaluaciones. Ninguno de ellos puede cambiar lo que pasó: solo lo observan.</figcaption></figure><div class="prose"><p>Un evento es un registro con forma fija. Un sobre mínimo lleva el tipo, el momento, la ejecución y la sesión a la que pertenece, un <b>identificador de traza</b> (<i>trace id</i>) para seguir un pedido a través de todas las piezas, y los datos propios del tipo. Muchos sistemas usan la especificación abierta <b>CloudEvents</b> (https://cloudevents.io) para ese sobre, y llevan los eventos a una plataforma de transmisión como Apache Kafka cuando hay muchos consumidores o hace falta guardar la secuencia.</p><div class="code-copia"><pre><code>interface EventoDelArnes {
+  tipo: "ejecucion.iniciada" | "modelo.respondio" | "politica.evaluada"
+      | "herramienta.completada" | "paso.comprometido" | "ejecucion.estacionada"
+      | "ejecucion.reanudada" | "ejecucion.terminada";
+  momento: string;
+  ejecucion: string;
+  sesion: string;
+  traza: string;
+  datos: Record&lt;string, unknown&gt;;
+}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Una regla separa a los eventos de los ganchos del capítulo 8: <b>los eventos observan; los ganchos intervienen</b>. Un suscriptor del bus no puede frenar una acción ni cambiar un argumento; si se cae, el agente sigue. Lo que necesita detener algo va en las políticas o en los validadores, que están en el camino de la acción.</p></div><div class="lab" id="06-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El bus de eventos: quién se entera de qué</h3></div><p class="hint">Dispara eventos de una ejecución con los botones y mira a qué suscriptores les llegan según su filtro. Cambia el filtro de un suscriptor y vuelve a disparar. Al final, apaga la auditoría y mira qué se perdería.</p><style>
+[id="06-lab-1"] .c6l1-subs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:8px}
+[id="06-lab-1"] .c6l1-sub{border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:5px;background:var(--card);transition:border-color .2s,background .2s}
+[id="06-lab-1"] .c6l1-sub.hit{border-color:var(--good);background:var(--good-soft)}
+[id="06-lab-1"] .c6l1-sub.off{opacity:.5;border-style:dashed}
+@media (prefers-reduced-motion: reduce){[id="06-lab-1"] .c6l1-sub{transition:none}}
+[id="06-lab-1"] .c6l1-sub b{font:700 .95rem var(--f-display)}
+[id="06-lab-1"] .c6l1-sub select{font-size:.8rem;padding:4px 6px}
+[id="06-lab-1"] .c6l1-sub .n{font:600 .8rem var(--f-mono);color:var(--muted)}
+[id="06-lab-1"] .c6l1-sub .u{font:500 .78rem var(--f-mono);color:var(--ink);min-height:1.2em;overflow-wrap:anywhere}
+[id="06-lab-1"] .c6l1-sub button{padding:3px 8px;font-size:.76rem;justify-self:start}
+[id="06-lab-1"] .c6l1-bus{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:var(--d-inet-s);border:1px solid var(--d-inet);font:700 .85rem var(--f-display);color:var(--d-inet);overflow:hidden}
+[id="06-lab-1"] .c6l1-bus span{font:500 .8rem var(--f-mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[id="06-lab-1"] .c6l1-ev{display:flex;flex-wrap:wrap;gap:6px}
+[id="06-lab-1"] .c6l1-ev button{font-size:.8rem}
+</style>
+<div class="opciones">
+  <label>Los eventos son de la ejecución
+    <select id="c6l1-run"><option value="E-7">E-7 (la de Ana, en pantalla)</option><option value="E-8">E-8 (otra persona)</option></select></label>
+</div>
+<div class="c6l1-ev" id="c6l1-ev" role="group" aria-label="Eventos para publicar"></div>
+<div class="c6l1-bus" aria-hidden="true">BUS <span id="c6l1-bus">esperando eventos…</span></div>
+<div class="c6l1-subs" id="c6l1-subs"></div>
+<div class="readout texto" id="c6l1-out" aria-live="polite"></div>
+<div class="btns"><button type="button" id="c6l1-reset">Vaciar contadores</button></div></div></section>
+<section><h2>Pasos durables: reanudar donde se quedó</h2><div class="prose"><p>Guardar la sesión al final de cada turno no alcanza. Imagina un turno que hace esto: el modelo propone <code>crear_reembolso</code>, el arnés lo ejecuta, el sistema de pagos lo procesa y, justo antes de guardar el resultado, el proceso se cae. Al reanudar, el arnés solo sabe lo que guardó, y lo último guardado es «el modelo va a proponer algo». Repite el turno, el modelo vuelve a proponer el reembolso y la cliente recibe dos.</p><p>La <b>ejecución durable</b> (<i>durable execution</i>) resuelve esto con una regla simple: <b>escribir antes del efecto</b> (<i>write-ahead</i>). Cada hecho del paso se guarda en un <b>diario</b> (<i>journal</i>) antes de dar el paso siguiente: la respuesta del modelo se guarda antes de gobernar la propuesta, y la llamada a herramienta se registra <b>antes</b> de ejecutarla. Así el diario distingue dos situaciones que sin él son idénticas:</p><ul><li>hay una respuesta con una propuesta, pero ninguna llamada registrada: <b>ningún efecto empezó</b>, y es seguro volver a gobernar la propuesta;</li><li>hay una llamada registrada sin resultado: <b>el efecto pudo haber empezado</b>, y repetirlo a ciegas es peligroso.</li></ul><p>Un paso cuya respuesta y cuyo resultado ya están guardados queda <b>comprometido</b> (<i>committed</i>) y nunca se vuelve a ejecutar: al reanudar, su resultado se lee del diario.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es la bitácora de una cirugía. La enfermera anota «se administra anestesia» antes de administrarla, y «anestesia administrada a las 10:42» después. Si hay un cambio de turno en medio, el equipo nuevo no adivina: si la primera anotación está y la segunda no, saben que tienen que comprobar al paciente antes de volver a administrar nada.</p></div><figure class="fig fig-flujo" id="06-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 520" style="min-width:680px" role="img" aria-label="Diagrama de secuencia de un paso durable: el bucle registra el inicio en el diario, llama al modelo, guarda la respuesta, registra la llamada a herramienta antes de ejecutarla, ejecuta, guarda el resultado y compromete el paso; cuatro puntos de caída marcados con rayos y, a la derecha, qué hace la recuperación en cada caso">
+  <defs>
+    <marker id="d62-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+    <marker id="d62-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-tra"/></marker>
+    <marker id="d62-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
+    <marker id="d62-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-enl"/></marker>
+    <symbol id="i6-rayo" viewBox="0 0 20 20"><path d="M11 1L3 11h6l-2 8 9-11h-6z" style="fill:var(--warm)"/></symbol>
+  </defs>
+  <rect x="10" y="14" width="110" height="46" rx="10" class="d-casa"/><text x="65" y="42" class="t t-b k-casa" text-anchor="middle">Diario</text>
+  <rect x="150" y="14" width="100" height="46" rx="10" class="c-red"/><text x="200" y="42" class="t t-b k-red" text-anchor="middle">Bucle</text>
+  <rect x="280" y="14" width="100" height="46" rx="10" class="c-tra"/><text x="330" y="42" class="t t-b k-tra" text-anchor="middle">Modelo</text>
+  <rect x="410" y="14" width="120" height="46" rx="10" class="c-enl"/><text x="470" y="42" class="t t-b k-enl" text-anchor="middle">Herramienta</text>
+  <text x="560" y="34" class="t t-xs t-b t-m">SI SE CAE AQUÍ,</text>
+  <text x="560" y="49" class="t t-xs t-b t-m">AL REANUDAR…</text>
+  <line x1="65" y1="60" x2="65" y2="505" class="vida"/>
+  <line x1="200" y1="60" x2="200" y2="505" class="vida"/>
+  <line x1="330" y1="60" x2="330" y2="505" class="vida"/>
+  <line x1="470" y1="60" x2="470" y2="505" class="vida"/>
+
+  <line x1="200" y1="95" x2="67" y2="95" class="ln" style="stroke:var(--d-casa);stroke-width:2" marker-end="url(#d62-c)"/>
+  <text x="72" y="88" class="t t-s">① paso 4: iniciado</text>
+  <line x1="200" y1="135" x2="328" y2="135" class="ln s-red" style="stroke-width:2" marker-end="url(#d62-r)"/>
+  <text x="206" y="128" class="t t-s">② llama al modelo</text>
+  <use href="#i6-rayo" x="258" y="150" width="20" height="20"/>
+  <text x="560" y="165" class="t t-s"><tspan class="t-b">A.</tspan> repite la llamada al modelo</text>
+  <text x="560" y="180" class="t t-s t-m">(o cierra con la salida parcial)</text>
+  <line x1="330" y1="200" x2="202" y2="200" class="ln s-tra" style="stroke-width:2" marker-end="url(#d62-t)"/>
+  <text x="206" y="193" class="t t-s">③ propone crear_reembolso</text>
+  <line x1="200" y1="235" x2="67" y2="235" class="ln" style="stroke:var(--d-casa);stroke-width:2" marker-end="url(#d62-c)"/>
+  <text x="72" y="228" class="t t-s">④ guarda la respuesta</text>
+  <use href="#i6-rayo" x="128" y="246" width="20" height="20"/>
+  <text x="560" y="261" class="t t-s"><tspan class="t-b">B.</tspan> vuelve a gobernar la propuesta:</text>
+  <text x="560" y="276" class="t t-s t-m">ningún efecto empezó</text>
+  <line x1="200" y1="300" x2="67" y2="300" class="ln" style="stroke:var(--d-casa);stroke-width:2" marker-end="url(#d62-c)"/>
+  <text x="72" y="293" class="t t-s t-b">⑤ registra la llamada</text>
+  <text x="72" y="316" class="t t-s t-m">antes del efecto</text>
+  <line x1="200" y1="340" x2="468" y2="340" class="ln s-enl" style="stroke-width:2" marker-end="url(#d62-e)"/>
+  <text x="206" y="333" class="t t-s">⑥ ejecuta: el reembolso sale</text>
+  <use href="#i6-rayo" x="388" y="352" width="20" height="20"/>
+  <text x="560" y="367" class="t t-s t-b" style="fill:var(--warm)">C. resultado desconocido:</text>
+  <text x="560" y="382" class="t t-s">«segura» repite · «nunca» verifica</text>
+  <line x1="470" y1="400" x2="202" y2="400" class="ln s-enl" style="stroke-width:2" marker-end="url(#d62-e)"/>
+  <text x="250" y="393" class="t t-s">⑦ resultado: R-5521</text>
+  <line x1="200" y1="440" x2="67" y2="440" class="ln" style="stroke:var(--d-casa);stroke-width:2" marker-end="url(#d62-c)"/>
+  <text x="72" y="433" class="t t-s t-b">⑧ paso 4: comprometido</text>
+  <use href="#i6-rayo" x="128" y="452" width="20" height="20"/>
+  <text x="560" y="467" class="t t-s"><tspan class="t-b">D.</tspan> lee el resultado del diario:</text>
+  <text x="560" y="482" class="t t-s t-m">no repite nada</text>
+  <line x1="548" y1="150" x2="548" y2="490" class="ln" style="stroke-width:2"/>
+</svg></div><figcaption><b>Un paso durable, con sus puntos de caída.</b> El tiempo corre hacia abajo. Fíjate en el orden: cada flecha hacia el diario ocurre antes de la flecha siguiente hacia afuera. Los rayos marcan dónde se puede caer el proceso, y la columna de la derecha dice qué hace la recuperación en cada caso: repetir la llamada al modelo, volver a gobernar la propuesta, resolver un efecto dudoso o leer el resultado ya comprometido.</figcaption></figure><div class="prose"><p>El caso difícil es el del medio: una llamada registrada sin resultado. El arnés no sabe si el reembolso se hizo. Aquí entra la <b>política de repetición</b> (<i>replay policy</i>) que cada herramienta declara en su contrato:</p><ul><li><b>segura</b> (<i>safe</i>): repetir no hace daño, como una lectura, o una escritura que el sistema externo deduplica con una <b>clave de idempotencia</b> (<i>idempotency key</i>), un identificador que hace que dos pedidos iguales produzcan un solo efecto;</li><li><b>nunca</b> (<i>never</i>): no se repite; el arnés le informa al modelo que el resultado es <b>desconocido</b> y que hay que verificarlo, por ejemplo consultando el estado del reembolso antes de decidir.</li></ul><p>Si una herramienta no declara política, vale «nunca». Es conservador, a veces se pregunta lo que se podría haber repetido, pero nunca duplica un efecto. La guardia de idempotencia completa está en el capítulo 10.</p></div><div class="lab" id="06-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Tumba el proceso en el paso 4 y mira cómo el arnés reanuda sin repetir lo hecho</h3></div><p class="hint">Elige en qué paso y en qué momento se cae el proceso, y si el arnés usa diario durable. Toca «Correr» y mira el diario, la recuperación de cada paso y cuántos reembolsos recibe la cliente. Prueba la caída justo después de registrar la llamada, con la política de repetición en «nunca» y en «segura».</p><style>
+[id="06-lab-2"] .c6l2-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:12px}
+[id="06-lab-2"] .c6l2-caja{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--card);display:grid;gap:6px;align-content:start}
+[id="06-lab-2"] .c6l2-caja h4{margin:0;font:700 .74rem var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+[id="06-lab-2"] .c6l2-lst{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-family:var(--f-body);font-size:.88rem;line-height:1.4}
+[id="06-lab-2"] .c6l2-lst li{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:start}
+[id="06-lab-2"] .c6l2-lst .nn{font:700 .78rem var(--f-mono);color:var(--muted);padding-top:2px}
+[id="06-lab-2"] .c6l2-tg{display:inline-block;font:700 .64rem var(--f-display);letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-right:6px;color:var(--card);vertical-align:1px}
+[id="06-lab-2"] .c6l2-cont{display:flex;flex-wrap:wrap;gap:8px 22px;font-family:var(--f-mono)}
+[id="06-lab-2"] .c6l2-cont div{display:grid}
+[id="06-lab-2"] .c6l2-cont em{font:600 .72rem var(--f-display);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+[id="06-lab-2"] .c6l2-cont b{font-size:1.4rem}
+</style>
+<div class="opciones">
+  <label>Se cae en el paso
+    <select id="c6l2-paso"><option value="0">no se cae</option><option value="1">1 · leer pedido</option><option value="2">2 · consultar cobros</option><option value="3">3 · calcular monto</option><option value="4" selected>4 · crear reembolso</option><option value="5">5 · enviar correo</option><option value="6">6 · cerrar ticket</option></select></label>
+  <label>En el momento
+    <select id="c6l2-mom"><option value="a">durante la llamada al modelo</option><option value="b">después de guardar la respuesta</option><option value="c" selected>después de registrar la llamada (el efecto ocurrió)</option><option value="d">después de comprometer el paso</option></select></label>
+  <label>Política de repetición de crear_reembolso
+    <select id="c6l2-pol"><option value="nunca">nunca (sin clave)</option><option value="segura">segura (clave de idempotencia)</option></select></label>
+</div>
+<div class="btns">
+  <button type="button" id="c6l2-dur" aria-pressed="true">Diario durable</button>
+  <button type="button" id="c6l2-run" class="primary">Correr ▶</button>
+</div>
+<div class="c6l2-cols">
+  <div class="c6l2-caja"><h4>Primera corrida</h4><ul class="c6l2-lst" id="c6l2-a"></ul></div>
+  <div class="c6l2-caja"><h4>Después de reiniciar</h4><ul class="c6l2-lst" id="c6l2-b"></ul></div>
+</div>
+<div class="c6l2-cont" id="c6l2-cont" aria-live="polite"></div>
+<div class="readout texto" id="c6l2-out" aria-live="polite"></div></div><div class="prose"><p>En el mercado, la ejecución durable es una categoría de herramientas con nombre propio. Motores de flujos como Temporal (https://docs.temporal.io/workflows), Restate o DBOS guardan cada paso y reanudan desde el último comprometido; LangGraph guarda un punto de control por paso con sus <b>checkpointers</b>; varios SDK de agentes ofrecen integraciones con estos motores para que el bucle del agente sea durable sin escribir el diario a mano. El arnés del curso escribe el suyo, para entender lo que esas herramientas hacen por dentro.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Un diario durable en 40 líneas</h3></div><p>Vas a correr un programa de Python que simula una tarea de 6 pasos con un diario en un archivo JSON. Lo interrumpes a la mitad, lo vuelves a correr y miras qué repite. Necesitas Python 3; no instala nada ni usa la red. Guarda el código como <code>durable.py</code> en una carpeta vacía.</p><div class="code-copia"><pre><code>import json, os, sys, time
+
+DIARIO = "diario.json"
+PASOS = ["leer pedido", "consultar cobros", "calcular monto",
+         "crear reembolso", "enviar correo", "cerrar ticket"]
+EFECTOS = {"crear reembolso", "enviar correo"}
+
+diario = json.load(open(DIARIO)) if os.path.exists(DIARIO) else {}
+
+def guardar():
+    with open(DIARIO, "w") as f:
+        json.dump(diario, f, indent=1)
+
+for i, paso in enumerate(PASOS, 1):
+    clave = str(i)
+    estado = diario.get(clave, {}).get("estado")
+    if estado == "comprometido":
+        print(f"{i}. {paso}: ya estaba hecho, se lee del diario")
+        continue
+    if estado == "iniciado" and paso in EFECTOS:
+        print(f"{i}. {paso}: resultado DESCONOCIDO, verificar antes de repetir")
+        sys.exit(1)
+    diario[clave] = {"paso": paso, "estado": "iniciado"}
+    guardar()  # escribir antes del efecto
+    print(f"{i}. {paso}: ejecutando...", flush=True)
+    time.sleep(2)
+    diario[clave]["estado"] = "comprometido"
+    guardar()
+print("Tarea terminada")</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python durable.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>type diario.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>del diario.json</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 durable.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>cat diario.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>rm diario.json</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Corre el programa y, cuando diga <code>4. crear reembolso: ejecutando...</code>, interrúmpelo con Ctrl+C.</span></li><li><span>Mira el diario: los pasos 1 a 3 están comprometidos y el 4, iniciado.</span></li><li><span>Corre el programa otra vez: los pasos 1 a 3 se leen del diario y el 4 se detiene como resultado desconocido.</span></li><li><span>Borra el diario y repite, pero interrumpe durante el paso 3, <code>calcular monto</code>, que no tiene efectos externos: al volver a correr, ese paso se repite sin problema.</span></li></ol><p><b>Qué observar:</b> el programa nunca repite un paso comprometido, y distingue un paso sin efectos, que repite tranquilo, de uno con efectos, que no repite a ciegas. Es la misma lógica del laboratorio, sin la parte de preguntarle al sistema externo qué pasó.</p></div></section>
+<section><h2>Esperas durables: horas o días hasta una aprobación</h2><div class="prose"><p>Un agente que pide aprobación para un pago de 4.800 dólares puede esperar diez minutos o dos días, según la agenda de quien aprueba. Si la espera vive en un proceso que se queda bloqueado, ese proceso ocupa memoria y una conexión todo ese tiempo, y una actualización del servidor la mata. La solución es la <b>espera estacionada</b> (<i>parked wait</i>): la ejecución se detiene de forma durable, el proceso termina y lo único que queda es un registro.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es el número de un turno en una oficina que te dice «vuelva el jueves». No te quedas parado en la ventanilla tres días. Te vas con un papel que dice qué trámite es y qué falta. El jueves, cualquier ventanilla abre tu expediente con ese número y sigue. Esperar tres días cuesta lo mismo que esperar tres minutos: un papel.</p></div><div class="prose"><p>El registro de una espera dice qué ejecución está detenida, de qué tipo es la espera (una aprobación, una pregunta, una autorización de acceso o un límite de presupuesto), quién la pidió, <b>quién puede responder</b> y hasta cuándo. La regla de quién responde es parte del contrato, no se infiere: puede ser la misma persona que pidió la tarea, cualquier persona verificada de la misma empresa o un aprobador designado, por ejemplo la responsable de pagos. Si la respuesta llega de alguien que no cumple la regla, se rechaza y queda un evento.</p></div><figure class="fig fig-esquema" id="06-diagrama-3"><div class="lienzo"><svg viewBox="0 0 820 390" style="min-width:640px" role="img" aria-label="Máquina de estados de una ejecución: creada, en curso; desde en curso, aprobación o pregunta llevan a esperando a una persona y autorización o presupuesto llevan a pausada; una respuesta válida vuelve a en curso; el plazo vencido lleva a vencida; los estados finales son completada, fallida, cancelada y vencida">
+  <defs>
+    <marker id="d63-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d63-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+  </defs>
+  <rect x="20" y="130" width="110" height="50" rx="25" class="caja"/><text x="75" y="160" class="t t-b" text-anchor="middle">Creada</text>
+  <line x1="130" y1="155" x2="236" y2="155" class="ln" style="stroke-width:2" marker-end="url(#d63-m)"/>
+  <text x="140" y="146" class="t t-s t-m">admitida</text>
+  <rect x="240" y="125" width="140" height="60" rx="30" class="c-red"/><text x="310" y="160" class="t t-b k-red" text-anchor="middle">En curso</text>
+
+  <rect x="520" y="20" width="230" height="60" rx="30" class="d-casa"/>
+  <text x="635" y="46" class="t t-b k-casa" text-anchor="middle">Esperando a una persona</text>
+  <text x="635" y="64" class="t t-s" text-anchor="middle">el proceso puede terminar</text>
+  <rect x="520" y="230" width="230" height="60" rx="30" class="c-fis"/>
+  <text x="635" y="256" class="t t-b k-fis" text-anchor="middle">Pausada</text>
+  <text x="635" y="274" class="t t-s" text-anchor="middle">el proceso puede terminar</text>
+
+  <path d="M370 132 C430 70 470 50 518 50" class="ln" style="stroke-width:2" marker-end="url(#d63-m)"/>
+  <text x="404" y="30" class="t t-s">aprobación</text><text x="404" y="44" class="t t-s">o pregunta</text>
+  <path d="M520 62 C470 80 430 110 382 142" class="ln s-red" style="stroke-width:2" marker-end="url(#d63-r)"/>
+  <text x="452" y="122" class="t t-s k-red">respuesta válida</text>
+  <path d="M370 178 C430 240 470 260 518 260" class="ln" style="stroke-width:2" marker-end="url(#d63-m)"/>
+  <text x="404" y="282" class="t t-s">autorización</text><text x="404" y="296" class="t t-s">o presupuesto</text>
+  <path d="M520 248 C470 230 430 200 382 170" class="ln s-red" style="stroke-width:2" marker-end="url(#d63-r)"/>
+  <text x="458" y="200" class="t t-s k-red">resuelta</text>
+
+  <path d="M750 50 H790 V350 H752" class="ln ln-d" style="stroke-width:1.6" marker-end="url(#d63-m)"/>
+  <path d="M750 260 H790" class="ln ln-d" style="stroke-width:1.6"/>
+  <text x="782" y="318" class="t t-s t-m" text-anchor="end">plazo vencido</text>
+
+  <text x="20" y="318" class="t t-xs t-b t-m">ESTADOS FINALES</text>
+  <rect x="20" y="330" width="150" height="40" rx="20" class="c-enl"/><text x="95" y="355" class="t t-b k-enl" text-anchor="middle">Completada</text>
+  <rect x="190" y="330" width="150" height="40" rx="20" class="d-sis"/><text x="265" y="355" class="t t-b k-sis" text-anchor="middle">Fallida</text>
+  <rect x="360" y="330" width="150" height="40" rx="20" class="caja"/><text x="435" y="355" class="t t-b" text-anchor="middle">Cancelada</text>
+  <rect x="600" y="330" width="150" height="40" rx="20" class="caja" style="stroke-dasharray:4 3"/><text x="675" y="355" class="t t-b t-m" text-anchor="middle">Vencida</text>
+  <path d="M290 185 L120 328" class="ln" style="stroke-width:1.6" marker-end="url(#d63-m)"/>
+  <path d="M300 185 L268 328" class="ln" style="stroke-width:1.6" marker-end="url(#d63-m)"/>
+  <path d="M320 185 L420 328" class="ln" style="stroke-width:1.6" marker-end="url(#d63-m)"/>
+</svg></div><figcaption><b>El ciclo de vida de una ejecución.</b> Los recuadros son estados y las flechas, las transiciones con lo que las provoca. Desde «En curso», una aprobación o una pregunta llevan a «Esperando a una persona»; una autorización de acceso o un presupuesto agotado llevan a «Pausada». En los dos casos el proceso puede terminar: el estado vive en el registro. Una respuesta válida vuelve a «En curso»; si vence el plazo, la ejecución termina como «Vencida». Los estados de abajo son finales.</figcaption></figure><div class="prose"><p>Cuando llega una respuesta válida, el arnés <b>reanuda</b>: reconstruye la sesión desde el último punto de control, agrega la respuesta como resultado del paso que esperaba y sigue el bucle. El modelo no nota que pasaron dos días, salvo que el arnés se lo diga, y conviene decírselo: los precios, el saldo o el estado del cliente pudieron cambiar mientras tanto.</p></div><div class="lab" id="06-lab-3"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Una espera de aprobación de dos días, comprimida en un minuto</h3></div><p class="hint">Elige quién responde, a qué hora y la regla de quién puede responder, y toca «Reproducir». El reloj corre 48 horas en unos segundos. Mira el estado de la ejecución, el registro de la espera y lo que cuesta esperar con un proceso vivo frente a un registro estacionado.</p><style>
+[id="06-lab-3"] .c6l3-scroll{overflow-x:auto}
+[id="06-lab-3"] .c6l3-svg{min-width:540px;width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:8px}
+[id="06-lab-3"] .c6l3-svg text{font-family:var(--f-display)}
+[id="06-lab-3"] .c6l3-est{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font:600 .85rem var(--f-display)}
+[id="06-lab-3"] .c6l3-est span{padding:4px 10px;border-radius:14px;border:1.5px solid var(--line);color:var(--muted)}
+[id="06-lab-3"] .c6l3-est span.on{color:var(--card);border-color:transparent}
+[id="06-lab-3"] .c6l3-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+[id="06-lab-3"] .c6l3-caja{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--card);display:grid;gap:6px;align-content:start}
+[id="06-lab-3"] .c6l3-caja h4{margin:0;font:700 .74rem var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+[id="06-lab-3"] pre.c6l3-reg{margin:0;font:500 .76rem/1.45 var(--f-mono);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+[id="06-lab-3"] .c6l3-log{margin:0;padding-left:1.1em;font:500 .78rem/1.5 var(--f-mono);color:var(--muted)}
+[id="06-lab-3"] .c6l3-log li.w{color:var(--warm)}
+</style>
+<div class="opciones">
+  <label>Quién puede responder
+    <select id="c6l3-regla"><option value="desig">solo la aprobadora designada (Marta, pagos)</option><option value="mismo">solo quien pidió la tarea (Ana)</option><option value="tenant">cualquier persona verificada de la empresa</option></select></label>
+  <label>Quién responde
+    <select id="c6l3-quien"><option value="marta">Marta, aprobadora de pagos</option><option value="ana">Ana, quien pidió la tarea</option><option value="luis">Luis, de atención al cliente</option><option value="ext">alguien de fuera a quien le reenviaron el correo</option></select></label>
+  <label>Responde
+    <select id="c6l3-dec"><option value="si">aprueba</option><option value="no">rechaza</option></select></label>
+</div>
+<div class="ctls">
+  <label class="ctl">Hora de la respuesta <output id="c6l3-hv"></output><input type="range" id="c6l3-h" min="1" max="60" step="1" value="31"></label>
+</div>
+<div class="btns">
+  <button type="button" id="c6l3-reini" aria-pressed="true">Reiniciar el servidor a las 20 h</button>
+  <button type="button" id="c6l3-play" class="primary">▶ Reproducir</button>
+</div>
+<div class="c6l3-scroll"><svg class="c6l3-svg" id="c6l3-svg" viewBox="0 0 640 150" role="img" aria-label="Línea de tiempo de 60 horas con el plazo a las 48 horas, el recordatorio, el reinicio y la respuesta"></svg></div>
+<div class="c6l3-est" id="c6l3-est"></div>
+<div class="c6l3-cols">
+  <div class="c6l3-caja"><h4>Registro de la espera</h4><pre class="c6l3-reg" id="c6l3-reg"></pre></div>
+  <div class="c6l3-caja"><h4>Eventos</h4><ol class="c6l3-log" id="c6l3-log"></ol></div>
+</div>
+<div class="readout texto" id="c6l3-out" aria-live="polite"></div></div></section>
+<section><h2>Canales de continuación: retomar la tarea desde otro canal</h2><div class="prose"><p>Las tareas no siempre empiezan y terminan en el mismo lugar. Un agente de soporte recibe un pedido por chat, pide una aprobación por correo, y la persona responde desde la aplicación de mensajería del equipo. O un agente que revisa código continúa una conversación cada vez que alguien comenta en la misma solicitud de cambios. El arnés necesita saber que un mensaje nuevo <b>continúa</b> una sesión existente y no empieza otra.</p><p>La herramienta es la <b>dirección de continuación</b> (<i>continuation address</i>): el par «canal + conversación» que identifica una conversación externa, como «chat del equipo, hilo 1718» o «repositorio, solicitud 42». Hace falta el canal porque el número 42 puede existir en dos lugares sin ser la misma conversación. Cuando llega un estímulo:</p><ul><li>si su dirección tiene una sesión dueña, <b>continúa</b> esa sesión;</li><li>si nadie la tiene, <b>activa</b> una sesión nueva y la reclama;</li><li>si el canal no declara dirección, cada estímulo activa una sesión propia.</li></ul><p>Cada dirección tiene <b>a lo sumo una sesión dueña a la vez</b>. Sin esa regla, dos mensajes rápidos en el mismo hilo podrían abrir dos sesiones que trabajan en paralelo sobre lo mismo. Y continuar no salta la identidad: que un mensaje llegue al hilo correcto no le da derecho a continuar la sesión de otra persona; eso lo decide la regla de propiedad de sesión del capítulo 7.</p></div><figure class="fig fig-flujo" id="06-diagrama-4"><div class="lienzo"><svg viewBox="0 0 820 330" style="min-width:660px" role="img" aria-label="Continuar o activar: tres estímulos llegan por chat del equipo, repositorio y una tarea programada; el adaptador de entrada verifica la identidad y extrae la dirección; la tabla de direcciones indica la sesión dueña; el primero continúa la sesión S-17, el segundo activa una sesión nueva y reclama su dirección, el tercero sin dirección activa una sesión propia">
+  <defs>
+    <marker id="d64-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
+    <marker id="d64-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-red"/></marker>
+  </defs>
+  <text x="20" y="24" class="t t-xs t-b t-m">ESTÍMULOS</text>
+  <rect x="20" y="36" width="170" height="58" rx="10" class="caja"/>
+  <text x="32" y="58" class="t t-s t-b">① chat del equipo</text><text x="32" y="78" class="t t-s t-mono">hilo 1718</text>
+  <rect x="20" y="132" width="170" height="58" rx="10" class="caja"/>
+  <text x="32" y="154" class="t t-s t-b">② repositorio</text><text x="32" y="174" class="t t-s t-mono">solicitud 42</text>
+  <rect x="20" y="228" width="170" height="58" rx="10" class="caja"/>
+  <text x="32" y="250" class="t t-s t-b">③ tarea programada</text><text x="32" y="270" class="t t-s t-m">sin dirección</text>
+
+  <rect x="220" y="36" width="130" height="250" rx="12" class="d-sis"/>
+  <text x="285" y="140" class="t t-b k-sis" text-anchor="middle">Adaptador</text>
+  <text x="285" y="157" class="t t-b k-sis" text-anchor="middle">de entrada</text>
+  <text x="285" y="180" class="t t-s" text-anchor="middle">verifica identidad</text>
+  <text x="285" y="195" class="t t-s" text-anchor="middle">y extrae dirección</text>
+  <g class="ln" style="stroke-width:1.6"><line x1="190" y1="65" x2="218" y2="65" marker-end="url(#d64-m)"/><line x1="190" y1="161" x2="218" y2="161" marker-end="url(#d64-m)"/><line x1="190" y1="257" x2="218" y2="257" marker-end="url(#d64-m)"/></g>
+
+  <rect x="380" y="36" width="230" height="160" rx="12" class="caja" style="stroke-width:1.6"/>
+  <text x="394" y="58" class="t t-xs t-b t-m">TABLA DE DIRECCIONES</text>
+  <text x="394" y="82" class="t t-s t-b">canal + conversación</text><text x="596" y="82" class="t t-s t-b" text-anchor="end">dueña</text>
+  <line x1="394" y1="90" x2="596" y2="90" class="ln"/>
+  <text x="394" y="110" class="t t-s t-mono">chat · 1718</text><text x="596" y="110" class="t t-s t-mono k-red" text-anchor="end">S-17</text>
+  <text x="394" y="132" class="t t-s t-mono">chat · 1690</text><text x="596" y="132" class="t t-s t-mono" text-anchor="end">S-09</text>
+  <text x="394" y="154" class="t t-s t-mono k-enl">repo · 42</text><text x="596" y="154" class="t t-s t-mono k-enl" text-anchor="end">S-31 nueva</text>
+  <text x="394" y="180" class="t t-s t-m">una sola dueña por dirección</text>
+  <line x1="350" y1="100" x2="378" y2="100" class="ln" style="stroke-width:1.6" marker-end="url(#d64-m)"/>
+
+  <rect x="650" y="36" width="150" height="58" rx="10" class="c-red"/>
+  <text x="664" y="58" class="t t-s t-b k-red">continúa S-17</text><text x="664" y="78" class="t t-s">misma historia</text>
+  <rect x="650" y="132" width="150" height="58" rx="10" class="c-enl"/>
+  <text x="664" y="154" class="t t-s t-b k-enl">activa S-31</text><text x="664" y="174" class="t t-s">y reclama repo · 42</text>
+  <rect x="650" y="228" width="150" height="58" rx="10" class="c-tra"/>
+  <text x="664" y="250" class="t t-s t-b k-tra">activa S-32</text><text x="664" y="270" class="t t-s">sin dirección</text>
+  <line x1="610" y1="65" x2="648" y2="65" class="ln s-red" style="stroke-width:2" marker-end="url(#d64-r)"/>
+  <line x1="610" y1="161" x2="648" y2="161" class="ln" style="stroke-width:2" marker-end="url(#d64-m)"/>
+  <line x1="350" y1="257" x2="648" y2="257" class="ln ln-d" style="stroke-width:1.6" marker-end="url(#d64-m)"/>
+  <text x="400" y="250" class="t t-s t-m">no consulta la tabla: cada estímulo, una sesión</text>
+</svg></div><figcaption><b>Continuar o activar.</b> A la izquierda, tres estímulos que llegan por canales distintos. El adaptador de entrada verifica la identidad y extrae la dirección; la tabla de direcciones, al centro, dice qué sesión es dueña de cada una. El primer estímulo continúa la sesión S-17, el segundo activa una sesión nueva y reclama su dirección, y el tercero, sin dirección, activa una sesión propia.</figcaption></figure></section>
+<section><h2>Repetir una ejecución (<i>replay</i>) y su política</h2><div class="prose"><p>Con el diario y los eventos guardados aparece una capacidad muy útil: <b>repetir</b> (<i>replay</i>) una ejecución. Pero la palabra se usa para tres cosas distintas, y conviene no mezclarlas:</p><ol class="steps"><li><span><b>Reanudar</b> después de una caída. Los pasos comprometidos se leen del diario, no se vuelven a ejecutar. Es lo que hace la recuperación de este capítulo.</span></li><li><span><b>Reproducir para depurar.</b> Se vuelve a recorrer una ejecución pasada con las respuestas del modelo y los resultados de herramientas <b>grabados</b>, sin llamar a nada real, para ver paso a paso qué vio el modelo y qué decidió el arnés. Es la base de la auditoría del capítulo 11.</span></li><li><span><b>Volver a correr con cambios.</b> Se toma el mismo pedido y se corre de nuevo con otro modelo, otra regla u otra herramienta, para comparar. Es la base de la evaluación del capítulo 15.</span></li></ol><p>Las tres comparten una regla: <b>ningún efecto real se repite sin permiso explícito</b>. En la reproducción para depurar, las herramientas con efectos se reemplazan por sus resultados grabados; en la reejecución con cambios, corren en un entorno de prueba o contra dobles. La política de repetición de cada herramienta, «segura» o «nunca», es la que el arnés consulta antes de tocar algo real.</p></div><div class="caso"><b>Un caso real</b><p>Un equipo que operaba un agente de facturación tenía un procedimiento para los fallos: «reiniciar la tarea». Funcionó hasta que un fallo de red cortó la conexión con el sistema de cobros justo después de emitir una nota de crédito, y el reinicio la emitió de nuevo. La corrección no fue un prompt más cuidadoso. Pasaron a registrar cada llamada antes de ejecutarla, declararon «nunca» como política de repetición de las herramientas de cobro y agregaron una consulta de estado para resolver los casos dudosos. Las reanudaciones dejaron de duplicar efectos, y la reproducción con resultados grabados les permitió investigar los fallos sin tocar el sistema de cobros.</p></div><div class="prose"><p>El estado guardado, los eventos publicados y los pasos que no se repiten convierten a un agente frágil en uno que se puede operar: se cae, se reinicia, espera días y sigue donde estaba.</p><p><b>Ejecución durable: cada paso queda registrado y se puede reanudar.</b></p></div><div class="quiz"><h3>Pruébate</h3><details><summary>¿Qué diferencia hay entre una ejecución y una sesión?</summary><p>Una ejecución es una corrida del bucle para un pedido, con su estado operativo; una sesión es la historia continua de un agente con una persona o un canal, que puede abarcar muchas ejecuciones y días.</p></details><details><summary>¿Por qué la llamada a herramienta se registra antes de ejecutarla y no después?</summary><p>Porque así, al reanudar, el arnés distingue «ningún efecto empezó» (no hay llamada registrada) de «el efecto pudo haber empezado» (hay llamada sin resultado). Si se registrara después, una caída en medio haría que el arnés repitiera un efecto que ya ocurrió.</p></details><details><summary>¿Qué hace el arnés al reanudar con un paso comprometido?</summary><p>No lo vuelve a ejecutar: lee su respuesta y su resultado del diario.</p></details><details><summary>Un suscriptor del bus de eventos detecta una acción sospechosa. ¿Puede detenerla?</summary><p>No. Los eventos observan y los ganchos intervienen: lo que debe detener una acción va en políticas o validadores, en el camino de la acción.</p></details><details><summary>¿Por qué una espera de dos días no debe vivir en un proceso bloqueado?</summary><p>Porque ocupa memoria y conexiones todo ese tiempo y se pierde con cualquier reinicio. Una espera estacionada es un registro: el proceso termina y cualquier proceso la reanuda cuando llega la respuesta.</p></details><details><summary>¿Para qué sirve la dirección de continuación y por qué incluye el canal?</summary><p>Para saber que un mensaje continúa una sesión existente. Incluye el canal porque el mismo número de conversación puede existir en dos canales sin ser la misma conversación.</p></details></div><div class="investiga"><h3>Para investigar</h3><p class="hint">Estas preguntas no se responden en el capítulo: búscalas por tu cuenta.</p><ol><li>¿Qué es un registro de escritura anticipada (<i>write-ahead log</i>) en las bases de datos y cómo lo usa PostgreSQL para recuperarse de una caída?<small>Pista: busca «PostgreSQL WAL».</small></li><li>¿Qué garantías de entrega ofrecen los sistemas de mensajería («como máximo una vez», «al menos una vez», «exactamente una vez») y por qué la última es tan difícil?</li><li>¿Qué es el patrón <i>outbox</i> transaccional y qué problema resuelve al publicar eventos desde una base de datos?<small>Pista: busca «transactional outbox pattern».</small></li><li>¿Cómo garantiza un motor como Temporal que el código de un flujo sea determinista al reproducirlo?<small>Pista: busca «Temporal workflow determinism».</small></li><li>¿Qué es el <i>event sourcing</i> y en qué se diferencia de guardar solo el estado actual?</li></ol></div><div class="vids"><span>Para saber más</span><a class="vid" href="https://docs.temporal.io/workflows" target="_blank" rel="noopener">Temporal: qué es un workflow <small>documentación, en inglés</small></a><a class="vid" href="https://docs.langchain.com/oss/python/langgraph/persistence" target="_blank" rel="noopener">LangGraph: persistencia <small>documentación, en inglés</small></a><a class="vid" href="https://cloudevents.io" target="_blank" rel="noopener">CloudEvents <small>especificación, en inglés</small></a><a class="vid" href="https://openai.github.io/openai-agents-python/sessions/" target="_blank" rel="noopener">OpenAI Agents SDK: sesiones <small>documentación, en inglés</small></a></div></section>
+<label class="got"><input type="checkbox" id="got"> Lo tengo claro</label>
+<nav class="pager" id="pager" aria-label="Capítulo anterior y siguiente"></nav>
+</main>
+</div>
+<footer><span>Curso abierto de aaramirez.github.io.</span><span>Sitio publicado: <a href="https://github.com/aaramirez/arneses" target="_blank" rel="noopener">github.com/aaramirez/arneses</a></span></footer>
+</div>
+<script src="assets/lab.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const EV=[
+    {t:'ejecucion.iniciada',d:'pedido: reembolso del cobro duplicado'},
+    {t:'modelo.respondio',d:'1.840 tokens · 0,012 USD'},
+    {t:'politica.evaluada',d:'consultar_cobros → permitir',deny:0},
+    {t:'politica.evaluada',d:'enviar_lista → denegar',deny:1},
+    {t:'herramienta.completada',d:'consultar_cobros · 3 cobros'},
+    {t:'herramienta.fallo',d:'crear_reembolso · tiempo agotado'},
+    {t:'ejecucion.terminada',d:'completada · 6 turnos'}
+  ];
+  const F={
+    todo:{n:'todos los eventos',m:()=>true},
+    run:{n:'solo la ejecución E-7',m:(e,r)=>r==='E-7'},
+    modelo:{n:'modelo.respondio',m:e=>e.t==='modelo.respondio'},
+    fallos:{n:'fallos y denegaciones',m:e=>e.t==='herramienta.fallo'||e.deny===1},
+    fin:{n:'ejecucion.terminada',m:e=>e.t==='ejecucion.terminada'},
+    politica:{n:'politica.evaluada',m:e=>e.t==='politica.evaluada'}
+  };
+  const S=[
+    {k:'ui',n:'Interfaz de Ana',f:'run'},
+    {k:'aud',n:'Auditoría',f:'todo'},
+    {k:'cos',n:'Costos',f:'modelo'},
+    {k:'ale',n:'Alertas',f:'fallos'},
+    {k:'eva',n:'Evaluaciones',f:'fin'}
+  ];
+  let perdAud=0,total=0;
+  const cont=$('#c6l1-subs');
+  S.forEach(s=>{s.on=true;s.c=0;
+    const d=document.createElement('div');d.className='c6l1-sub';
+    d.innerHTML=`<b>${s.n}</b><select aria-label="Filtro de ${s.n}">${Object.entries(F).map(([k,v])=>`<option value="${k}"${k===s.f?' selected':''}>filtro: ${v.n}</option>`).join('')}</select><span class="n">recibidos: 0</span><span class="u"></span><button type="button" aria-pressed="true">suscrito</button>`;
+    cont.appendChild(d);s.el=d;
+    d.querySelector('select').addEventListener('change',e=>{s.f=e.target.value;});
+    const b=d.querySelector('button');b.addEventListener('click',()=>{s.on=!s.on;b.setAttribute('aria-pressed',s.on?'true':'false');b.textContent=s.on?'suscrito':'desuscrito';d.classList.toggle('off',!s.on);});
+  });
+  const evc=$('#c6l1-ev');
+  EV.forEach(e=>{const b=document.createElement('button');b.type='button';b.textContent=e.t+(e.t==='politica.evaluada'?(e.deny?' (denegar)':' (permitir)'):'');
+    b.addEventListener('click',()=>publicar(e));evc.appendChild(b);});
+  function publicar(e){
+    const r=$('#c6l1-run').value;total++;
+    $('#c6l1-bus').textContent=`${e.t} · ${r} · ${e.d}`;
+    const quien=[];
+    S.forEach(s=>{s.el.classList.remove('hit');
+      if(s.on&&F[s.f].m(e,r)){s.c++;quien.push(s.n);s.el.querySelector('.u').textContent=`${e.t} (${r})`;
+        void s.el.offsetWidth;s.el.classList.add('hit');}
+      s.el.querySelector('.n').textContent='recibidos: '+s.c;});
+    const aud=S.find(s=>s.k==='aud');if(!(aud.on&&F[aud.f].m(e,r)))perdAud++;
+    let h=`<span><b>${e.t}</b> de ${r} llegó a <b>${quien.length}</b> suscriptor${quien.length===1?'':'es'}${quien.length?': '+quien.join(', '):''}.</span>`;
+    if(r==='E-8'&&S.find(s=>s.k==='ui').f==='run')h+='<span>La interfaz de Ana no lo recibe: su filtro es la ejecución E-7. Cada pantalla ve solo lo suyo.</span>';
+    if(perdAud)h+=`<span class="warn">Auditoría no registró ${perdAud} de ${total} eventos. Si mañana hay que reconstruir qué pasó, esos huecos no se pueden llenar.</span>`;
+    else h+=`<span class="ok">Auditoría tiene los ${total} eventos publicados.</span>`;
+    h+='<span>El bus solo reparte: ninguno de estos suscriptores puede frenar la acción que originó el evento.</span>';
+    $('#c6l1-out').innerHTML=h;
+  }
+  $('#c6l1-reset').addEventListener('click',()=>{perdAud=0;total=0;S.forEach(s=>{s.c=0;s.el.querySelector('.n').textContent='recibidos: 0';s.el.querySelector('.u').textContent='';s.el.classList.remove('hit');});
+    $('#c6l1-bus').textContent='esperando eventos…';$('#c6l1-out').textContent='Toca un evento para publicarlo en el bus.';});
+  $('#c6l1-out').textContent='Toca un evento para publicarlo en el bus.';
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const P=[
+    {n:'leer pedido',ef:0},{n:'consultar cobros',ef:0},{n:'calcular monto',ef:0},
+    {n:'crear reembolso',ef:'reembolso'},{n:'enviar correo de confirmación',ef:'correo'},{n:'cerrar ticket',ef:'ticket',segura:1}
+  ];
+  const TG={ok:['hecho','--good'],dia:['del diario','--c-red'],caida:['⚡ caída','--warm'],rep:['repetido','--warm'],ver:['verificado','--d-casa'],gob:['regobernado','--c-tra'],mod:['modelo otra vez','--c-fis'],dedup:['deduplicado','--d-casa'],no:['no llegó','--muted']};
+  const tg=k=>`<span class="c6l2-tg" style="background:var(${TG[k][1]})">${TG[k][0]}</span>`;
+  const dur=$('#c6l2-dur');
+  dur.addEventListener('click',()=>{dur.setAttribute('aria-pressed',dur.getAttribute('aria-pressed')==='true'?'false':'true');correr();});
+  ['#c6l2-paso','#c6l2-mom','#c6l2-pol'].forEach(id=>$(id).addEventListener('change',correr));
+  $('#c6l2-run').addEventListener('click',correr);
+  function correr(){
+    const k=+$('#c6l2-paso').value,m=$('#c6l2-mom').value,pol=$('#c6l2-pol').value,D=dur.getAttribute('aria-pressed')==='true';
+    const efectos={reembolso:0,correo:0,ticket:0};let llamadas=0;
+    const segura=p=>p.ef==='reembolso'?pol==='segura':!!p.segura||!p.ef;
+    const A=[],B=[];
+    // primera corrida
+    P.forEach((p,i)=>{const n=i+1;
+      if(k&&n>k){A.push([n,p.n,'no']);return;}
+      if(n===k){
+        if(m==='a'){llamadas++;A.push([n,p.n+': el modelo estaba respondiendo','caida']);return;}
+        llamadas++;
+        if(m==='b'){A.push([n,p.n+': respuesta guardada, nada ejecutado','caida']);return;}
+        if(m==='c'){if(p.ef)efectos[p.ef]++;A.push([n,p.n+(p.ef?': el efecto ocurrió, el resultado no se guardó':': se ejecutó, el resultado no se guardó'),'caida']);return;}
+        if(p.ef)efectos[p.ef]++;A.push([n,p.n+': comprometido justo antes de caer','caida']);return;
+      }
+      llamadas++;if(p.ef)efectos[p.ef]++;A.push([n,p.n,'ok']);
+    });
+    // reanudación
+    if(!k){B.push([0,'No hubo caída: no hace falta reanudar.','ok']);}
+    else P.forEach((p,i)=>{const n=i+1;
+      if(!D){ // sin diario: empieza de cero
+        llamadas++;
+        if(p.ef){
+          const ya=efectos[p.ef]>0;
+          if(ya&&p.ef==='reembolso'&&pol==='segura'){B.push([n,p.n+': la clave evita un segundo reembolso','dedup']);}
+          else if(ya&&p.segura){B.push([n,p.n+': cerrar un ticket ya cerrado no cambia nada','dedup']);}
+          else{efectos[p.ef]++;B.push([n,p.n+(ya?': ¡se ejecuta otra vez!':''),ya?'rep':'ok']);}
+        }else B.push([n,p.n+(n<=k?': se repite (costo)':''),n<=k?'rep':'ok']);
+        return;
+      }
+      if(n<k||(n===k&&m==='d')){B.push([n,p.n,'dia']);return;}
+      if(n===k){
+        if(m==='a'){llamadas++;if(p.ef)efectos[p.ef]++;B.push([n,p.n+': repite la llamada al modelo y sigue','mod']);return;}
+        if(m==='b'){if(p.ef)efectos[p.ef]++;B.push([n,p.n+': ningún efecto empezó; vuelve a pasar por políticas y se ejecuta','gob']);return;}
+        // m==='c': llamada registrada sin resultado
+        if(!p.ef){B.push([n,p.n+': sin efectos externos, se repite tranquilo','gob']);return;}
+        if(segura(p)){B.push([n,p.n+': política «segura», se repite con la misma clave; el sistema devuelve el mismo resultado','dedup']);return;}
+        llamadas++;B.push([n,p.n+': resultado desconocido; el modelo consulta el estado, lo encuentra hecho y no repite','ver']);return;
+      }
+      llamadas++;if(p.ef)efectos[p.ef]++;B.push([n,p.n,'ok']);
+    });
+    const li=([n,t,c])=>`<li><span class="nn">${n||''}</span><span>${tg(c)}${t}</span></li>`;
+    $('#c6l2-a').innerHTML=A.map(li).join('');$('#c6l2-b').innerHTML=B.map(li).join('');
+    const col=v=>v===1?'--good':v>1?'--warm':'--muted';
+    $('#c6l2-cont').innerHTML=`<div><em>reembolsos</em><b style="color:var(${col(efectos.reembolso)})">${efectos.reembolso}</b></div><div><em>correos</em><b style="color:var(${col(efectos.correo)})">${efectos.correo}</b></div><div><em>tickets cerrados</em><b style="color:var(${col(efectos.ticket)})">${efectos.ticket}</b></div><div><em>llamadas al modelo</em><b style="color:var(${llamadas>6?'--warm':'--good'})">${llamadas}</b></div>`;
+    let v;
+    const dup=Object.entries(efectos).filter(([,x])=>x>1).map(([e])=>e);
+    if(!k)v='Sin caída, cada efecto ocurre una vez y se pagan 6 llamadas al modelo.';
+    else if(dup.length)v=`<span class="warn">Efecto duplicado: ${dup.join(', ')}.</span> Sin diario, el arnés reinicia desde el paso 1 y repite todo lo que ya había ocurrido. Enciende «Diario durable».`;
+    else if(!D)v='Sin diario se repitió todo desde el paso 1 (mira las llamadas al modelo), pero esta vez ningún efecto se duplicó: la caída fue antes de cualquier efecto, o la clave de idempotencia lo deduplicó.';
+    else if(m==='c'&&P[k-1].ef)v=`El paso ${k} quedó con la llamada registrada y sin resultado: el caso difícil. ${segura(P[k-1])?'Con política «segura», se repite con la misma clave y el sistema externo no duplica.':'Con política «nunca», el arnés no repite a ciegas: le informa al modelo que el resultado es desconocido y este lo verifica.'} Los pasos anteriores se leen del diario.`;
+    else v='Los pasos comprometidos se leen del diario sin volver a ejecutarse ni pagar al modelo; la recuperación decide solo qué hacer con el paso que se cortó.';
+    $('#c6l2-out').innerHTML=`<span>${v}</span>`;
+  }
+  correr();
+})();
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const PLAZO=48,REC=24,REI=20,HMAX=60;
+  const QUIEN={marta:'marta@ejemplo.com',ana:'ana@ejemplo.com',luis:'luis@ejemplo.com',ext:'otro@proveedor.example'};
+  const EST=[['curso','En curso','--c-red'],['esp','Esperando a una persona','--d-casa'],['comp','Completada','--good'],['venc','Vencida','--muted'],['perd','Perdida','--warm']];
+  let reloj=0,timer=null;
+  const X=h=>30+h/HMAX*580;
+  const ns='http://www.w3.org/2000/svg';
+  function el(t,a,x){const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;return e;}
+  function valido(r,q){if(q==='ext')return false;if(r==='desig')return q==='marta';if(r==='mismo')return q==='ana';return true;}
+  function calc(t){
+    const r=$('#c6l3-regla').value,q=$('#c6l3-quien').value,dec=$('#c6l3-dec').value,H=+$('#c6l3-h').value,rei=$('#c6l3-reini').getAttribute('aria-pressed')==='true';
+    const ev=[['0 h','ejecucion.estacionada · espera W-301']];let st='esp',fin=null;
+    if(t>=REC&&!(H<REC&&valido(r,q)))ev.push([REC+' h','recordatorio enviado a '+(r==='mismo'?'Ana':r==='desig'?'Marta':'aprobadores')]);
+    if(rei&&t>=REI)ev.push([REI+' h','servidor reiniciado: la espera sigue en el registro']);
+    if(t>=H&&H<=PLAZO){
+      if(valido(r,q)){ev.push([H+' h',`respuesta de ${QUIEN[q]}: ${dec==='si'?'aprueba':'rechaza'}`]);ev.push([H+' h','ejecucion.reanudada']);
+        st='comp';fin=H;ev.push([H+' h',dec==='si'?'reembolso de 4.800 USD ejecutado':'el agente avisa a Ana del rechazo']);}
+      else ev.push([H+' h','entrega.rechazada: '+QUIEN[q]+' no cumple la regla',1]);
+    }
+    if(st!=='comp'&&t>=PLAZO){st='venc';fin=PLAZO;ev.push([PLAZO+' h','espera vencida: la ejecución termina y avisa a Ana',1]);}
+    ev.sort((a,b)=>parseInt(a[0])-parseInt(b[0]));
+    // proceso vivo
+    return {r,q,dec,H,rei,ev,st,fin};
+  }
+  function pintar(){
+    const H=+$('#c6l3-h').value;$('#c6l3-hv').textContent=H+' h'+(H>PLAZO?' (fuera de plazo)':'');
+    const s=calc(reloj);
+    const svg=$('#c6l3-svg');svg.innerHTML='';
+    svg.appendChild(el('line',{x1:X(0),y1:70,x2:X(HMAX),y2:70,style:'stroke:var(--line);stroke-width:8;stroke-linecap:round'}));
+    const hasta=s.fin!=null?Math.min(reloj,s.fin):reloj;
+    svg.appendChild(el('line',{x1:X(0),y1:70,x2:X(Math.max(0.01,hasta)),y2:70,style:'stroke:var(--d-casa);stroke-width:8;stroke-linecap:round'}));
+    [0,12,24,36,48,60].forEach(h=>{svg.appendChild(el('text',{x:X(h),y:100,'text-anchor':'middle',style:'font-size:11px;fill:var(--muted)'},h+' h'));});
+    const marca=(h,txt,c,y)=>{svg.appendChild(el('line',{x1:X(h),y1:56,x2:X(h),y2:84,style:`stroke:var(${c});stroke-width:2`}));
+      svg.appendChild(el('text',{x:X(h),y:y,'text-anchor':'middle',style:`font-size:11px;font-weight:700;fill:var(${c})`},txt));};
+    marca(PLAZO,'plazo','--warm',46);marca(REC,'recordatorio','--muted',46);
+    if(s.rei)marca(REI,'reinicio','--c-fis',122);
+    marca(Math.min(H,HMAX),'respuesta','--c-red',140);
+    svg.appendChild(el('circle',{cx:X(Math.min(reloj,HMAX)),cy:70,r:8,style:'fill:var(--card);stroke:var(--ink);stroke-width:2.5'}));
+    svg.appendChild(el('text',{x:X(0),y:22,style:'font-size:12px;font-weight:700;fill:var(--ink)'},`Reloj: ${Math.round(reloj)} h`));
+    // estados
+    const act=reloj===0?'esp':s.st;
+    $('#c6l3-est').innerHTML='Estado: '+EST.filter(e=>e[0]!=='perd').map(([k,n,c])=>`<span class="${k===act?'on':''}" style="${k===act?`background:var(${c})`:''}">${n}</span>`).join('');
+    const reg={espera:'W-301',ejecucion:'E-7',tipo:'aprobacion_de_herramienta',accion:'crear_reembolso(4800 USD)',pedida_por:'ana@ejemplo.com',
+      quien_responde:s.r==='desig'?'designado: marta@ejemplo.com':s.r==='mismo'?'misma persona':'misma empresa',
+      estado:act==='esp'?'estacionada':act==='comp'?'reanudada':'vencida',vence:'+48 h'};
+    $('#c6l3-reg').textContent=JSON.stringify(reg,null,1);
+    $('#c6l3-log').innerHTML=s.ev.map(e=>`<li class="${e[2]?'w':''}">${e[0]} · ${e[1]}</li>`).join('');
+    let v='';
+    if(reloj<Math.min(HMAX,Math.max(H,PLAZO))&&s.st==='esp')v='La ejecución está estacionada: no hay ningún proceso esperando, solo el registro de la izquierda.';
+    else if(s.st==='comp')v=`Respuesta válida a las ${s.fin} h: el arnés reconstruye la sesión, agrega la respuesta y sigue. ${s.dec==='si'?'El reembolso se ejecuta.':'El agente informa del rechazo.'}`;
+    else if(s.st==='venc')v=valido(s.r,s.q)?'Nadie respondió dentro del plazo: la espera vence y la ejecución termina, avisando a quien la pidió.':'La única respuesta vino de alguien que no cumple la regla: se rechazó, quedó un evento, y la espera venció a las 48 h.';
+    const cuesta=s.fin!=null?s.fin:Math.round(reloj);
+    v=`<span>${v}</span><span><b>Costo de esperar ${cuesta} h:</b> con un proceso vivo, ${cuesta} horas de memoria y una conexión ocupadas${s.rei&&reloj>=REI&&(s.fin==null||s.fin>REI)?', <span class="warn">y el reinicio de las 20 h la habría borrado: la respuesta no encontraría a nadie</span>':''}; con una espera estacionada, un registro de menos de 1 KB.</span>`;
+    $('#c6l3-out').innerHTML=v;
+  }
+  function topeR(){const H=+$('#c6l3-h').value;return valido($('#c6l3-regla').value,$('#c6l3-quien').value)&&H<=PLAZO?H:PLAZO;}
+  function parar(){clearInterval(timer);timer=null;$('#c6l3-play').textContent='▶ Reproducir';}
+  $('#c6l3-play').addEventListener('click',()=>{
+    if(timer){parar();return;}
+    reloj=0;$('#c6l3-play').textContent='❚❚ Pausa';
+    const tope=topeR();
+    const red=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(red){reloj=tope;pintar();parar();return;}
+    timer=setInterval(()=>{reloj=Math.min(tope,reloj+1);pintar();if(reloj>=tope)parar();},120);
+  });
+  $('#c6l3-reini').addEventListener('click',e=>{const b=e.currentTarget;b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');pintar();});
+  ['#c6l3-regla','#c6l3-quien','#c6l3-dec'].forEach(id=>$(id).addEventListener('change',()=>{parar();reloj=topeR();pintar();}));
+  $('#c6l3-h').addEventListener('input',()=>{parar();reloj=topeR();pintar();});
+  reloj=topeR();pintar();
+})();
+</script>
+</body>
+</html>

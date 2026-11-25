@@ -29,21 +29,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <nav class="toc" id="toc" aria-label="Ruta de aprendizaje"></nav>
 <main>
 <header class="page-head"><span class="num">CAPÍTULO 06 DE 16</span><h1>Sesiones, eventos y ejecución durable</h1><p class="lede">Un agente que trabaja durante horas, o que espera dos días a que alguien apruebe un pago, no puede vivir solo en la memoria de un proceso. Este capítulo le da al arnés un estado que sobrevive a las caídas, un bus de eventos para que todos se enteren de lo que pasa, y la forma de reanudar una tarea sin repetir lo que ya hizo.</p></header>
-<section><h2>El gestor de sesiones: qué se guarda de cada turno</h2><div class="prose"><p>Hasta aquí, el arnés del curso guarda todo en variables: la historia, el presupuesto gastado, el turno en que va. Funciona en una demostración. En producción, el proceso que corre al agente se reinicia por una actualización, el servidor se cae o la tarea tiene que esperar a una persona que contesta mañana. Si el estado vive solo en memoria, todo eso significa empezar de cero.</p><p>La pieza que resuelve esto es el <b>gestor de sesiones</b> (<i>session manager</i>). Responde una pregunta: ¿qué historia de ejecución se guarda y desde dónde se puede reconstruir? Para contestarla separa dos cosas que suelen mezclarse:</p><ul><li>La <b>ejecución</b> (<i>run</i>): una corrida del bucle para un pedido, con su estado operativo (en curso, esperando, terminada). Le pertenece al bucle.</li><li>La <b>sesión</b> (<i>session</i>): la historia continua de un agente con una persona o un canal, que puede abarcar muchas ejecuciones a lo largo de días. Le pertenece al gestor de sesiones.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en un expediente de un trámite en una oficina pública. Cada visita del ciudadano es una ejecución: llega, presenta un papel, se le pide otro, se va. El expediente es la sesión: guarda todo lo que pasó en cada visita, y cualquier funcionario, aunque no sea el de la primera vez, puede abrirlo y seguir exactamente desde donde quedó. Si el funcionario se enferma, el trámite no vuelve a empezar.</p></div><div class="prose"><p>De cada turno se guarda lo necesario para <b>reconstruir</b> la sesión sin ningún proceso vivo: los mensajes con sus bloques, las llamadas a herramientas con sus argumentos, los resultados, las decisiones de política, el uso del presupuesto y un <b>punto de control</b> (<i>checkpoint</i>), una foto inmutable del estado del agente en ese momento. Inmutable quiere decir que no se corrige: si algo cambia, se escribe un punto de control nuevo. El capítulo 5 ya usó estos puntos para bifurcar sesiones; aquí son la base para reanudarlas.</p><div class="code-copia"><pre><code>interface PuntoDeControl {
-  id: string;
-  ejecucion: string;        // a qué corrida pertenece
-  turno: number;
-  historia: Mensaje[];      // o una referencia a donde está guardada
-  presupuestoUsado: { turnos: number; tokens: number; costoUSD: number };
-  creado: string;           // fecha y hora
-}
-
-interface Sesion {
-  id: string;
-  ejecuciones: string[];    // en orden
-  ultimoPunto: PuntoDeControl;
-  puntoPadre?: string;      // si nació de una bifurcación
-}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Dónde se guarda es una decisión de infraestructura: una base de datos relacional como PostgreSQL o SQLite, un almacén de documentos, archivos. Los agentes de código suelen guardar cada sesión como un archivo de líneas JSON (<i>JSON Lines</i>, un objeto JSON por línea) en la carpeta del usuario, y por eso pueden retomar una conversación de ayer. Lo que no se negocia es la regla: <b>la sesión se puede reconstruir solo desde lo guardado</b>.</p></div></section>
+<section><h2>El gestor de sesiones: qué se guarda de cada turno</h2><div class="prose"><p>Hasta aquí, el arnés del curso guarda todo en variables: la historia, el presupuesto gastado, el turno en que va. Funciona en una demostración. En producción, el proceso que corre al agente se reinicia por una actualización, el servidor se cae o la tarea tiene que esperar a una persona que contesta mañana. Si el estado vive solo en memoria, todo eso significa empezar de cero.</p><p>La pieza que resuelve esto es el <b>gestor de sesiones</b> (<i>session manager</i>). Responde una pregunta: ¿qué historia de ejecución se guarda y desde dónde se puede reconstruir? Para contestarla separa dos cosas que suelen mezclarse:</p><ul><li>La <b>ejecución</b> (<i>run</i>): una corrida del bucle para un pedido, con su estado operativo (en curso, esperando, terminada). Le pertenece al bucle.</li><li>La <b>sesión</b> (<i>session</i>): la historia continua de un agente con una persona o un canal, que puede abarcar muchas ejecuciones a lo largo de días. Le pertenece al gestor de sesiones.</li></ul></div><div class="analogia"><b>Imagínalo así</b><p>Piensa en un expediente de un trámite en una oficina pública. Cada visita del ciudadano es una ejecución: llega, presenta un papel, se le pide otro, se va. El expediente es la sesión: guarda todo lo que pasó en cada visita, y cualquier funcionario, aunque no sea el de la primera vez, puede abrirlo y seguir exactamente desde donde quedó. Si el funcionario se enferma, el trámite no vuelve a empezar.</p></div><div class="prose"><p>De cada turno se guarda lo necesario para <b>reconstruir</b> la sesión sin ningún proceso vivo: los mensajes con sus bloques, las llamadas a herramientas con sus argumentos, los resultados, las decisiones de política, el uso del presupuesto y un <b>punto de control</b> (<i>checkpoint</i>), una foto inmutable del estado del agente en ese momento. Inmutable quiere decir que no se corrige: si algo cambia, se escribe un punto de control nuevo. El capítulo 5 ya usó estos puntos para bifurcar sesiones; aquí son la base para reanudarlas.</p><div class="code-copia code-lineas"><pre><code><span class="ln">interface PuntoDeControl {</span>
+<span class="ln">  id: string;</span>
+<span class="ln">  ejecucion: string;        // a qué corrida pertenece</span>
+<span class="ln">  turno: number;</span>
+<span class="ln">  historia: Mensaje[];      // o una referencia a donde está guardada</span>
+<span class="ln">  presupuestoUsado: { turnos: number; tokens: number; costoUSD: number };</span>
+<span class="ln">  creado: string;           // fecha y hora</span>
+<span class="ln">}</span>
+<span class="ln"></span>
+<span class="ln">interface Sesion {</span>
+<span class="ln">  id: string;</span>
+<span class="ln">  ejecuciones: string[];    // en orden</span>
+<span class="ln">  ultimoPunto: PuntoDeControl;</span>
+<span class="ln">  puntoPadre?: string;      // si nació de una bifurcación</span>
+<span class="ln">}</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Dónde se guarda es una decisión de infraestructura: una base de datos relacional como PostgreSQL o SQLite, un almacén de documentos, archivos. Los agentes de código suelen guardar cada sesión como un archivo de líneas JSON (<i>JSON Lines</i>, un objeto JSON por línea) en la carpeta del usuario, y por eso pueden retomar una conversación de ayer. Lo que no se negocia es la regla: <b>la sesión se puede reconstruir solo desde lo guardado</b>.</p></div></section>
 <section><h2>El bus de eventos: lo que pasa en el arnés, publicado para quien lo necesite</h2><div class="prose"><p>Cada pieza del arnés hace cosas que a otros les interesan. La interfaz quiere mostrar que el agente está corriendo una prueba. Auditoría quiere cada decisión de política. Finanzas quiere el costo de cada llamada al modelo. Operación quiere una alerta si una ejecución falla tres veces. Si cada pieza llamara directamente a cada interesado, el bucle terminaría sabiendo de pantallas, de contabilidad y de alertas.</p><p>La solución es un <b>bus de eventos</b> (<i>event bus</i>): cada pieza <b>publica</b> (<i>publish</i>) un evento cuando pasa algo, y quien quiera <b>se suscribe</b> (<i>subscribe</i>) a los que le interesan, con un filtro. El bus no decide nada; solo reparte. A ese patrón se le llama <b>publicación y suscripción</b> (<i>publish/subscribe</i>, o <i>pub/sub</i>).</p></div><figure class="fig fig-arquitectura" id="06-diagrama-1"><div class="lienzo"><svg viewBox="0 0 800 400" style="min-width:660px" role="img" aria-label="Arquitectura del bus de eventos: arriba, bucle, contexto, políticas, herramientas y humano publican eventos; en el centro, el bus de eventos y el gestor de sesiones, que guarda puntos de control; abajo, consumidores con filtro: interfaz, auditoría, costos, alertas y evaluaciones, que solo observan">
   <defs>
     <marker id="d61-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>
@@ -100,16 +100,16 @@ interface Sesion {
   <text x="695" y="316" class="t t-s t-m" text-anchor="middle">filtro: ejecución</text>
   <text x="695" y="331" class="t t-s t-m" text-anchor="middle">terminada</text>
   <text x="695" y="356" class="t t-s" text-anchor="middle">trayectorias</text>
-</svg></div><figcaption><b>El gestor de sesiones y el bus de eventos dentro del arnés.</b> Arriba, las piezas que producen eventos: bucle, contexto, políticas, herramientas, humano. Todas publican en el bus, la franja central, y el gestor de sesiones guarda lo que hace falta para reconstruir. Abajo, los consumidores desacoplados, cada uno con su filtro: la interfaz, la auditoría, los costos, las alertas y las evaluaciones. Ninguno de ellos puede cambiar lo que pasó: solo lo observan.</figcaption></figure><div class="prose"><p>Un evento es un registro con forma fija. Un sobre mínimo lleva el tipo, el momento, la ejecución y la sesión a la que pertenece, un <b>identificador de traza</b> (<i>trace id</i>) para seguir un pedido a través de todas las piezas, y los datos propios del tipo. Muchos sistemas usan la especificación abierta <b>CloudEvents</b> (https://cloudevents.io) para ese sobre, y llevan los eventos a una plataforma de transmisión como Apache Kafka cuando hay muchos consumidores o hace falta guardar la secuencia.</p><div class="code-copia"><pre><code>interface EventoDelArnes {
-  tipo: "ejecucion.iniciada" | "modelo.respondio" | "politica.evaluada"
-      | "herramienta.completada" | "paso.comprometido" | "ejecucion.estacionada"
-      | "ejecucion.reanudada" | "ejecucion.terminada";
-  momento: string;
-  ejecucion: string;
-  sesion: string;
-  traza: string;
-  datos: Record&lt;string, unknown&gt;;
-}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Una regla separa a los eventos de los ganchos del capítulo 8: <b>los eventos observan; los ganchos intervienen</b>. Un suscriptor del bus no puede frenar una acción ni cambiar un argumento; si se cae, el agente sigue. Lo que necesita detener algo va en las políticas o en los validadores, que están en el camino de la acción.</p></div><div class="lab" id="06-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El bus de eventos: quién se entera de qué</h3></div><p class="hint">Dispara eventos de una ejecución con los botones y mira a qué suscriptores les llegan según su filtro. Cambia el filtro de un suscriptor y vuelve a disparar. Al final, apaga la auditoría y mira qué se perdería.</p><style>
+</svg></div><figcaption><b>El gestor de sesiones y el bus de eventos dentro del arnés.</b> Arriba, las piezas que producen eventos: bucle, contexto, políticas, herramientas, humano. Todas publican en el bus, la franja central, y el gestor de sesiones guarda lo que hace falta para reconstruir. Abajo, los consumidores desacoplados, cada uno con su filtro: la interfaz, la auditoría, los costos, las alertas y las evaluaciones. Ninguno de ellos puede cambiar lo que pasó: solo lo observan.</figcaption></figure><div class="prose"><p>Un evento es un registro con forma fija. Un sobre mínimo lleva el tipo, el momento, la ejecución y la sesión a la que pertenece, un <b>identificador de traza</b> (<i>trace id</i>) para seguir un pedido a través de todas las piezas, y los datos propios del tipo. Muchos sistemas usan la especificación abierta <b>CloudEvents</b> (https://cloudevents.io) para ese sobre, y llevan los eventos a una plataforma de transmisión como Apache Kafka cuando hay muchos consumidores o hace falta guardar la secuencia.</p><div class="code-copia code-lineas"><pre><code><span class="ln">interface EventoDelArnes {</span>
+<span class="ln">  tipo: "ejecucion.iniciada" | "modelo.respondio" | "politica.evaluada"</span>
+<span class="ln">      | "herramienta.completada" | "paso.comprometido" | "ejecucion.estacionada"</span>
+<span class="ln">      | "ejecucion.reanudada" | "ejecucion.terminada";</span>
+<span class="ln">  momento: string;</span>
+<span class="ln">  ejecucion: string;</span>
+<span class="ln">  sesion: string;</span>
+<span class="ln">  traza: string;</span>
+<span class="ln">  datos: Record&lt;string, unknown&gt;;</span>
+<span class="ln">}</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Una regla separa a los eventos de los ganchos del capítulo 8: <b>los eventos observan; los ganchos intervienen</b>. Un suscriptor del bus no puede frenar una acción ni cambiar un argumento; si se cae, el agente sigue. Lo que necesita detener algo va en las políticas o en los validadores, que están en el camino de la acción.</p></div><div class="lab" id="06-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>El bus de eventos: quién se entera de qué</h3></div><p class="hint">Dispara eventos de una ejecución con los botones y mira a qué suscriptores les llegan según su filtro. Cambia el filtro de un suscriptor y vuelve a disparar. Al final, apaga la auditoría y mira qué se perdería.</p><style>
 [id="06-lab-1"] .c6l1-subs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:8px}
 [id="06-lab-1"] .c6l1-sub{border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:5px;background:var(--card);transition:border-color .2s,background .2s}
 [id="06-lab-1"] .c6l1-sub.hit{border-color:var(--good);background:var(--good-soft)}
@@ -213,35 +213,35 @@ interface Sesion {
   <div class="c6l2-caja"><h4>Después de reiniciar</h4><ul class="c6l2-lst" id="c6l2-b"></ul></div>
 </div>
 <div class="c6l2-cont" id="c6l2-cont" aria-live="polite"></div>
-<div class="readout texto" id="c6l2-out" aria-live="polite"></div></div><div class="prose"><p>En el mercado, la ejecución durable es una categoría de herramientas con nombre propio. Motores de flujos como Temporal (https://docs.temporal.io/workflows), Restate o DBOS guardan cada paso y reanudan desde el último comprometido; LangGraph guarda un punto de control por paso con sus <b>checkpointers</b>; varios SDK de agentes ofrecen integraciones con estos motores para que el bucle del agente sea durable sin escribir el diario a mano. El arnés del curso escribe el suyo, para entender lo que esas herramientas hacen por dentro.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Un diario durable en 40 líneas</h3></div><p>Vas a correr un programa de Python que simula una tarea de 6 pasos con un diario en un archivo JSON. Lo interrumpes a la mitad, lo vuelves a correr y miras qué repite. Necesitas Python 3; no instala nada ni usa la red. Guarda el código como <code>durable.py</code> en una carpeta vacía.</p><div class="code-copia"><pre><code>import json, os, sys, time
-
-DIARIO = "diario.json"
-PASOS = ["leer pedido", "consultar cobros", "calcular monto",
-         "crear reembolso", "enviar correo", "cerrar ticket"]
-EFECTOS = {"crear reembolso", "enviar correo"}
-
-diario = json.load(open(DIARIO)) if os.path.exists(DIARIO) else {}
-
-def guardar():
-    with open(DIARIO, "w") as f:
-        json.dump(diario, f, indent=1)
-
-for i, paso in enumerate(PASOS, 1):
-    clave = str(i)
-    estado = diario.get(clave, {}).get("estado")
-    if estado == "comprometido":
-        print(f"{i}. {paso}: ya estaba hecho, se lee del diario")
-        continue
-    if estado == "iniciado" and paso in EFECTOS:
-        print(f"{i}. {paso}: resultado DESCONOCIDO, verificar antes de repetir")
-        sys.exit(1)
-    diario[clave] = {"paso": paso, "estado": "iniciado"}
-    guardar()  # escribir antes del efecto
-    print(f"{i}. {paso}: ejecutando...", flush=True)
-    time.sleep(2)
-    diario[clave]["estado"] = "comprometido"
-    guardar()
-print("Tarea terminada")</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python durable.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>type diario.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>del diario.json</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 durable.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>cat diario.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>rm diario.json</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Corre el programa y, cuando diga <code>4. crear reembolso: ejecutando...</code>, interrúmpelo con Ctrl+C.</span></li><li><span>Mira el diario: los pasos 1 a 3 están comprometidos y el 4, iniciado.</span></li><li><span>Corre el programa otra vez: los pasos 1 a 3 se leen del diario y el 4 se detiene como resultado desconocido.</span></li><li><span>Borra el diario y repite, pero interrumpe durante el paso 3, <code>calcular monto</code>, que no tiene efectos externos: al volver a correr, ese paso se repite sin problema.</span></li></ol><p><b>Qué observar:</b> el programa nunca repite un paso comprometido, y distingue un paso sin efectos, que repite tranquilo, de uno con efectos, que no repite a ciegas. Es la misma lógica del laboratorio, sin la parte de preguntarle al sistema externo qué pasó.</p></div></section>
+<div class="readout texto" id="c6l2-out" aria-live="polite"></div></div><div class="prose"><p>En el mercado, la ejecución durable es una categoría de herramientas con nombre propio. Motores de flujos como Temporal (https://docs.temporal.io/workflows), Restate o DBOS guardan cada paso y reanudan desde el último comprometido; LangGraph guarda un punto de control por paso con sus <b>checkpointers</b>; varios SDK de agentes ofrecen integraciones con estos motores para que el bucle del agente sea durable sin escribir el diario a mano. El arnés del curso escribe el suyo, para entender lo que esas herramientas hacen por dentro.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Un diario durable en 40 líneas</h3></div><p>Vas a correr un programa de Python que simula una tarea de 6 pasos con un diario en un archivo JSON. Lo interrumpes a la mitad, lo vuelves a correr y miras qué repite. Necesitas Python 3; no instala nada ni usa la red. Guarda el código como <code>durable.py</code> en una carpeta vacía.</p><div class="code-copia code-lineas"><pre><code><span class="ln">import json, os, sys, time</span>
+<span class="ln"></span>
+<span class="ln">DIARIO = "diario.json"</span>
+<span class="ln">PASOS = ["leer pedido", "consultar cobros", "calcular monto",</span>
+<span class="ln">         "crear reembolso", "enviar correo", "cerrar ticket"]</span>
+<span class="ln">EFECTOS = {"crear reembolso", "enviar correo"}</span>
+<span class="ln"></span>
+<span class="ln">diario = json.load(open(DIARIO)) if os.path.exists(DIARIO) else {}</span>
+<span class="ln"></span>
+<span class="ln">def guardar():</span>
+<span class="ln">    with open(DIARIO, "w") as f:</span>
+<span class="ln">        json.dump(diario, f, indent=1)</span>
+<span class="ln"></span>
+<span class="ln">for i, paso in enumerate(PASOS, 1):</span>
+<span class="ln">    clave = str(i)</span>
+<span class="ln">    estado = diario.get(clave, {}).get("estado")</span>
+<span class="ln">    if estado == "comprometido":</span>
+<span class="ln">        print(f"{i}. {paso}: ya estaba hecho, se lee del diario")</span>
+<span class="ln">        continue</span>
+<span class="ln">    if estado == "iniciado" and paso in EFECTOS:</span>
+<span class="ln">        print(f"{i}. {paso}: resultado DESCONOCIDO, verificar antes de repetir")</span>
+<span class="ln">        sys.exit(1)</span>
+<span class="ln">    diario[clave] = {"paso": paso, "estado": "iniciado"}</span>
+<span class="ln">    guardar()  # escribir antes del efecto</span>
+<span class="ln">    print(f"{i}. {paso}: ejecutando...", flush=True)</span>
+<span class="ln">    time.sleep(2)</span>
+<span class="ln">    diario[clave]["estado"] = "comprometido"</span>
+<span class="ln">    guardar()</span>
+<span class="ln">print("Tarea terminada")</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python durable.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>type diario.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>del diario.json</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 durable.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>cat diario.json</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>rm diario.json</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Corre el programa y, cuando diga <code>4. crear reembolso: ejecutando...</code>, interrúmpelo con Ctrl+C.</span></li><li><span>Mira el diario: los pasos 1 a 3 están comprometidos y el 4, iniciado.</span></li><li><span>Corre el programa otra vez: los pasos 1 a 3 se leen del diario y el 4 se detiene como resultado desconocido.</span></li><li><span>Borra el diario y repite, pero interrumpe durante el paso 3, <code>calcular monto</code>, que no tiene efectos externos: al volver a correr, ese paso se repite sin problema.</span></li></ol><p><b>Qué observar:</b> el programa nunca repite un paso comprometido, y distingue un paso sin efectos, que repite tranquilo, de uno con efectos, que no repite a ciegas. Es la misma lógica del laboratorio, sin la parte de preguntarle al sistema externo qué pasó.</p></div></section>
 <section><h2>Esperas durables: horas o días hasta una aprobación</h2><div class="prose"><p>Un agente que pide aprobación para un pago de 4.800 dólares puede esperar diez minutos o dos días, según la agenda de quien aprueba. Si la espera vive en un proceso que se queda bloqueado, ese proceso ocupa memoria y una conexión todo ese tiempo, y una actualización del servidor la mata. La solución es la <b>espera estacionada</b> (<i>parked wait</i>): la ejecución se detiene de forma durable, el proceso termina y lo único que queda es un registro.</p></div><div class="analogia"><b>Imagínalo así</b><p>Es el número de un turno en una oficina que te dice «vuelva el jueves». No te quedas parado en la ventanilla tres días. Te vas con un papel que dice qué trámite es y qué falta. El jueves, cualquier ventanilla abre tu expediente con ese número y sigue. Esperar tres días cuesta lo mismo que esperar tres minutos: un papel.</p></div><div class="prose"><p>El registro de una espera dice qué ejecución está detenida, de qué tipo es la espera (una aprobación, una pregunta, una autorización de acceso o un límite de presupuesto), quién la pidió, <b>quién puede responder</b> y hasta cuándo. La regla de quién responde es parte del contrato, no se infiere: puede ser la misma persona que pidió la tarea, cualquier persona verificada de la misma empresa o un aprobador designado, por ejemplo la responsable de pagos. Si la respuesta llega de alguien que no cumple la regla, se rechaza y queda un evento.</p></div><figure class="fig fig-esquema" id="06-diagrama-3"><div class="lienzo"><svg viewBox="0 0 820 390" style="min-width:640px" role="img" aria-label="Máquina de estados de una ejecución: creada, en curso; desde en curso, aprobación o pregunta llevan a esperando a una persona y autorización o presupuesto llevan a pausada; una respuesta válida vuelve a en curso; el plazo vencido lleva a vencida; los estados finales son completada, fallida, cancelada y vencida">
   <defs>
     <marker id="d63-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>

@@ -189,23 +189,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <rect x="560" y="12" width="26" height="14" rx="3" class="d-sis" style="stroke-width:3"/><text x="592" y="24">puede bloquear</text>
     <rect x="700" y="12" width="26" height="14" rx="3" class="caja" style="stroke-dasharray:5 4"/><text x="732" y="24">observa o agrega</text>
   </g>
-</svg></div><figcaption><b>Los puntos de gancho en el ciclo de vida de una ejecución.</b> El tiempo corre de izquierda a derecha por el bucle: inicio de sesión, pedido del usuario, antes de cada herramienta, después de cada herramienta, antes de compactar y al terminar. Cada punto dice qué datos recibe el gancho y qué puede responder. Los ganchos que pueden bloquear van con borde grueso; los que solo observan, punteados.</figcaption></figure><div class="prose"><p>Los momentos más comunes en los arneses del mercado son:</p><ul><li><b>Al iniciar la sesión</b> (<i>session start</i>): cargar contexto extra o comprobar que el entorno está listo.</li><li><b>Al recibir el pedido</b> (<i>user prompt submit</i>): rechazar pedidos fuera de alcance o agregar información antes de que los vea el modelo.</li><li><b>Antes de la herramienta</b> (<i>pre-tool use</i>): el lugar natural de los validadores previos. Puede bloquear la llamada y explicar por qué.</li><li><b>Después de la herramienta</b> (<i>post-tool use</i>): validadores posteriores, formateo automático, registro.</li><li><b>Antes de compactar</b> (<i>pre-compact</i>): guardar algo que no debe perderse en el resumen (capítulo 5).</li><li><b>Al terminar</b> (<i>stop</i>): validar la respuesta final o impedir que el agente se detenga si faltan pasos, por ejemplo si las pruebas no pasan.</li></ul><p>Claude Code, por ejemplo, implementa sus ganchos como programas que reciben la llamada en JSON por la entrada estándar; si el programa termina con el código de salida 2, la herramienta se bloquea y el texto de error vuelve al modelo como explicación. El OpenAI Agents SDK los llama <b>barreras</b> (<i>guardrails</i>): de entrada, de salida y de herramienta, y cuando una se activa dispara un <b>cable trampa</b> (<i>tripwire</i>) que detiene la ejecución. La palabra cambia, la pieza es la misma.</p><p>En el arnés del curso, un validador es un gancho con contrato:</p><div class="code-copia"><pre><code>type Momento = "inicio" | "pedido" | "antes_herramienta" | "despues_herramienta"
-             | "antes_compactar" | "fin";
-
-type Veredicto =
-  | { tipo: "seguir" }
-  | { tipo: "bloquear"; motivo: string }                 // vuelve al modelo como error
-  | { tipo: "corregir"; argumentos: unknown; nota: string } // cambio determinista y registrado
-  | { tipo: "escalar"; motivo: string };                 // pasa a una persona (capítulo 9)
-
-interface Gancho {
-  nombre: string;
-  momento: Momento;
-  aplicaA?: string[];                 // herramientas a las que se engancha; vacío: todas
-  clase: "determinista" | "modelo";
-  plazoMs: number;                    // un gancho lento no detiene el bucle para siempre
-  revisar(e: { llamada?: Bloque; resultado?: Bloque; mensajes: Mensaje[] }): Promise&lt;Veredicto&gt;;
-}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en el <code>plazoMs</code>. Un gancho es código que corre en el camino crítico de cada acción: si se cuelga, se cuelga el agente. El arnés le pone un límite de tiempo y decide qué pasa si se vence. Para un gancho que protege algo, la respuesta segura es <b>cerrar ante la falla</b> (<i>fail closed</i>): si el validador no contestó, la acción no pasa.</p><p>Ahora escribe uno. El gancho más clásico de un agente de código es el que impide borrar fuera de la carpeta del proyecto, y es más difícil de lo que parece.</p></div><div class="lab" id="08-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Escribe un gancho que impide borrar fuera de la carpeta de trabajo</h3></div><p class="hint">Elige cómo compara tu gancho la ruta pedida con la carpeta de trabajo, encendiendo o apagando cada técnica. Diez pedidos de borrado pasan por el gancho: mira cuáles bloquea, cuáles deja pasar y cuáles se le escapan. La meta es 10 de 10 sin bloquear lo que sí se puede borrar.</p><style>
+</svg></div><figcaption><b>Los puntos de gancho en el ciclo de vida de una ejecución.</b> El tiempo corre de izquierda a derecha por el bucle: inicio de sesión, pedido del usuario, antes de cada herramienta, después de cada herramienta, antes de compactar y al terminar. Cada punto dice qué datos recibe el gancho y qué puede responder. Los ganchos que pueden bloquear van con borde grueso; los que solo observan, punteados.</figcaption></figure><div class="prose"><p>Los momentos más comunes en los arneses del mercado son:</p><ul><li><b>Al iniciar la sesión</b> (<i>session start</i>): cargar contexto extra o comprobar que el entorno está listo.</li><li><b>Al recibir el pedido</b> (<i>user prompt submit</i>): rechazar pedidos fuera de alcance o agregar información antes de que los vea el modelo.</li><li><b>Antes de la herramienta</b> (<i>pre-tool use</i>): el lugar natural de los validadores previos. Puede bloquear la llamada y explicar por qué.</li><li><b>Después de la herramienta</b> (<i>post-tool use</i>): validadores posteriores, formateo automático, registro.</li><li><b>Antes de compactar</b> (<i>pre-compact</i>): guardar algo que no debe perderse en el resumen (capítulo 5).</li><li><b>Al terminar</b> (<i>stop</i>): validar la respuesta final o impedir que el agente se detenga si faltan pasos, por ejemplo si las pruebas no pasan.</li></ul><p>Claude Code, por ejemplo, implementa sus ganchos como programas que reciben la llamada en JSON por la entrada estándar; si el programa termina con el código de salida 2, la herramienta se bloquea y el texto de error vuelve al modelo como explicación. El OpenAI Agents SDK los llama <b>barreras</b> (<i>guardrails</i>): de entrada, de salida y de herramienta, y cuando una se activa dispara un <b>cable trampa</b> (<i>tripwire</i>) que detiene la ejecución. La palabra cambia, la pieza es la misma.</p><p>En el arnés del curso, un validador es un gancho con contrato:</p><div class="code-copia code-lineas"><pre><code><span class="ln">type Momento = "inicio" | "pedido" | "antes_herramienta" | "despues_herramienta"</span>
+<span class="ln">             | "antes_compactar" | "fin";</span>
+<span class="ln"></span>
+<span class="ln">type Veredicto =</span>
+<span class="ln">  | { tipo: "seguir" }</span>
+<span class="ln">  | { tipo: "bloquear"; motivo: string }                 // vuelve al modelo como error</span>
+<span class="ln">  | { tipo: "corregir"; argumentos: unknown; nota: string } // cambio determinista y registrado</span>
+<span class="ln">  | { tipo: "escalar"; motivo: string };                 // pasa a una persona (capítulo 9)</span>
+<span class="ln"></span>
+<span class="ln">interface Gancho {</span>
+<span class="ln">  nombre: string;</span>
+<span class="ln">  momento: Momento;</span>
+<span class="ln">  aplicaA?: string[];                 // herramientas a las que se engancha; vacío: todas</span>
+<span class="ln">  clase: "determinista" | "modelo";</span>
+<span class="ln">  plazoMs: number;                    // un gancho lento no detiene el bucle para siempre</span>
+<span class="ln">  revisar(e: { llamada?: Bloque; resultado?: Bloque; mensajes: Mensaje[] }): Promise&lt;Veredicto&gt;;</span>
+<span class="ln">}</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en el <code>plazoMs</code>. Un gancho es código que corre en el camino crítico de cada acción: si se cuelga, se cuelga el agente. El arnés le pone un límite de tiempo y decide qué pasa si se vence. Para un gancho que protege algo, la respuesta segura es <b>cerrar ante la falla</b> (<i>fail closed</i>): si el validador no contestó, la acción no pasa.</p><p>Ahora escribe uno. El gancho más clásico de un agente de código es el que impide borrar fuera de la carpeta del proyecto, y es más difícil de lo que parece.</p></div><div class="lab" id="08-lab-2"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Escribe un gancho que impide borrar fuera de la carpeta de trabajo</h3></div><p class="hint">Elige cómo compara tu gancho la ruta pedida con la carpeta de trabajo, encendiendo o apagando cada técnica. Diez pedidos de borrado pasan por el gancho: mira cuáles bloquea, cuáles deja pasar y cuáles se le escapan. La meta es 10 de 10 sin bloquear lo que sí se puede borrar.</p><style>
 [id="08-lab-2"] .c8l2-tecs{display:grid;gap:6px}
 [id="08-lab-2"] .c8l2-tecs label{display:flex;gap:8px;align-items:flex-start;font:500 .9rem/1.35 var(--f-display);cursor:pointer}
 [id="08-lab-2"] .c8l2-tecs input{margin-top:3px;accent-color:var(--accent)}
@@ -234,41 +234,41 @@ interface Gancho {
   <pre class="c8l2-cod" id="c8l2-cod" aria-label="El código del gancho según las técnicas elegidas"></pre>
 </div>
 <ul class="c8l2-lista" id="c8l2-lista" aria-label="Pedidos de borrado y la decisión del gancho"></ul>
-<div class="readout texto" id="c8l2-out" aria-live="polite"></div></div><div class="prose"><p>Lo que muestra el laboratorio es una lección general: comparar textos no es comparar rutas. <code>../</code> sube de carpeta, <code>~</code> es la carpeta personal, un <b>enlace simbólico</b> (<i>symbolic link</i>) apunta a otro lugar y <code>/proyecto-viejo</code> empieza con las mismas letras que <code>/proyecto</code>. El gancho correcto primero <b>normaliza</b> la ruta (resuelve todo eso a una ruta absoluta y real) y después compara carpetas completas. Y aun así, el gancho es una capa: el entorno aislado del capítulo 10 es la que impide el daño si el gancho tiene un hueco.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Corre un gancho previo que impide borrar fuera del proyecto</h3></div><p>Vas a correr, en tu computadora y sin borrar nada, un gancho escrito en Python que decide si un borrado se permite. Compara una versión ingenua con una correcta. Necesitas Python 3. Crea una carpeta vacía, entra en ella y guarda este archivo como <code>gancho.py</code>:</p><div class="code-copia"><pre><code># gancho.py: gancho previo que impide borrar fuera de la carpeta de trabajo (no borra nada)
-import os
-import sys
-
-TRABAJO = os.path.realpath("proyecto")   # la carpeta de trabajo del agente
-
-def ingenuo(pedida):
-    # resuelve ".." pero compara letras y no expande "~": el error más común
-    return os.path.normpath(os.path.join(TRABAJO, pedida)).startswith(TRABAJO)
-
-def correcto(pedida):
-    # normaliza (~, .., enlaces) y compara carpetas completas
-    real = os.path.realpath(os.path.join(TRABAJO, os.path.expanduser(pedida)))
-    try:
-        return os.path.commonpath([real, TRABAJO]) == TRABAJO
-    except ValueError:                      # otra unidad de disco en Windows
-        return False
-
-CASOS = ["build/tmp.txt", "src/../dist/app.js", "../secreto.txt",
-         "src/../../notas.txt", "../proyecto-viejo/datos.csv", "~/.ssh/id_rsa"]
-
-if len(sys.argv) &gt; 1:                       # modo gancho: una ruta, un código de salida
-    ruta = sys.argv[1]
-    if correcto(ruta):
-        print(f"permitir: {ruta}")
-        sys.exit(0)
-    print(f"bloquear: {ruta} queda fuera de {TRABAJO}", file=sys.stderr)
-    sys.exit(2)                             # 2 = bloquear, como en varios agentes de código
-
-print(f"Carpeta de trabajo: {TRABAJO}\n")
-print(f"{'ruta pedida':32} {'ingenuo':10} correcto")
-for c in CASOS:
-    a = "permite" if ingenuo(c) else "bloquea"
-    b = "permite" if correcto(c) else "bloquea"
-    print(f"{c:32} {a:10} {b}{'   &lt;- se escapa' if a != b else ''}")</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python gancho.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python gancho.py ../secreto.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $LASTEXITCODE</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python gancho.py build/tmp.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $LASTEXITCODE</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 gancho.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 gancho.py ../secreto.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $?</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 gancho.py build/tmp.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $?</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la tabla, busca las filas marcadas «se escapa»: son borrados que la versión ingenua deja pasar y la correcta bloquea.</span></li><li><span>Mira la ruta <code>../proyecto-viejo/datos.csv</code>: ¿por qué la versión ingenua la permite si está fuera?</span></li><li><span>Corre el gancho con una sola ruta y anota el código de salida: 2 cuando bloquea, 0 cuando permite.</span></li><li><span>Agrega a <code>CASOS</code> una ruta absoluta de tu sistema, como <code>C:/Windows/win.ini</code> o <code>/etc/hosts</code>, y vuelve a correrlo.</span></li></ol><p><b>Qué observar:</b> la versión ingenua ya resuelve <code>../</code>, así que atrapa <code>../secreto.txt</code>, pero deja escapar dos rutas: <code>../proyecto-viejo/datos.csv</code>, porque «proyecto-viejo» empieza con las letras de «proyecto» y la comparación es de letras y no de carpetas, y <code>~/.ssh/id_rsa</code>, porque no sabe que la terminal convierte <code>~</code> en tu carpeta personal. La correcta normaliza todo primero y compara carpetas completas. El código de salida es la interfaz del gancho: el arnés no necesita entender Python, solo leer 0 o 2 y el motivo. La carpeta <code>proyecto</code> ni siquiera tiene que existir, porque el gancho solo razona sobre rutas.</p></div></section>
+<div class="readout texto" id="c8l2-out" aria-live="polite"></div></div><div class="prose"><p>Lo que muestra el laboratorio es una lección general: comparar textos no es comparar rutas. <code>../</code> sube de carpeta, <code>~</code> es la carpeta personal, un <b>enlace simbólico</b> (<i>symbolic link</i>) apunta a otro lugar y <code>/proyecto-viejo</code> empieza con las mismas letras que <code>/proyecto</code>. El gancho correcto primero <b>normaliza</b> la ruta (resuelve todo eso a una ruta absoluta y real) y después compara carpetas completas. Y aun así, el gancho es una capa: el entorno aislado del capítulo 10 es la que impide el daño si el gancho tiene un hueco.</p></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Corre un gancho previo que impide borrar fuera del proyecto</h3></div><p>Vas a correr, en tu computadora y sin borrar nada, un gancho escrito en Python que decide si un borrado se permite. Compara una versión ingenua con una correcta. Necesitas Python 3. Crea una carpeta vacía, entra en ella y guarda este archivo como <code>gancho.py</code>:</p><div class="code-copia code-lineas"><pre><code><span class="ln"># gancho.py: gancho previo que impide borrar fuera de la carpeta de trabajo (no borra nada)</span>
+<span class="ln">import os</span>
+<span class="ln">import sys</span>
+<span class="ln"></span>
+<span class="ln">TRABAJO = os.path.realpath("proyecto")   # la carpeta de trabajo del agente</span>
+<span class="ln"></span>
+<span class="ln">def ingenuo(pedida):</span>
+<span class="ln">    # resuelve ".." pero compara letras y no expande "~": el error más común</span>
+<span class="ln">    return os.path.normpath(os.path.join(TRABAJO, pedida)).startswith(TRABAJO)</span>
+<span class="ln"></span>
+<span class="ln">def correcto(pedida):</span>
+<span class="ln">    # normaliza (~, .., enlaces) y compara carpetas completas</span>
+<span class="ln">    real = os.path.realpath(os.path.join(TRABAJO, os.path.expanduser(pedida)))</span>
+<span class="ln">    try:</span>
+<span class="ln">        return os.path.commonpath([real, TRABAJO]) == TRABAJO</span>
+<span class="ln">    except ValueError:                      # otra unidad de disco en Windows</span>
+<span class="ln">        return False</span>
+<span class="ln"></span>
+<span class="ln">CASOS = ["build/tmp.txt", "src/../dist/app.js", "../secreto.txt",</span>
+<span class="ln">         "src/../../notas.txt", "../proyecto-viejo/datos.csv", "~/.ssh/id_rsa"]</span>
+<span class="ln"></span>
+<span class="ln">if len(sys.argv) &gt; 1:                       # modo gancho: una ruta, un código de salida</span>
+<span class="ln">    ruta = sys.argv[1]</span>
+<span class="ln">    if correcto(ruta):</span>
+<span class="ln">        print(f"permitir: {ruta}")</span>
+<span class="ln">        sys.exit(0)</span>
+<span class="ln">    print(f"bloquear: {ruta} queda fuera de {TRABAJO}", file=sys.stderr)</span>
+<span class="ln">    sys.exit(2)                             # 2 = bloquear, como en varios agentes de código</span>
+<span class="ln"></span>
+<span class="ln">print(f"Carpeta de trabajo: {TRABAJO}\n")</span>
+<span class="ln">print(f"{'ruta pedida':32} {'ingenuo':10} correcto")</span>
+<span class="ln">for c in CASOS:</span>
+<span class="ln">    a = "permite" if ingenuo(c) else "bloquea"</span>
+<span class="ln">    b = "permite" if correcto(c) else "bloquea"</span>
+<span class="ln">    print(f"{c:32} {a:10} {b}{'   &lt;- se escapa' if a != b else ''}")</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python gancho.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python gancho.py ../secreto.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $LASTEXITCODE</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python gancho.py build/tmp.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $LASTEXITCODE</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 gancho.py</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 gancho.py ../secreto.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $?</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>python3 gancho.py build/tmp.txt</code><button type="button" class="copiar">Copiar</button></div><div class="cmd-l"><code>echo $?</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>En la tabla, busca las filas marcadas «se escapa»: son borrados que la versión ingenua deja pasar y la correcta bloquea.</span></li><li><span>Mira la ruta <code>../proyecto-viejo/datos.csv</code>: ¿por qué la versión ingenua la permite si está fuera?</span></li><li><span>Corre el gancho con una sola ruta y anota el código de salida: 2 cuando bloquea, 0 cuando permite.</span></li><li><span>Agrega a <code>CASOS</code> una ruta absoluta de tu sistema, como <code>C:/Windows/win.ini</code> o <code>/etc/hosts</code>, y vuelve a correrlo.</span></li></ol><p><b>Qué observar:</b> la versión ingenua ya resuelve <code>../</code>, así que atrapa <code>../secreto.txt</code>, pero deja escapar dos rutas: <code>../proyecto-viejo/datos.csv</code>, porque «proyecto-viejo» empieza con las letras de «proyecto» y la comparación es de letras y no de carpetas, y <code>~/.ssh/id_rsa</code>, porque no sabe que la terminal convierte <code>~</code> en tu carpeta personal. La correcta normaliza todo primero y compara carpetas completas. El código de salida es la interfaz del gancho: el arnés no necesita entender Python, solo leer 0 o 2 y el motivo. La carpeta <code>proyecto</code> ni siquiera tiene que existir, porque el gancho solo razona sobre rutas.</p></div></section>
 <section><h2>Validadores deterministas y validadores con modelo</h2><div class="prose"><p>Hasta aquí casi todos los validadores fueron <b>deterministas</b>: código que, ante la misma entrada, da siempre el mismo veredicto. Esquemas, rangos, rutas, expresiones regulares, consultas al sistema para verificar un efecto. Son baratos, rápidos y se pueden probar con casos fijos.</p><p>Pero hay defectos que el código no ve. ¿El resumen que el agente le va a mandar al cliente tiene un tono agresivo? ¿El correo revela, con otras palabras, información de otro cliente? ¿La respuesta contradice el documento que cita, aunque cite bien? Para eso existen los <b>validadores con modelo</b> (<i>model-based validators</i>), también llamados <b>LLM como juez</b> (<i>LLM-as-a-judge</i>, donde LLM es <i>large language model</i>, modelo grande de lenguaje): otro llamado a un modelo, con instrucciones cortas y una salida estructurada (<code>aprueba: sí/no</code>, <code>motivo</code>), que revisa lo que el primero produjo.</p></div><figure class="fig fig-comparacion" id="08-diagrama-3"><div class="lienzo"><svg viewBox="0 0 860 400" style="min-width:680px" role="img" aria-label="Comparación entre validadores deterministas y validadores con modelo en siete criterios: qué detectan, costo, tiempo, si dan siempre el mismo veredicto, cómo se prueban, cómo se engañan y dónde conviene cada uno.">
   <g class="t">
     <rect x="200" y="10" width="320" height="40" rx="8" class="d-sis"/><text x="360" y="36" text-anchor="middle" class="t-b k-sis">Determinista (código)</text>

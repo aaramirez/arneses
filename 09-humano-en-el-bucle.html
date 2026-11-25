@@ -95,29 +95,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <path d="M808 404V580" class="ln s-red" style="stroke-width:3"/>
     <text transform="translate(826 492) rotate(-90)" text-anchor="middle" class="k-red">REANUDAR</text>
   </g>
-</svg></div><figcaption><b>El flujo de una aprobación.</b> Siete participantes arriba y el tiempo corriendo hacia abajo. El modelo propone un reembolso, la política responde «pedir aprobación» y el servicio de interacción crea una solicitud persistida; la sesión guarda el estado y el agente se pausa. El canal le lleva la tarjeta a la persona, que responde horas después. El servicio comprueba que la solicitud siga pendiente y que la respuesta sea válida, y solo entonces el bucle se reanuda y la herramienta corre. A la derecha, las fases: proponer, esperar y reanudar.</figcaption></figure><div class="prose"><p>Observa en el diagrama que el servicio no decide <b>si</b> hace falta aprobación (eso es de la política), ni <b>cómo</b> se ejecuta la acción aprobada (eso es de la herramienta), ni <b>por dónde</b> se le avisa a la persona (eso es de un <b>adaptador de canal</b>, <i>channel adapter</i>: chat, correo, aplicación móvil o una API). El servicio decide una sola cosa: cómo se representa, se espera y se resuelve una intervención humana. Por eso la misma aprobación puede llegar por chat a una persona y por correo a otra sin cambiar el núcleo.</p><p>En código, la solicitud y su resolución son dos registros con forma fija, guardados por el arnés:</p><div class="code-copia"><pre><code>type TipoInteraccion = "aprobar" | "elegir" | "completar" | "corregir";
-
-interface SolicitudHumana {
-  id: string;
-  tipo: TipoInteraccion;
-  llamadaId: string;          // la llamada a herramienta que la originó
-  paraQuien: string[];        // roles o personas que pueden resolverla
-  presentacion: Tarjeta;      // lo que ve la persona (siguiente sección)
-  opciones?: string[];        // solo para "elegir"
-  esquema?: object;           // solo para "completar"
-  venceEn: string;            // fecha y hora límite
-  siVence: "denegar" | "escalar" | "cancelar_tarea";
-  estado: "pendiente" | "resuelta" | "vencida";
-}
-
-interface Resolucion {
-  solicitudId: string;
-  resultado: "aprobada" | "rechazada" | "elegida" | "completada" | "corregida";
-  valor?: unknown;            // la opción, el dato o la versión corregida
-  motivo?: string;            // vuelve al modelo si se rechaza
-  resueltaPor: string;        // identidad verificada, no un nombre escrito
-  resueltaEn: string;
-}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Dos campos merecen atención. <code>resueltaPor</code> es una identidad verificada por el sistema de acceso, no un nombre que alguien escribió: es lo que luego permite auditar quién aprobó qué (capítulo 11). Y <code>siVence</code> existe desde el principio, porque una solicitud que nadie contesta es el caso normal, no la excepción.</p></div></section>
+</svg></div><figcaption><b>El flujo de una aprobación.</b> Siete participantes arriba y el tiempo corriendo hacia abajo. El modelo propone un reembolso, la política responde «pedir aprobación» y el servicio de interacción crea una solicitud persistida; la sesión guarda el estado y el agente se pausa. El canal le lleva la tarjeta a la persona, que responde horas después. El servicio comprueba que la solicitud siga pendiente y que la respuesta sea válida, y solo entonces el bucle se reanuda y la herramienta corre. A la derecha, las fases: proponer, esperar y reanudar.</figcaption></figure><div class="prose"><p>Observa en el diagrama que el servicio no decide <b>si</b> hace falta aprobación (eso es de la política), ni <b>cómo</b> se ejecuta la acción aprobada (eso es de la herramienta), ni <b>por dónde</b> se le avisa a la persona (eso es de un <b>adaptador de canal</b>, <i>channel adapter</i>: chat, correo, aplicación móvil o una API). El servicio decide una sola cosa: cómo se representa, se espera y se resuelve una intervención humana. Por eso la misma aprobación puede llegar por chat a una persona y por correo a otra sin cambiar el núcleo.</p><p>En código, la solicitud y su resolución son dos registros con forma fija, guardados por el arnés:</p><div class="code-copia code-lineas"><pre><code><span class="ln">type TipoInteraccion = "aprobar" | "elegir" | "completar" | "corregir";</span>
+<span class="ln"></span>
+<span class="ln">interface SolicitudHumana {</span>
+<span class="ln">  id: string;</span>
+<span class="ln">  tipo: TipoInteraccion;</span>
+<span class="ln">  llamadaId: string;          // la llamada a herramienta que la originó</span>
+<span class="ln">  paraQuien: string[];        // roles o personas que pueden resolverla</span>
+<span class="ln">  presentacion: Tarjeta;      // lo que ve la persona (siguiente sección)</span>
+<span class="ln">  opciones?: string[];        // solo para "elegir"</span>
+<span class="ln">  esquema?: object;           // solo para "completar"</span>
+<span class="ln">  venceEn: string;            // fecha y hora límite</span>
+<span class="ln">  siVence: "denegar" | "escalar" | "cancelar_tarea";</span>
+<span class="ln">  estado: "pendiente" | "resuelta" | "vencida";</span>
+<span class="ln">}</span>
+<span class="ln"></span>
+<span class="ln">interface Resolucion {</span>
+<span class="ln">  solicitudId: string;</span>
+<span class="ln">  resultado: "aprobada" | "rechazada" | "elegida" | "completada" | "corregida";</span>
+<span class="ln">  valor?: unknown;            // la opción, el dato o la versión corregida</span>
+<span class="ln">  motivo?: string;            // vuelve al modelo si se rechaza</span>
+<span class="ln">  resueltaPor: string;        // identidad verificada, no un nombre escrito</span>
+<span class="ln">  resueltaEn: string;</span>
+<span class="ln">}</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Dos campos merecen atención. <code>resueltaPor</code> es una identidad verificada por el sistema de acceso, no un nombre que alguien escribió: es lo que luego permite auditar quién aprobó qué (capítulo 11). Y <code>siVence</code> existe desde el principio, porque una solicitud que nadie contesta es el caso normal, no la excepción.</p></div></section>
 <section><h2>Presentar la acción: resumen, diferencias y riesgo</h2><div class="prose"><p>Una aprobación solo vale lo que vale la información con que se toma. Si la persona ve «¿Aprobar <code>reembolsar({"cliente":"4512","monto":480})</code>?», va a decir que sí sin entender, o va a tener que abrir tres sistemas para entender. Las dos cosas destruyen el valor del control.</p><p>La pieza que resuelve esto es la <b>tarjeta de aprobación</b> (<i>approval card</i>): una presentación fija, armada por el arnés y no por el modelo, con lo que hace falta para decidir en menos de un minuto.</p></div><figure class="fig fig-esquema" id="09-diagrama-2"><div class="lienzo"><svg viewBox="0 0 860 420" style="min-width:700px" role="img" aria-label="Anatomía de una tarjeta de aprobación: a la izquierda, la tarjeta con el resumen, las diferencias de saldo, la regla que pidió la aprobación, el contexto, el plazo y los botones; a la derecha, de dónde sale cada parte: el resumen lo redacta el modelo y todo lo demás lo pone el arnés desde la llamada real y los sistemas.">
   <defs>
     <marker id="d92-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fl-muted"/></marker>

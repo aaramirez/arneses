@@ -90,26 +90,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <text x="444" y="380" class="t t-s">riesgo o alguien tiene que aprobar lo que se hará;</text>
   <text x="444" y="398" class="t t-s">dentro de cada paso sigue corriendo un bucle chico</text>
 </svg></div><figcaption><b>El bucle reactivo frente a planificar y ejecutar.</b> A la izquierda, el ciclo de siempre: percibir, decidir y actuar, un paso a la vez, sin nada escrito sobre lo que viene. A la derecha, el planificador escribe el plan completo, el arnés lo valida, el ejecutor lo sigue paso a paso con un punto de control en cada uno, y si algo falla la tarea vuelve al planificador con lo que ya se hizo. Abajo, cuándo conviene cada uno.</figcaption></figure><div class="prose"><p>No es una cosa o la otra. Dentro de cada paso del plan sigue corriendo un bucle reactivo pequeño; lo que cambia es que ese bucle tiene un objetivo acotado, pocas herramientas y un criterio de terminado.</p></div></section>
-<section><h2>Planificar primero: el plan como dato</h2><div class="prose"><p>La idea clave de este capítulo cabe en una frase: <b>el plan es un dato, no un párrafo</b>. Si el modelo escribe «primero voy a revisar los pagos y luego veré las facturas», el arnés no puede hacer nada con eso. Si escribe un objeto con forma fija, el arnés puede validarlo, mostrarlo, aprobarlo, guardarlo, ejecutarlo y compararlo con la versión siguiente.</p><div class="code-copia"><pre><code>type EstadoPaso = "pendiente" | "en_curso" | "hecho" | "fallido" | "omitido";
-
-interface Paso {
-  id: string;                    // "p3"
-  objetivo: string;              // "Cruzar cada pago con su factura"
-  herramientas: string[];        // solo las que este paso puede usar
-  dependeDe: string[];           // ["p1", "p2"]
-  terminado: string;             // criterio verificable: "toda factura queda pagada, parcial o abierta"
-  riesgo: "bajo" | "medio" | "alto";
-  estado: EstadoPaso;
-  resultado?: string;            // lo que produjo, para los pasos que dependen de él
-}
-
-interface Plan {
-  tarea: string;
-  version: number;               // v1, v2… cada replanificación crea una nueva
-  pasos: Paso[];
-  costoEstimadoUSD: number;
-  creadoPor: "modelo" | "persona" | "plantilla";
-}</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en tres campos. <code>herramientas</code> reduce lo que el modelo puede hacer en cada paso: el paso que redacta el informe no puede enviar correos. <code>dependeDe</code> convierte la lista en un <b>grafo acíclico dirigido</b> (<i>DAG</i>, <i>directed acyclic graph</i>): pasos que no dependen entre sí pueden correr a la vez. Y <code>terminado</code> es lo que permite saber, sin preguntarle al modelo, si el paso cumplió.</p><p>Para el pedido de la conciliación, el plan v1 que propone el modelo tiene seis pasos: leer los pagos de octubre (p1), leer las facturas abiertas (p2), cruzarlos (p3, depende de p1 y p2), marcar las vencidas (p4), redactar el informe (p5) y enviarlo a finanzas (p6, riesgo alto).</p><p>Antes de ejecutar nada, el arnés revisa el plan completo. Es la misma lógica de los capítulos 7 y 8, aplicada una vez al principio y no solo acción por acción:</p><ol class="steps"><li><span><b>Esquema</b>: el plan tiene la forma de <code>Plan</code>, cada <code>dependeDe</code> apunta a un paso que existe y no hay ciclos.</span></li><li><span><b>Capacidades</b>: cada herramienta nombrada está en el registro de este agente (capítulo 3). Un plan que pide <code>borrar_facturas</code> se rechaza antes de empezar.</span></li><li><span><b>Políticas por paso</b>: el motor de políticas clasifica cada paso. Si alguno queda en «denegar», el plan entero vuelve al planificador con el motivo.</span></li><li><span><b>Presupuesto</b>: el costo estimado cabe en lo que le queda a la tarea.</span></li><li><span><b>Aprobación del plan</b> (opcional): si algún paso es de riesgo alto, una persona puede aprobar el plan completo de una vez, en lugar de recibir una pregunta suelta a mitad de camino (capítulo 9).</span></li></ol></div><div class="analogia"><b>Imagínalo así</b><p>Es el plan de vuelo. Antes de despegar, el piloto lo presenta y control de tránsito aéreo lo revisa: ruta, combustible, aeropuertos alternos. Nadie le pregunta al piloto en pleno vuelo si pensó en el combustible. Y el plan aprobado no impide desviarse por una tormenta: obliga a avisar y a presentar uno nuevo.</p></div><div class="prose"><p>Aprobar el plan no aprueba los efectos a ciegas. Si en la ejecución el paso 6 resulta tener otro destinatario que el aprobado, la política vuelve a decidir sobre la acción real. El plan dice qué se piensa hacer; las reglas siguen mirando lo que se hace.</p></div></section>
+<section><h2>Planificar primero: el plan como dato</h2><div class="prose"><p>La idea clave de este capítulo cabe en una frase: <b>el plan es un dato, no un párrafo</b>. Si el modelo escribe «primero voy a revisar los pagos y luego veré las facturas», el arnés no puede hacer nada con eso. Si escribe un objeto con forma fija, el arnés puede validarlo, mostrarlo, aprobarlo, guardarlo, ejecutarlo y compararlo con la versión siguiente.</p><div class="code-copia code-lineas"><pre><code><span class="ln">type EstadoPaso = "pendiente" | "en_curso" | "hecho" | "fallido" | "omitido";</span>
+<span class="ln"></span>
+<span class="ln">interface Paso {</span>
+<span class="ln">  id: string;                    // "p3"</span>
+<span class="ln">  objetivo: string;              // "Cruzar cada pago con su factura"</span>
+<span class="ln">  herramientas: string[];        // solo las que este paso puede usar</span>
+<span class="ln">  dependeDe: string[];           // ["p1", "p2"]</span>
+<span class="ln">  terminado: string;             // criterio verificable: "toda factura queda pagada, parcial o abierta"</span>
+<span class="ln">  riesgo: "bajo" | "medio" | "alto";</span>
+<span class="ln">  estado: EstadoPaso;</span>
+<span class="ln">  resultado?: string;            // lo que produjo, para los pasos que dependen de él</span>
+<span class="ln">}</span>
+<span class="ln"></span>
+<span class="ln">interface Plan {</span>
+<span class="ln">  tarea: string;</span>
+<span class="ln">  version: number;               // v1, v2… cada replanificación crea una nueva</span>
+<span class="ln">  pasos: Paso[];</span>
+<span class="ln">  costoEstimadoUSD: number;</span>
+<span class="ln">  creadoPor: "modelo" | "persona" | "plantilla";</span>
+<span class="ln">}</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Fíjate en tres campos. <code>herramientas</code> reduce lo que el modelo puede hacer en cada paso: el paso que redacta el informe no puede enviar correos. <code>dependeDe</code> convierte la lista en un <b>grafo acíclico dirigido</b> (<i>DAG</i>, <i>directed acyclic graph</i>): pasos que no dependen entre sí pueden correr a la vez. Y <code>terminado</code> es lo que permite saber, sin preguntarle al modelo, si el paso cumplió.</p><p>Para el pedido de la conciliación, el plan v1 que propone el modelo tiene seis pasos: leer los pagos de octubre (p1), leer las facturas abiertas (p2), cruzarlos (p3, depende de p1 y p2), marcar las vencidas (p4), redactar el informe (p5) y enviarlo a finanzas (p6, riesgo alto).</p><p>Antes de ejecutar nada, el arnés revisa el plan completo. Es la misma lógica de los capítulos 7 y 8, aplicada una vez al principio y no solo acción por acción:</p><ol class="steps"><li><span><b>Esquema</b>: el plan tiene la forma de <code>Plan</code>, cada <code>dependeDe</code> apunta a un paso que existe y no hay ciclos.</span></li><li><span><b>Capacidades</b>: cada herramienta nombrada está en el registro de este agente (capítulo 3). Un plan que pide <code>borrar_facturas</code> se rechaza antes de empezar.</span></li><li><span><b>Políticas por paso</b>: el motor de políticas clasifica cada paso. Si alguno queda en «denegar», el plan entero vuelve al planificador con el motivo.</span></li><li><span><b>Presupuesto</b>: el costo estimado cabe en lo que le queda a la tarea.</span></li><li><span><b>Aprobación del plan</b> (opcional): si algún paso es de riesgo alto, una persona puede aprobar el plan completo de una vez, en lugar de recibir una pregunta suelta a mitad de camino (capítulo 9).</span></li></ol></div><div class="analogia"><b>Imagínalo así</b><p>Es el plan de vuelo. Antes de despegar, el piloto lo presenta y control de tránsito aéreo lo revisa: ruta, combustible, aeropuertos alternos. Nadie le pregunta al piloto en pleno vuelo si pensó en el combustible. Y el plan aprobado no impide desviarse por una tormenta: obliga a avisar y a presentar uno nuevo.</p></div><div class="prose"><p>Aprobar el plan no aprueba los efectos a ciegas. Si en la ejecución el paso 6 resulta tener otro destinatario que el aprobado, la política vuelve a decidir sobre la acción real. El plan dice qué se piensa hacer; las reglas siguen mirando lo que se hace.</p></div></section>
 <section><h2>El ejecutor que sigue el plan paso a paso</h2><div class="prose"><p>El <b>ejecutor</b> (<i>executor</i>) es una pieza del arnés, no un modelo. Su trabajo es mecánico: elige el siguiente paso cuyas dependencias están en «hecho», lo marca «en curso», corre para él un bucle pequeño y lo cierra según su criterio de terminado.</p><p>Ese bucle pequeño es el del capítulo 2 con tres diferencias. Su contexto lleva el objetivo del paso, los resultados de los pasos de los que depende y un resumen del plan, no toda la historia de la tarea. Su registro de herramientas es solo el que declara el paso. Y su presupuesto es una porción del de la tarea, con pocos turnos.</p></div><figure class="fig fig-flujo" id="12-diagrama-2"><div class="lienzo"><svg viewBox="0 0 900 690" style="min-width:760px" role="img" aria-label="Diagrama de secuencia del planificador y el ejecutor: la persona pide, el ejecutor pide un plan al modelo, el arnés lo valida y lo presenta para aprobación porque el último paso es de riesgo alto, el ejecutor corre los pasos 1 y 2 en paralelo y guarda puntos de control; el paso 3 falla por datos y la tarea vuelve al planificador, que entrega un plan v2 validado de nuevo.">
 <defs>
 <marker id="d122-per" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="k-casa"/></marker>
@@ -182,78 +182,78 @@ interface Plan {
 <text x="8" y="560" class="t t-xs t-b t-m">REPLANIFICAR</text>
 <rect x="858" y="552" width="30" height="112" rx="6" class="d-sis"/>
 <text transform="translate(877 608.0) rotate(-90)" text-anchor="middle" class="t t-xs t-b k-sis">REPLANIFICAR</text>
-</svg></div><figcaption><b>El flujo del planificador y el ejecutor.</b> Seis participantes y el tiempo hacia abajo. La persona pide; el arnés le pide un plan al modelo, lo valida y, como el último paso es de riesgo alto, lo presenta para aprobación. Después el ejecutor corre p1 y p2 en paralelo, guarda un punto de control por paso en el diario y sigue con p3. Cuando p3 falla, el ejecutor no improvisa: devuelve la tarea al planificador con lo hecho y el error, y recibe el plan v2. A la derecha, las tres fases.</figcaption></figure><div class="prose"><p>Cada paso cerrado queda en el diario de la ejecución como un <b>punto de control</b> (<i>checkpoint</i>), igual que en el capítulo 6. Si el proceso se cae en p4, al reanudar el ejecutor lee el plan y los estados, ve que p1 a p3 están «hecho» con sus resultados guardados, y sigue en p4. El plan es también la mejor interfaz posible para una persona: una lista con casillas que se van marcando, en vez de una conversación de cuarenta mensajes.</p><p>Hay dos decisiones de diseño que conviene tomar temprano:</p><ul><li><b>Quién cierra el paso.</b> Lo ideal es un criterio que el arnés pueda comprobar: «el archivo existe y tiene 312 filas», «toda factura quedó en uno de tres estados». Cuando el criterio solo lo puede juzgar un modelo, entra el revisor de la sección siguiente.</li><li><b>Qué pasa entre pasos.</b> El ejecutor puede volver al planificador después de cada paso (más caro, más adaptable) o solo cuando algo falla (más barato, más rígido). La mayoría de los arneses hacen lo segundo y agregan puntos de revisión en los hitos.</li></ul></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Ejecuta un plan como dato y míralo replanificar</h3></div><p>Vas a correr, sin red y sin modelo, un ejecutor que sigue un plan de seis pasos con dependencias. El paso 3 falla porque aparecen pagos en dos monedas, y un planificador de reglas fijas produce el plan v2. Necesitas Python 3. Crea un archivo <code>plan.py</code> con este contenido:</p><div class="code-copia"><pre><code># plan.py: planificador y ejecutor con el plan como dato (simulado, sin red)
-import copy
-
-PLAN_V1 = {"version": 1, "pasos": [
-    {"id": "p1", "objetivo": "leer pagos de octubre",   "depende": [],           "riesgo": "bajo"},
-    {"id": "p2", "objetivo": "leer facturas abiertas",  "depende": [],           "riesgo": "bajo"},
-    {"id": "p3", "objetivo": "cruzar pagos y facturas", "depende": ["p1", "p2"], "riesgo": "bajo"},
-    {"id": "p4", "objetivo": "marcar facturas vencidas","depende": ["p3"],       "riesgo": "bajo"},
-    {"id": "p5", "objetivo": "redactar informe de mora","depende": ["p4"],       "riesgo": "medio"},
-    {"id": "p6", "objetivo": "enviar informe a finanzas","depende": ["p5"],      "riesgo": "alto"},
-]}
-
-def validar(plan):
-    ids = {p["id"] for p in plan["pasos"]}
-    for p in plan["pasos"]:
-        for d in p["depende"]:
-            if d not in ids:
-                raise ValueError(f"{p['id']} depende de {d}, que no existe")
-    return True
-
-def herramienta(paso, estado):
-    """Simula el mundo: los pagos traen dos monedas y el cruce directo falla."""
-    if paso["id"] == "p1":
-        estado["pagos"] = [("4512", 25.0, "USD"), ("4513", 30.0, "EUR"), ("4514", 40.0, "USD")]
-    if paso["id"] == "p3" and any(m != "USD" for _, _, m in estado["pagos"]):
-        raise RuntimeError("hay pagos en otra moneda: el cruce directo no sirve")
-    if paso["id"] == "p3a":
-        estado["pagos"] = [(c, round(v * 1.08, 2) if m == "EUR" else v, "USD") for c, v, m in estado["pagos"]]
-    return f"ok ({paso['objetivo']})"
-
-def replanificar(plan, fallido, error):
-    """Un planificador de reglas fijas. En un arnés real, aquí se llama al modelo."""
-    nuevo = copy.deepcopy(plan)
-    nuevo["version"] += 1
-    if "moneda" in error:
-        i = next(k for k, p in enumerate(nuevo["pasos"]) if p["id"] == fallido)
-        nuevo["pasos"].insert(i, {"id": "p3a", "objetivo": "convertir pagos a USD",
-                                  "depende": ["p1"], "riesgo": "bajo"})
-        nuevo["pasos"][i + 1]["depende"] = ["p3a", "p2"]
-    for p in nuevo["pasos"]:
-        if p.get("estado") == "fallido":
-            p["estado"] = "pendiente"
-    return nuevo
-
-def ejecutar(plan, max_replanes=1):
-    estado, replanes = {}, 0
-    validar(plan)
-    while True:
-        listos = [p for p in plan["pasos"] if p.get("estado", "pendiente") == "pendiente"
-                  and all(q.get("estado") == "hecho" for q in plan["pasos"] if q["id"] in p["depende"])]
-        if not listos:
-            break
-        for p in listos:                       # los listos podrían correr en paralelo
-            try:
-                p["resultado"] = herramienta(p, estado)
-                p["estado"] = "hecho"
-                print(f"  v{plan['version']} {p['id']} hecho      {p['objetivo']}")
-            except RuntimeError as e:
-                p["estado"] = "fallido"
-                print(f"  v{plan['version']} {p['id']} FALLIDO    {e}")
-                if replanes &gt;= max_replanes:
-                    print("  sin replanificaciones disponibles: se escala a una persona")
-                    return plan
-                replanes += 1
-                plan = replanificar(plan, p["id"], str(e))
-                validar(plan)
-                print(f"  -&gt; plan v{plan['version']}: " + ", ".join(q["id"] for q in plan["pasos"]))
-                break
-    return plan
-
-final = ejecutar(copy.deepcopy(PLAN_V1))
-print("Estados finales:", {p["id"]: p.get("estado", "pendiente") for p in final["pasos"]})</code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python plan.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 plan.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Sigue la salida: p1 y p2 quedan «hecho» en la versión 1 y no se vuelven a ejecutar en la versión 2.</span></li><li><span>Mira el plan v2: el paso nuevo <code>p3a</code> se insertó antes de p3, y p3 ahora depende de él.</span></li><li><span>Cambia <code>max_replanes=1</code> por <code>max_replanes=0</code> en la definición de <code>ejecutar</code> y vuelve a correrlo: ¿qué hace el arnés cuando no puede replanificar?</span></li><li><span>En <code>PLAN_V1</code>, cambia <code>"depende": ["p4"]</code> de p5 por <code>"depende": ["p9"]</code> y córrelo: el plan se rechaza antes de ejecutar un solo paso.</span></li></ol><p><b>Qué observar:</b> el plan es una estructura que el arnés valida, recorre y versiona, y el ejecutor no necesita entender las tareas para seguirlo. Lo ya hecho se conserva entre versiones: replanificar es cambiar lo que falta, no empezar de cero. La simulación no usa la red, así que la salida es la misma en cualquier sistema.</p></div></section>
+</svg></div><figcaption><b>El flujo del planificador y el ejecutor.</b> Seis participantes y el tiempo hacia abajo. La persona pide; el arnés le pide un plan al modelo, lo valida y, como el último paso es de riesgo alto, lo presenta para aprobación. Después el ejecutor corre p1 y p2 en paralelo, guarda un punto de control por paso en el diario y sigue con p3. Cuando p3 falla, el ejecutor no improvisa: devuelve la tarea al planificador con lo hecho y el error, y recibe el plan v2. A la derecha, las tres fases.</figcaption></figure><div class="prose"><p>Cada paso cerrado queda en el diario de la ejecución como un <b>punto de control</b> (<i>checkpoint</i>), igual que en el capítulo 6. Si el proceso se cae en p4, al reanudar el ejecutor lee el plan y los estados, ve que p1 a p3 están «hecho» con sus resultados guardados, y sigue en p4. El plan es también la mejor interfaz posible para una persona: una lista con casillas que se van marcando, en vez de una conversación de cuarenta mensajes.</p><p>Hay dos decisiones de diseño que conviene tomar temprano:</p><ul><li><b>Quién cierra el paso.</b> Lo ideal es un criterio que el arnés pueda comprobar: «el archivo existe y tiene 312 filas», «toda factura quedó en uno de tres estados». Cuando el criterio solo lo puede juzgar un modelo, entra el revisor de la sección siguiente.</li><li><b>Qué pasa entre pasos.</b> El ejecutor puede volver al planificador después de cada paso (más caro, más adaptable) o solo cuando algo falla (más barato, más rígido). La mayoría de los arneses hacen lo segundo y agregan puntos de revisión en los hitos.</li></ul></div><div class="practica"><div class="practica-title"><span class="tag">En la terminal</span><h3>Ejecuta un plan como dato y míralo replanificar</h3></div><p>Vas a correr, sin red y sin modelo, un ejecutor que sigue un plan de seis pasos con dependencias. El paso 3 falla porque aparecen pagos en dos monedas, y un planificador de reglas fijas produce el plan v2. Necesitas Python 3. Crea un archivo <code>plan.py</code> con este contenido:</p><div class="code-copia code-lineas"><pre><code><span class="ln"># plan.py: planificador y ejecutor con el plan como dato (simulado, sin red)</span>
+<span class="ln">import copy</span>
+<span class="ln"></span>
+<span class="ln">PLAN_V1 = {"version": 1, "pasos": [</span>
+<span class="ln">    {"id": "p1", "objetivo": "leer pagos de octubre",   "depende": [],           "riesgo": "bajo"},</span>
+<span class="ln">    {"id": "p2", "objetivo": "leer facturas abiertas",  "depende": [],           "riesgo": "bajo"},</span>
+<span class="ln">    {"id": "p3", "objetivo": "cruzar pagos y facturas", "depende": ["p1", "p2"], "riesgo": "bajo"},</span>
+<span class="ln">    {"id": "p4", "objetivo": "marcar facturas vencidas","depende": ["p3"],       "riesgo": "bajo"},</span>
+<span class="ln">    {"id": "p5", "objetivo": "redactar informe de mora","depende": ["p4"],       "riesgo": "medio"},</span>
+<span class="ln">    {"id": "p6", "objetivo": "enviar informe a finanzas","depende": ["p5"],      "riesgo": "alto"},</span>
+<span class="ln">]}</span>
+<span class="ln"></span>
+<span class="ln">def validar(plan):</span>
+<span class="ln">    ids = {p["id"] for p in plan["pasos"]}</span>
+<span class="ln">    for p in plan["pasos"]:</span>
+<span class="ln">        for d in p["depende"]:</span>
+<span class="ln">            if d not in ids:</span>
+<span class="ln">                raise ValueError(f"{p['id']} depende de {d}, que no existe")</span>
+<span class="ln">    return True</span>
+<span class="ln"></span>
+<span class="ln">def herramienta(paso, estado):</span>
+<span class="ln">    """Simula el mundo: los pagos traen dos monedas y el cruce directo falla."""</span>
+<span class="ln">    if paso["id"] == "p1":</span>
+<span class="ln">        estado["pagos"] = [("4512", 25.0, "USD"), ("4513", 30.0, "EUR"), ("4514", 40.0, "USD")]</span>
+<span class="ln">    if paso["id"] == "p3" and any(m != "USD" for _, _, m in estado["pagos"]):</span>
+<span class="ln">        raise RuntimeError("hay pagos en otra moneda: el cruce directo no sirve")</span>
+<span class="ln">    if paso["id"] == "p3a":</span>
+<span class="ln">        estado["pagos"] = [(c, round(v * 1.08, 2) if m == "EUR" else v, "USD") for c, v, m in estado["pagos"]]</span>
+<span class="ln">    return f"ok ({paso['objetivo']})"</span>
+<span class="ln"></span>
+<span class="ln">def replanificar(plan, fallido, error):</span>
+<span class="ln">    """Un planificador de reglas fijas. En un arnés real, aquí se llama al modelo."""</span>
+<span class="ln">    nuevo = copy.deepcopy(plan)</span>
+<span class="ln">    nuevo["version"] += 1</span>
+<span class="ln">    if "moneda" in error:</span>
+<span class="ln">        i = next(k for k, p in enumerate(nuevo["pasos"]) if p["id"] == fallido)</span>
+<span class="ln">        nuevo["pasos"].insert(i, {"id": "p3a", "objetivo": "convertir pagos a USD",</span>
+<span class="ln">                                  "depende": ["p1"], "riesgo": "bajo"})</span>
+<span class="ln">        nuevo["pasos"][i + 1]["depende"] = ["p3a", "p2"]</span>
+<span class="ln">    for p in nuevo["pasos"]:</span>
+<span class="ln">        if p.get("estado") == "fallido":</span>
+<span class="ln">            p["estado"] = "pendiente"</span>
+<span class="ln">    return nuevo</span>
+<span class="ln"></span>
+<span class="ln">def ejecutar(plan, max_replanes=1):</span>
+<span class="ln">    estado, replanes = {}, 0</span>
+<span class="ln">    validar(plan)</span>
+<span class="ln">    while True:</span>
+<span class="ln">        listos = [p for p in plan["pasos"] if p.get("estado", "pendiente") == "pendiente"</span>
+<span class="ln">                  and all(q.get("estado") == "hecho" for q in plan["pasos"] if q["id"] in p["depende"])]</span>
+<span class="ln">        if not listos:</span>
+<span class="ln">            break</span>
+<span class="ln">        for p in listos:                       # los listos podrían correr en paralelo</span>
+<span class="ln">            try:</span>
+<span class="ln">                p["resultado"] = herramienta(p, estado)</span>
+<span class="ln">                p["estado"] = "hecho"</span>
+<span class="ln">                print(f"  v{plan['version']} {p['id']} hecho      {p['objetivo']}")</span>
+<span class="ln">            except RuntimeError as e:</span>
+<span class="ln">                p["estado"] = "fallido"</span>
+<span class="ln">                print(f"  v{plan['version']} {p['id']} FALLIDO    {e}")</span>
+<span class="ln">                if replanes &gt;= max_replanes:</span>
+<span class="ln">                    print("  sin replanificaciones disponibles: se escala a una persona")</span>
+<span class="ln">                    return plan</span>
+<span class="ln">                replanes += 1</span>
+<span class="ln">                plan = replanificar(plan, p["id"], str(e))</span>
+<span class="ln">                validar(plan)</span>
+<span class="ln">                print(f"  -&gt; plan v{plan['version']}: " + ", ".join(q["id"] for q in plan["pasos"]))</span>
+<span class="ln">                break</span>
+<span class="ln">    return plan</span>
+<span class="ln"></span>
+<span class="ln">final = ejecutar(copy.deepcopy(PLAN_V1))</span>
+<span class="ln">print("Estados finales:", {p["id"]: p.get("estado", "pendiente") for p in final["pasos"]})</span></code></pre><button type="button" class="copiar copiar-todo">Copiar</button></div><p>Después, en la misma carpeta:</p><div class="cmds"><div class="cmd-tabs" role="tablist" aria-label="Sistema operativo"><button type="button" role="tab" data-so="win">Windows</button><button type="button" role="tab" data-so="mac linux">macOS y Linux</button></div><div class="cmd-panel" role="tabpanel" data-so="win"><div class="cmd-l"><code>python plan.py</code><button type="button" class="copiar">Copiar</button></div></div><div class="cmd-panel" role="tabpanel" data-so="mac linux"><div class="cmd-l"><code>python3 plan.py</code><button type="button" class="copiar">Copiar</button></div></div></div><ol class="steps"><li><span>Sigue la salida: p1 y p2 quedan «hecho» en la versión 1 y no se vuelven a ejecutar en la versión 2.</span></li><li><span>Mira el plan v2: el paso nuevo <code>p3a</code> se insertó antes de p3, y p3 ahora depende de él.</span></li><li><span>Cambia <code>max_replanes=1</code> por <code>max_replanes=0</code> en la definición de <code>ejecutar</code> y vuelve a correrlo: ¿qué hace el arnés cuando no puede replanificar?</span></li><li><span>En <code>PLAN_V1</code>, cambia <code>"depende": ["p4"]</code> de p5 por <code>"depende": ["p9"]</code> y córrelo: el plan se rechaza antes de ejecutar un solo paso.</span></li></ol><p><b>Qué observar:</b> el plan es una estructura que el arnés valida, recorre y versiona, y el ejecutor no necesita entender las tareas para seguirlo. Lo ya hecho se conserva entre versiones: replanificar es cambiar lo que falta, no empezar de cero. La simulación no usa la red, así que la salida es la misma en cualquier sistema.</p></div></section>
 <section><h2>Replanificar cuando algo falla</h2><div class="prose"><p>Ningún plan sobrevive intacto al contacto con los datos. Un plan bien hecho no es el que nunca cambia, sino el que cambia de forma controlada. Hay tres razones típicas para que un paso no termine:</p><ul><li><b>Falla transitoria</b>: la API no respondió, se agotó el tiempo. El paso estaba bien pensado; el mundo estaba ocupado.</li><li><b>El dato contradice el plan</b>: el plan suponía que todos los pagos estaban en dólares y hay dos monedas. El paso no puede cumplir su criterio de terminado tal como fue escrito.</li><li><b>Falta permiso o algo es imposible</b>: la política deniega leer las facturas de otra filial. Ningún reintento lo cambia.</li></ul><p>Para cada una, el arnés tiene cuatro respuestas posibles, de la más barata a la más cara:</p><ol class="steps"><li><span><b>Reintentar</b> (<i>retry</i>) el mismo paso, con espera creciente. Sirve para lo transitorio; para lo demás, solo gasta.</span></li><li><span><b>Rodear</b> (<i>fallback</i>): hacer el mismo paso con otra herramienta declarada como alternativa. Sirve si la alternativa resuelve el mismo problema, y nunca para esquivar una denegación.</span></li><li><span><b>Replanificar</b> (<i>replan</i>): devolverle al planificador el plan, los pasos hechos con sus resultados y el error, para que escriba la versión siguiente. Los pasos en «hecho» son inmutables: el planificador puede agregar, cambiar o quitar pasos pendientes, pero no deshacer ni reescribir lo que ya ocurrió.</span></li><li><span><b>Escalar</b> (<i>escalate</i>): traspasar la decisión a una persona, como en el capítulo 9.</span></li></ol><p>Cada versión nueva del plan pasa por la misma validación que la primera. Si el plan v2 agrega un paso de riesgo alto, o cambia el destinatario del correo, la aprobación que se dio al v1 ya no alcanza. Y las replanificaciones tienen un límite propio, por ejemplo dos por tarea: un agente que replanifica sin fin es un bucle reactivo caro con pasos extra.</p></div><div class="lab" id="12-lab-1"><div class="lab-title"><span class="tag">Laboratorio</span><h3>Un plan de 6 pasos: falla el paso 3 y mira cómo replanifica</h3></div><p class="hint">Elige por qué falla el paso 3 y qué estrategia aplica el arnés. Compara el plan v1 con el que resulta, mira qué pasos se conservan, cuántas llamadas al modelo se gastan y si la tarea termina bien. Prueba las cuatro estrategias con cada tipo de falla.</p><style>
 [id="12-lab-1"] .c12l1-planes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 [id="12-lab-1"] .c12l1-plan{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--card);display:grid;gap:5px;align-content:start}
